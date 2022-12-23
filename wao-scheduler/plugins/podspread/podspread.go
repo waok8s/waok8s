@@ -225,14 +225,14 @@ func (pl *PodSpread) updateSchedulingSession(ctx context.Context, rs *appsv1.Rep
 		totalReplicas := int(pointer.Int32Deref(rs.Spec.Replicas, 0))
 		podspreadRate, ok := rs.Annotations[annotationPodSpreadRate]
 		if !ok {
-			return fmt.Errorf("can't get annotations:podspread/rate")
+			return fmt.Errorf("ReplicaSet %s does not have annotation %s", rs.Name, annotationPodSpreadRate)
 		}
 		rate, err := strconv.ParseFloat(podspreadRate, 64)
 		if err != nil {
-			return fmt.Errorf("annotations:podspread/rate parse error")
+			return fmt.Errorf("parse error of annotation %s", annotationPodSpreadRate)
 		}
 		if !(0 <= rate && rate <= 1) {
-			return fmt.Errorf("annotations:podspread/rate is inavalid value")
+			return fmt.Errorf("annotation %s is inavalid value", annotationPodSpreadRate)
 		}
 		redunduncy := int(float64(totalReplicas) * rate)
 
