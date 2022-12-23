@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"strconv"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -213,17 +214,27 @@ func getSpreadMode(nodeList *corev1.NodeList) (mode SpreadMode, regions, zones S
 	return
 }
 
-func calcRedunduncy(...any) int {
-	return 4
-}
+const(
+	annotationPodSpreadRate = "podspread/rate"
+)
 
 func (pl *PodSpread) updateSchedulingSession(ctx context.Context, rs *appsv1.ReplicaSet, podList *corev1.PodList, nodeList *corev1.NodeList) error {
 
 	// スケジュール対象Podが所属するReplicaSetのschedulingSessionがなければ初期化
 	if _, ok := pl.schedulingSession[rs.Name]; !ok {
 		totalReplicas := int(pointer.Int32Deref(rs.Spec.Replicas, 0))
-		const p = 0.1                                  // TODO annotationからpをとってくる
-		redunduncy := calcRedunduncy(totalReplicas, p) // TODO 計算する
+		podspreadRate, ok := rs.Annotations[annotationPodSpreadRate]
+		if !ok {
+			return fmt.Errorf("ReplicaSet %s does not have annotation %s", rs.Name, annotationPodSpreadRate)
+		}
+		rate, err := strconv.ParseFloat(podspreadRate, 64)
+		if err != nil {
+			return fmt.Errorf("parse annotation %s got error: %w", annotationPodSpreadRate, err)
+		}
+		if !(0 <= rate && rate <= 1) {
+			return fmt.Errorf("annotation %s is inavalid value", annotationPodSpreadRate)
+		}
+		redunduncy := int(float64(totalReplicas) * rate)
 
 		pl.schedulingSession[rs.Name] = &SchedulingSession{
 			TotalReplicas: totalReplicas,
