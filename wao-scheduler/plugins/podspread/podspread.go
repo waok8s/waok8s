@@ -229,7 +229,7 @@ func (pl *PodSpread) updateSchedulingSession(ctx context.Context, rs *appsv1.Rep
 		}
 		rate, err := strconv.ParseFloat(podspreadRate, 64)
 		if err != nil {
-			return fmt.Errorf("parse error of annotation %s", annotationPodSpreadRate)
+			return fmt.Errorf("parse annotation %s got error: %w", annotationPodSpreadRate, err)
 		}
 		if !(0 <= rate && rate <= 1) {
 			return fmt.Errorf("annotation %s is inavalid value", annotationPodSpreadRate)
