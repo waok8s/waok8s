@@ -214,20 +214,18 @@ func getSpreadMode(nodeList *corev1.NodeList) (mode SpreadMode, regions, zones S
 	return
 }
 
-func calcRedunduncy(totalReplicas int, rate float64) int {
-	return int(float64(totalReplicas) * rate)
-}
+const(
+	annotationPodSpreadRate = "podspread/rate"
+)
 
 func (pl *PodSpread) updateSchedulingSession(ctx context.Context, rs *appsv1.ReplicaSet, podList *corev1.PodList, nodeList *corev1.NodeList) error {
 
 	// スケジュール対象Podが所属するReplicaSetのschedulingSessionがなければ初期化
 	if _, ok := pl.schedulingSession[rs.Name]; !ok {
 		totalReplicas := int(pointer.Int32Deref(rs.Spec.Replicas, 0))
-		podspreadRate := ""
-		if annotation, ok := rs.Annotations["podspread/rate"]; !ok {
+		podspreadRate, ok := rs.Annotations[annotationPodSpreadRate]
+		if !ok {
 			return fmt.Errorf("can't get annotations:podspread/rate")
-		} else {
-			podspreadRate = annotation
 		}
 		rate, err := strconv.ParseFloat(podspreadRate, 64)
 		if err != nil {
@@ -236,7 +234,7 @@ func (pl *PodSpread) updateSchedulingSession(ctx context.Context, rs *appsv1.Rep
 		if !(0 <= rate && rate <= 1) {
 			return fmt.Errorf("annotations:podspread/rate is inavalid value")
 		}
-		redunduncy := calcRedunduncy(totalReplicas, rate)
+		redunduncy := int(float64(totalReplicas) * rate)
 
 		pl.schedulingSession[rs.Name] = &SchedulingSession{
 			TotalReplicas: totalReplicas,
