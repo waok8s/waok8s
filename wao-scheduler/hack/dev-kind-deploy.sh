@@ -41,4 +41,4 @@ echo ''
 echo 'check logs:'
 echo "    kubectl logs $SCHED_POD -f -nkube-system"
 echo 'run a Deployment:'
-echo '    kubectl delete -f config/samples/dep.yaml || kubectl apply -f config/samples/dep.yaml && sleep 2 && kubectl get pod'
+echo '    kubectl delete -f config/samples/dep.yaml ; kubectl apply -f config/samples/dep.yaml && sleep 2 && kubectl get pod'
