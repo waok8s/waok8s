@@ -21,7 +21,7 @@ import (
 )
 
 type PodSpread struct {
-	filteredNodes     []string
+	filteredNodes     map[string][]string
 	mu                sync.Mutex
 	schedulingSession map[string]*SchedulingSession
 	k8sClient         *kubernetes.Clientset
@@ -108,7 +108,7 @@ func New(_ runtime.Object, _ framework.Handle) (framework.Plugin, error) {
 	klog.V(1).InfoS("Test: 0: OK")
 
 	pl := &PodSpread{
-		filteredNodes:     []string{},
+		filteredNodes:     map[string][]string{},
 		schedulingSession: map[string]*SchedulingSession{},
 		k8sClient:         clientset,
 	}
@@ -146,16 +146,16 @@ func (pl *PodSpread) PreFilter(ctx context.Context, cycleState *framework.CycleS
 	}
 
 	// schedulingSessionの更新
-	pl.mu.Lock()
 	pl.updateSchedulingSession(ctx, rs, podList, nodeList)
 
 	// 配置できないノードをリストする
 	filteredNodes, err := getUnallocatableNodes(pl.schedulingSession[rs.Name], pod, nodeList)
-	pl.mu.Unlock()
 	if err != nil {
 		return nil, framework.NewStatus(framework.UnschedulableAndUnresolvable, err.Error())
 	}
-	pl.filteredNodes = filteredNodes
+	pl.mu.Lock()
+	defer pl.mu.Unlock()
+	pl.filteredNodes[rs.Name] = filteredNodes
 
 	klog.V(1).InfoS("list unallocatable node", "filteredNodes", filteredNodes)
 
@@ -172,8 +172,20 @@ func (pl *PodSpread) Filter(ctx context.Context, state *framework.CycleState, po
 		return framework.NewStatus(framework.Error, ErrReasonNodeNotFound.Error())
 	}
 
+	// PodのReplicaSetを取得
+	replicaSetName := "" // TODO
+	for _, ref := range pod.OwnerReferences {
+		if pointer.BoolDeref(ref.Controller, false) && ref.Kind == "ReplicaSet" {
+			replicaSetName = ref.Name
+		}
+	}
+	if replicaSetName == "" {
+		// no controller found
+		return framework.NewStatus(framework.Error, "no controller found")
+	}
+
 	// Filter処理
-	for _, n := range pl.filteredNodes {
+	for _, n := range pl.filteredNodes[replicaSetName] {
 		if nodeInfo.Node().Name == n {
 			return framework.NewStatus(framework.UnschedulableAndUnresolvable, "unschedulable reason:filterd node")
 		}
