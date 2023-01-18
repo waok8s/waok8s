@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math"
 	"strconv"
+	"sync"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -20,6 +21,8 @@ import (
 )
 
 type PodSpread struct {
+	filteredNodes     map[string][]string
+	mu                sync.Mutex
 	schedulingSession map[string]*SchedulingSession
 	k8sClient         *kubernetes.Clientset
 }
@@ -105,13 +108,63 @@ func New(_ runtime.Object, _ framework.Handle) (framework.Plugin, error) {
 	klog.V(1).InfoS("Test: 0: OK")
 
 	pl := &PodSpread{
+		filteredNodes:     map[string][]string{},
 		schedulingSession: map[string]*SchedulingSession{},
 		k8sClient:         clientset,
 	}
 	return pl, nil
 }
 
-// Check the node name and deploy pods to the schedulable node.
+// PreFilter invoked at the prefilter extension point.
+func (pl *PodSpread) PreFilter(ctx context.Context, cycleState *framework.CycleState, pod *corev1.Pod) (*framework.PreFilterResult, *framework.Status) {
+	// PodのReplicaSetを取得
+	replicaSetName := "" // TODO
+	for _, ref := range pod.OwnerReferences {
+		if pointer.BoolDeref(ref.Controller, false) && ref.Kind == "ReplicaSet" {
+			replicaSetName = ref.Name
+		}
+	}
+	if replicaSetName == "" {
+		// no controller found
+		return nil, framework.NewStatus(framework.Error, "no controller found")
+	}
+	rs, err := pl.k8sClient.AppsV1().ReplicaSets(pod.Namespace).Get(ctx, replicaSetName, metav1.GetOptions{})
+	if err != nil {
+		return nil, framework.NewStatus(framework.Error, err.Error())
+	}
+
+	// PodListを取得
+	podList, err := pl.k8sClient.CoreV1().Pods(rs.Namespace).List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return nil, framework.NewStatus(framework.Error, err.Error())
+	}
+
+	// NodeListを取得
+	nodeList, err := pl.k8sClient.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return nil, framework.NewStatus(framework.Error, err.Error())
+	}
+
+	// schedulingSessionの更新
+	pl.mu.Lock()
+	pl.updateSchedulingSession(ctx, rs, podList, nodeList)
+	pl.mu.Unlock()
+
+	// 配置できないノードをリストする
+	filteredNodes, err := getUnallocatableNodes(pl.schedulingSession[rs.Name], pod, nodeList)
+	if err != nil {
+		return nil, framework.NewStatus(framework.UnschedulableAndUnresolvable, err.Error())
+	}
+	pl.mu.Lock()
+	defer pl.mu.Unlock()
+	pl.filteredNodes[rs.Name] = filteredNodes
+
+	klog.V(1).InfoS("list unallocatable node", "filteredNodes", filteredNodes)
+
+	return nil, nil
+}
+
+// Filter node and deploy pods to the schedulable node.
 func (pl *PodSpread) Filter(ctx context.Context, state *framework.CycleState, pod *corev1.Pod, nodeInfo *framework.NodeInfo) *framework.Status {
 
 	klog.V(1).InfoS("Filter: PodSpread", "pod", pod.Name, "node", nodeInfo.Node().Name)
@@ -130,38 +183,11 @@ func (pl *PodSpread) Filter(ctx context.Context, state *framework.CycleState, po
 	}
 	if replicaSetName == "" {
 		// no controller found
-		return nil
+		return framework.NewStatus(framework.Error, "no controller found")
 	}
-	rs, err := pl.k8sClient.AppsV1().ReplicaSets(pod.Namespace).Get(ctx, replicaSetName, metav1.GetOptions{})
-	if err != nil {
-		return framework.NewStatus(framework.Error, err.Error())
-	}
-
-	// PodListを取得
-	podList, err := pl.k8sClient.CoreV1().Pods(rs.Namespace).List(ctx, metav1.ListOptions{})
-	if err != nil {
-		return framework.NewStatus(framework.Error, err.Error())
-	}
-
-	// NodeListを取得
-	nodeList, err := pl.k8sClient.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
-	if err != nil {
-		return framework.NewStatus(framework.Error, err.Error())
-	}
-
-	// schedulingSessionの更新
-	pl.updateSchedulingSession(ctx, rs, podList, nodeList)
-
-	// 配置できないノードをリストする
-	filteredNodes, err := getUnallocatableNodes(pl.schedulingSession[rs.Name], pod, nodeList)
-	if err != nil {
-		return framework.NewStatus(framework.UnschedulableAndUnresolvable, err.Error())
-	}
-
-	klog.V(1).InfoS("list unallocatable node", "filteredNodes", filteredNodes)
 
 	// Filter処理
-	for _, n := range filteredNodes {
+	for _, n := range pl.filteredNodes[replicaSetName] {
 		if nodeInfo.Node().Name == n {
 			return framework.NewStatus(framework.UnschedulableAndUnresolvable, "unschedulable reason:filterd node")
 		}
@@ -214,7 +240,7 @@ func getSpreadMode(nodeList *corev1.NodeList) (mode SpreadMode, regions, zones S
 	return
 }
 
-const(
+const (
 	annotationPodSpreadRate = "podspread/rate"
 )
 
