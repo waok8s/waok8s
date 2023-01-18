@@ -146,7 +146,9 @@ func (pl *PodSpread) PreFilter(ctx context.Context, cycleState *framework.CycleS
 	}
 
 	// schedulingSessionの更新
+	pl.mu.Lock()
 	pl.updateSchedulingSession(ctx, rs, podList, nodeList)
+	pl.mu.Unlock()
 
 	// 配置できないノードをリストする
 	filteredNodes, err := getUnallocatableNodes(pl.schedulingSession[rs.Name], pod, nodeList)
