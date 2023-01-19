@@ -2,7 +2,6 @@ package podspread
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"math"
 	"strconv"
@@ -37,9 +36,16 @@ type SchedulingSession struct {
 	SpreadInfoZone   SpreadInfo
 }
 
+// SpreadInfo holds area info.
+//
+//	area1:           # nodes has "area1" label (zone or region)
+//	  node11: true   # node11 is a control plane node
+//	  node12: false  # node12 is a worker node
+//	area2:
+//	  node21: false
 type SpreadInfo map[string]map[string]bool
 
-func (s SpreadInfo) GetNodeArea(node string) (string, bool) {
+func (s SpreadInfo) GetNodeArea(node string) (area string, isControlPlane bool) {
 	for area, nodes := range s {
 		_, ok := nodes[node]
 		if ok {
@@ -49,6 +55,8 @@ func (s SpreadInfo) GetNodeArea(node string) (string, bool) {
 	return "", false
 }
 
+// GetAreasOnlyControlPlane returns areas no worker nodes.
+// These areas should be excluded from scheduling.
 func (s SpreadInfo) GetAreasOnlyControlPlane() []string {
 	var a []string
 	for area, nodes := range s {
@@ -79,9 +87,11 @@ var _ framework.FilterPlugin = &PodSpread{}
 var (
 	Name = "PodSpread"
 
-	ErrReasonNodeNotFound = errors.New("node not found")
-	// ErrReasonPodAlreadyDeployed = errors.New("one or more pods already deployed to the node")
-	// ErrReasonIsBetterNode       = errors.New("there is a better node to deploy the pod")
+	ReasonEmptyNodeName             = "node not found"
+	ReasonNotControlledByReplicaSet = "the pod is not controlled by any ReplicaSet"
+	ReasonK8sClient                 = "skip this plugin as k8sClient got error: "
+	ReasonShouldBeSpread            = "pod allocation should be spread"
+	ReasonSchedulingSession         = "skip this plugin as wrong SchedulingSession status: "
 )
 
 // Name returns name of the plugin. It is used in logs, etc.
@@ -92,33 +102,33 @@ func (*PodSpread) Name() string {
 // New initializes a new plugin and returns it.
 func New(_ runtime.Object, _ framework.Handle) (framework.Plugin, error) {
 	// initialize a K8s client
-	klog.V(1).InfoS("Test: 0: initializing client-go")
-
+	klog.V(1).InfoS("initializing client-go")
 	// NOTE: kube-scheduler does not have in cluster config
 	// config, err := rest.InClusterConfig()
 	config, err := clientcmd.BuildConfigFromFlags("", "/etc/kubernetes/scheduler.conf")
 	if err != nil {
 		return nil, err
 	}
-
 	clientset, err := kubernetes.NewForConfig(config)
 	if err != nil {
 		return nil, err
 	}
-	klog.V(1).InfoS("Test: 0: OK")
+	klog.V(1).InfoS("initialized client-go")
 
+	// initialize the plugin
 	pl := &PodSpread{
 		filteredNodes:     map[string][]string{},
 		schedulingSession: map[string]*SchedulingSession{},
 		k8sClient:         clientset,
 	}
+
 	return pl, nil
 }
 
 // PreFilter invoked at the prefilter extension point.
 func (pl *PodSpread) PreFilter(ctx context.Context, cycleState *framework.CycleState, pod *corev1.Pod) (*framework.PreFilterResult, *framework.Status) {
 	// PodのReplicaSetを取得
-	replicaSetName := "" // TODO
+	replicaSetName := ""
 	for _, ref := range pod.OwnerReferences {
 		if pointer.BoolDeref(ref.Controller, false) && ref.Kind == "ReplicaSet" {
 			replicaSetName = ref.Name
@@ -126,34 +136,34 @@ func (pl *PodSpread) PreFilter(ctx context.Context, cycleState *framework.CycleS
 	}
 	if replicaSetName == "" {
 		// no controller found
-		return nil, framework.NewStatus(framework.Error, "no controller found")
+		return nil, framework.NewStatus(framework.Error, ReasonNotControlledByReplicaSet)
 	}
 	rs, err := pl.k8sClient.AppsV1().ReplicaSets(pod.Namespace).Get(ctx, replicaSetName, metav1.GetOptions{})
 	if err != nil {
-		return nil, framework.NewStatus(framework.Error, err.Error())
+		return nil, framework.NewStatus(framework.Error, ReasonK8sClient+err.Error())
 	}
 
 	// PodListを取得
 	podList, err := pl.k8sClient.CoreV1().Pods(rs.Namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
-		return nil, framework.NewStatus(framework.Error, err.Error())
+		return nil, framework.NewStatus(framework.Error, ReasonK8sClient+err.Error())
 	}
 
 	// NodeListを取得
 	nodeList, err := pl.k8sClient.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
 	if err != nil {
-		return nil, framework.NewStatus(framework.Error, err.Error())
+		return nil, framework.NewStatus(framework.Error, ReasonK8sClient+err.Error())
 	}
 
 	// schedulingSessionの更新
-	pl.mu.Lock()
-	pl.updateSchedulingSession(ctx, rs, podList, nodeList)
-	pl.mu.Unlock()
+	if err := pl.updateSchedulingSession(ctx, rs, podList, nodeList); err != nil {
+		return nil, framework.NewStatus(framework.Error, ReasonSchedulingSession+err.Error())
+	}
 
 	// 配置できないノードをリストする
 	filteredNodes, err := getUnallocatableNodes(pl.schedulingSession[rs.Name], pod, nodeList)
 	if err != nil {
-		return nil, framework.NewStatus(framework.UnschedulableAndUnresolvable, err.Error())
+		return nil, framework.NewStatus(framework.UnschedulableAndUnresolvable, ReasonShouldBeSpread)
 	}
 	pl.mu.Lock()
 	defer pl.mu.Unlock()
@@ -170,8 +180,7 @@ func (pl *PodSpread) Filter(ctx context.Context, state *framework.CycleState, po
 	klog.V(1).InfoS("Filter: PodSpread", "pod", pod.Name, "node", nodeInfo.Node().Name)
 
 	if nodeInfo.Node().Name == "" {
-		fmt.Println("node name not found")
-		return framework.NewStatus(framework.Error, ErrReasonNodeNotFound.Error())
+		return framework.NewStatus(framework.Error, ReasonEmptyNodeName)
 	}
 
 	// PodのReplicaSetを取得
@@ -183,13 +192,13 @@ func (pl *PodSpread) Filter(ctx context.Context, state *framework.CycleState, po
 	}
 	if replicaSetName == "" {
 		// no controller found
-		return framework.NewStatus(framework.Error, "no controller found")
+		return framework.NewStatus(framework.Error, ReasonNotControlledByReplicaSet)
 	}
 
 	// Filter処理
 	for _, n := range pl.filteredNodes[replicaSetName] {
 		if nodeInfo.Node().Name == n {
-			return framework.NewStatus(framework.UnschedulableAndUnresolvable, "unschedulable reason:filterd node")
+			return framework.NewStatus(framework.UnschedulableAndUnresolvable, ReasonShouldBeSpread)
 		}
 	}
 	return nil
@@ -245,6 +254,9 @@ const (
 )
 
 func (pl *PodSpread) updateSchedulingSession(ctx context.Context, rs *appsv1.ReplicaSet, podList *corev1.PodList, nodeList *corev1.NodeList) error {
+
+	pl.mu.Lock()
+	defer pl.mu.Unlock()
 
 	// スケジュール対象Podが所属するReplicaSetのschedulingSessionがなければ初期化
 	if _, ok := pl.schedulingSession[rs.Name]; !ok {
