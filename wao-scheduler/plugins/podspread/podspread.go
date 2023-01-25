@@ -126,7 +126,7 @@ func New(plArgs runtime.Object, _ framework.Handle) (framework.Plugin, error) {
 	var rateannotation string
 	err := json.Unmarshal(args.Raw, &conf)
 	if err != nil {
-		fmt.Printf("could not parse args and use default annotation %s\n", DefaultAnnotationPodSpreadRate)
+		klog.V(1).InfoS("could not parse args and use default annotation name", "DefaultAnnotationPodSpreadRate", DefaultAnnotationPodSpreadRate)
 		rateannotation = DefaultAnnotationPodSpreadRate
 	} else {
 		rateannotation = conf.RateAnnotation
