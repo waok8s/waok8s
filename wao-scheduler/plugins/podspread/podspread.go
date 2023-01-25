@@ -102,6 +102,10 @@ func (*PodSpread) Name() string {
 	return Name
 }
 
+const (
+	DefaultAnnotationPodSpreadRate = "podspread/rate"
+)
+
 // New initializes a new plugin and returns it.
 func New(plArgs runtime.Object, _ framework.Handle) (framework.Plugin, error) {
 	// parse args
@@ -117,12 +121,16 @@ func New(plArgs runtime.Object, _ framework.Handle) (framework.Plugin, error) {
 		return nil, fmt.Errorf("cannot parse content type: %v", args.ContentType)
 	}
 	var conf struct {
-		RATEAnnotation string `json:"rateAnnotation"`
+		RateAnnotation string `json:"rateAnnotation"`
 	}
-	if err := json.Unmarshal(args.Raw, &conf); err != nil {
-		return nil, fmt.Errorf("could not parse args: %w", err)
+	var rateannotation string
+	err := json.Unmarshal(args.Raw, &conf)
+	if err != nil {
+		fmt.Printf("could not parse args and use default annotation %s\n", DefaultAnnotationPodSpreadRate)
+		rateannotation = DefaultAnnotationPodSpreadRate
+	} else {
+		rateannotation = conf.RateAnnotation
 	}
-	rateannotation := conf.RATEAnnotation
 
 	// initialize a K8s client
 	klog.V(1).InfoS("initializing client-go")
