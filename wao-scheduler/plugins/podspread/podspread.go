@@ -2,6 +2,8 @@ package podspread
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"math"
 	"strconv"
@@ -24,6 +26,7 @@ type PodSpread struct {
 	mu                sync.Mutex
 	schedulingSession map[string]*SchedulingSession
 	k8sClient         *kubernetes.Clientset
+	rateAnnotation    string
 }
 
 type SchedulingSession struct {
@@ -100,7 +103,27 @@ func (*PodSpread) Name() string {
 }
 
 // New initializes a new plugin and returns it.
-func New(_ runtime.Object, _ framework.Handle) (framework.Plugin, error) {
+func New(plArgs runtime.Object, _ framework.Handle) (framework.Plugin, error) {
+	// parse args
+	// See: https://github.com/kubernetes/enhancements/blob/master/keps/sig-scheduling/624-scheduling-framework/README.md#optional-args
+	if plArgs == nil {
+		return nil, errors.New("cannot find PodSpread plugin config")
+	}
+	args, ok := plArgs.(*runtime.Unknown)
+	if !ok {
+		return nil, errors.New("cannot cast plArgs to *runtime.Unknown")
+	}
+	if args.ContentType != "application/json" {
+		return nil, fmt.Errorf("cannot parse content type: %v", args.ContentType)
+	}
+	var conf struct {
+		RATEAnnotation string `json:"rateAnnotation"`
+	}
+	if err := json.Unmarshal(args.Raw, &conf); err != nil {
+		return nil, fmt.Errorf("could not parse args: %w", err)
+	}
+	rateannotation := conf.RATEAnnotation
+
 	// initialize a K8s client
 	klog.V(1).InfoS("initializing client-go")
 	// NOTE: kube-scheduler does not have in cluster config
@@ -120,6 +143,7 @@ func New(_ runtime.Object, _ framework.Handle) (framework.Plugin, error) {
 		filteredNodes:     map[string][]string{},
 		schedulingSession: map[string]*SchedulingSession{},
 		k8sClient:         clientset,
+		rateAnnotation:    rateannotation,
 	}
 
 	return pl, nil
@@ -249,10 +273,6 @@ func getSpreadMode(nodeList *corev1.NodeList) (mode SpreadMode, regions, zones S
 	return
 }
 
-const (
-	annotationPodSpreadRate = "podspread/rate"
-)
-
 func (pl *PodSpread) updateSchedulingSession(ctx context.Context, rs *appsv1.ReplicaSet, podList *corev1.PodList, nodeList *corev1.NodeList) error {
 
 	pl.mu.Lock()
@@ -261,16 +281,16 @@ func (pl *PodSpread) updateSchedulingSession(ctx context.Context, rs *appsv1.Rep
 	// スケジュール対象Podが所属するReplicaSetのschedulingSessionがなければ初期化
 	if _, ok := pl.schedulingSession[rs.Name]; !ok {
 		totalReplicas := int(pointer.Int32Deref(rs.Spec.Replicas, 0))
-		podspreadRate, ok := rs.Annotations[annotationPodSpreadRate]
+		podspreadRate, ok := rs.Annotations[pl.rateAnnotation]
 		if !ok {
-			return fmt.Errorf("ReplicaSet %s does not have annotation %s", rs.Name, annotationPodSpreadRate)
+			return fmt.Errorf("ReplicaSet %s does not have annotation %s", rs.Name, pl.rateAnnotation)
 		}
 		rate, err := strconv.ParseFloat(podspreadRate, 64)
 		if err != nil {
-			return fmt.Errorf("parse annotation %s got error: %w", annotationPodSpreadRate, err)
+			return fmt.Errorf("parse annotation %s got error: %w", pl.rateAnnotation, err)
 		}
 		if !(0 <= rate && rate <= 1) {
-			return fmt.Errorf("annotation %s is inavalid value", annotationPodSpreadRate)
+			return fmt.Errorf("annotation %s is inavalid value", pl.rateAnnotation)
 		}
 		redunduncy := int(float64(totalReplicas) * rate)
 

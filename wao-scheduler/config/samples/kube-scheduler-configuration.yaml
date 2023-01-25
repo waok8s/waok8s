@@ -8,3 +8,7 @@ profiles:
       filter:
         enabled:
           - name: PodSpread
+    pluginConfig:
+      - name: PodSpread
+        args:
+          rateAnnotation: "podspread/rate"
