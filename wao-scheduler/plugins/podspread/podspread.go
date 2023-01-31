@@ -13,6 +13,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/kubernetes"
 
 	"k8s.io/client-go/tools/clientcmd"
@@ -22,7 +23,6 @@ import (
 )
 
 type PodSpread struct {
-	filteredNodes     map[string][]string
 	mu                sync.Mutex
 	schedulingSession map[string]*SchedulingSession
 	k8sClient         *kubernetes.Clientset
@@ -85,8 +85,6 @@ const (
 	SpreadModeNode   SpreadMode = "SpreadModeNode"
 )
 
-var _ framework.FilterPlugin = &PodSpread{}
-
 var (
 	Name = "PodSpread"
 
@@ -148,7 +146,6 @@ func New(plArgs runtime.Object, _ framework.Handle) (framework.Plugin, error) {
 
 	// initialize the plugin
 	pl := &PodSpread{
-		filteredNodes:     map[string][]string{},
 		schedulingSession: map[string]*SchedulingSession{},
 		k8sClient:         clientset,
 		rateAnnotation:    rateannotation,
@@ -197,43 +194,15 @@ func (pl *PodSpread) PreFilter(ctx context.Context, cycleState *framework.CycleS
 	if err != nil {
 		return nil, framework.NewStatus(framework.UnschedulableAndUnresolvable, ReasonShouldBeSpread)
 	}
-	pl.mu.Lock()
-	defer pl.mu.Unlock()
-	pl.filteredNodes[rs.Name] = filteredNodes
 
 	klog.V(1).InfoS("list unallocatable node", "filteredNodes", filteredNodes)
 
-	return nil, nil
-}
-
-// Filter node and deploy pods to the schedulable node.
-func (pl *PodSpread) Filter(ctx context.Context, state *framework.CycleState, pod *corev1.Pod, nodeInfo *framework.NodeInfo) *framework.Status {
-
-	klog.V(1).InfoS("Filter: PodSpread", "pod", pod.Name, "node", nodeInfo.Node().Name)
-
-	if nodeInfo.Node().Name == "" {
-		return framework.NewStatus(framework.Error, ReasonEmptyNodeName)
+	nodenames := sets.NewString(filteredNodes...)
+	result := &framework.PreFilterResult{
+		NodeNames: nodenames,
 	}
 
-	// PodのReplicaSetを取得
-	replicaSetName := "" // TODO
-	for _, ref := range pod.OwnerReferences {
-		if pointer.BoolDeref(ref.Controller, false) && ref.Kind == "ReplicaSet" {
-			replicaSetName = ref.Name
-		}
-	}
-	if replicaSetName == "" {
-		// no controller found
-		return framework.NewStatus(framework.Error, ReasonNotControlledByReplicaSet)
-	}
-
-	// Filter処理
-	for _, n := range pl.filteredNodes[replicaSetName] {
-		if nodeInfo.Node().Name == n {
-			return framework.NewStatus(framework.UnschedulableAndUnresolvable, ReasonShouldBeSpread)
-		}
-	}
-	return nil
+	return result, nil
 }
 
 const (
