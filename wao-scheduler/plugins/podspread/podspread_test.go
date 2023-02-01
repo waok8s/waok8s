@@ -419,7 +419,7 @@ func Test_getSpreadMode(t *testing.T) {
 	}
 }
 
-func Test_getUnallocatableNodes(t *testing.T) {
+func Test_getAllocatableNodes(t *testing.T) {
 	type args struct {
 		ss       *SchedulingSession
 		pod      *corev1.Pod
@@ -457,7 +457,7 @@ func Test_getUnallocatableNodes(t *testing.T) {
 			nodeList: &corev1.NodeList{Items: []corev1.Node{
 				newNode("n00", "", "r0", true), newNode("n01", "", "r0", false), newNode("n10", "", "r1", false), newNode("n11", "", "r1", false),
 			}},
-		}, []string{"n00", "n10", "n11"}, false},
+		}, []string{"n01"}, false},
 		{"0zone/3region/01-01-01", args{
 			ss: &SchedulingSession{
 				TotalReplicas: 10,
@@ -489,7 +489,7 @@ func Test_getUnallocatableNodes(t *testing.T) {
 			nodeList: &corev1.NodeList{Items: []corev1.Node{
 				newNode("n00", "", "r0", true), newNode("n01", "", "r0", false), newNode("n10", "", "r1", false), newNode("n11", "", "r1", false), newNode("n20", "", "r2", false), newNode("n21", "", "r2", false),
 			}},
-		}, []string{"n00"}, false},
+		}, []string{"n01", "n10", "n11", "n20", "n21"}, false},
 		{"2zone/0region/012-110", args{
 			ss: &SchedulingSession{
 				TotalReplicas: 10,
@@ -518,7 +518,7 @@ func Test_getUnallocatableNodes(t *testing.T) {
 			nodeList: &corev1.NodeList{Items: []corev1.Node{
 				newNode("n00", "z0", "", true), newNode("n01", "z0", "", false), newNode("n02", "z0", "", false), newNode("n10", "z1", "", false), newNode("n11", "z1", "", false), newNode("n12", "z1", "", false),
 			}},
-		}, []string{"n00", "n01", "n02"}, false},
+		}, []string{"n10", "n11", "n12"}, false},
 		{"node_0211", args{
 			ss: &SchedulingSession{
 				TotalReplicas: 10,
@@ -538,7 +538,7 @@ func Test_getUnallocatableNodes(t *testing.T) {
 			nodeList: &corev1.NodeList{Items: []corev1.Node{
 				newNode("n00", "", "", true), newNode("n01", "", "", false), newNode("n02", "", "", false), newNode("n03", "", "", false),
 			}},
-		}, []string{"n00", "n01"}, false},
+		}, []string{"n02", "n03"}, false},
 		{"node_0221", args{
 			ss: &SchedulingSession{
 				TotalReplicas: 10,
@@ -558,7 +558,7 @@ func Test_getUnallocatableNodes(t *testing.T) {
 			nodeList: &corev1.NodeList{Items: []corev1.Node{
 				newNode("n00", "", "", true), newNode("n01", "", "", false), newNode("n02", "", "", false), newNode("n03", "", "", false),
 			}},
-		}, []string{"n00", "n01", "n02"}, false},
+		}, []string{"n03"}, false},
 		{"node_0222", args{
 			ss: &SchedulingSession{
 				TotalReplicas: 10,
@@ -578,13 +578,13 @@ func Test_getUnallocatableNodes(t *testing.T) {
 			nodeList: &corev1.NodeList{Items: []corev1.Node{
 				newNode("n00", "", "", true), newNode("n01", "", "", false), newNode("n02", "", "", false), newNode("n03", "", "", false),
 			}},
-		}, []string{}, false},
+		}, []string{"n00", "n01", "n02", "n03"}, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := getUnallocatableNodes(tt.args.ss, tt.args.pod, tt.args.nodeList)
+			got, err := getAllocatableNodes(tt.args.ss, tt.args.pod, tt.args.nodeList)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("getUnallocatableNodes() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("getAllocatableNodes() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			gotM := map[string]struct{}{}
@@ -600,4 +600,3 @@ func Test_getUnallocatableNodes(t *testing.T) {
 		})
 	}
 }
-
