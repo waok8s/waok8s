@@ -13,6 +13,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/kubernetes"
 
 	"k8s.io/client-go/tools/clientcmd"
@@ -22,7 +23,6 @@ import (
 )
 
 type PodSpread struct {
-	filteredNodes     map[string][]string
 	mu                sync.Mutex
 	schedulingSession map[string]*SchedulingSession
 	k8sClient         *kubernetes.Clientset
@@ -85,8 +85,6 @@ const (
 	SpreadModeNode   SpreadMode = "SpreadModeNode"
 )
 
-var _ framework.FilterPlugin = &PodSpread{}
-
 var (
 	Name = "PodSpread"
 
@@ -148,7 +146,6 @@ func New(plArgs runtime.Object, _ framework.Handle) (framework.Plugin, error) {
 
 	// initialize the plugin
 	pl := &PodSpread{
-		filteredNodes:     map[string][]string{},
 		schedulingSession: map[string]*SchedulingSession{},
 		k8sClient:         clientset,
 		rateAnnotation:    rateannotation,
@@ -192,48 +189,20 @@ func (pl *PodSpread) PreFilter(ctx context.Context, cycleState *framework.CycleS
 		return nil, framework.NewStatus(framework.Error, ReasonSchedulingSession+err.Error())
 	}
 
-	// 配置できないノードをリストする
-	filteredNodes, err := getUnallocatableNodes(pl.schedulingSession[rs.Name], pod, nodeList)
+	// 配置できるノードをリストする
+	allocatableNodes, err := getAllocatableNodes(pl.schedulingSession[rs.Name], pod, nodeList)
 	if err != nil {
 		return nil, framework.NewStatus(framework.UnschedulableAndUnresolvable, ReasonShouldBeSpread)
 	}
-	pl.mu.Lock()
-	defer pl.mu.Unlock()
-	pl.filteredNodes[rs.Name] = filteredNodes
 
-	klog.V(1).InfoS("list unallocatable node", "filteredNodes", filteredNodes)
+	klog.V(1).InfoS("list allocatable node", "allocatableNodes", allocatableNodes)
 
-	return nil, nil
-}
-
-// Filter node and deploy pods to the schedulable node.
-func (pl *PodSpread) Filter(ctx context.Context, state *framework.CycleState, pod *corev1.Pod, nodeInfo *framework.NodeInfo) *framework.Status {
-
-	klog.V(1).InfoS("Filter: PodSpread", "pod", pod.Name, "node", nodeInfo.Node().Name)
-
-	if nodeInfo.Node().Name == "" {
-		return framework.NewStatus(framework.Error, ReasonEmptyNodeName)
+	nodenames := sets.NewString(allocatableNodes...)
+	result := &framework.PreFilterResult{
+		NodeNames: nodenames,
 	}
 
-	// PodのReplicaSetを取得
-	replicaSetName := "" // TODO
-	for _, ref := range pod.OwnerReferences {
-		if pointer.BoolDeref(ref.Controller, false) && ref.Kind == "ReplicaSet" {
-			replicaSetName = ref.Name
-		}
-	}
-	if replicaSetName == "" {
-		// no controller found
-		return framework.NewStatus(framework.Error, ReasonNotControlledByReplicaSet)
-	}
-
-	// Filter処理
-	for _, n := range pl.filteredNodes[replicaSetName] {
-		if nodeInfo.Node().Name == n {
-			return framework.NewStatus(framework.UnschedulableAndUnresolvable, ReasonShouldBeSpread)
-		}
-	}
-	return nil
+	return result, nil
 }
 
 const (
@@ -349,7 +318,7 @@ func (ss *SchedulingSession) setDeployNodes(rs *appsv1.ReplicaSet, podList *core
 	}
 }
 
-func getUnallocatableNodes(ss *SchedulingSession, pod *corev1.Pod, nodeList *corev1.NodeList) ([]string, error) {
+func getAllocatableNodes(ss *SchedulingSession, pod *corev1.Pod, nodeList *corev1.NodeList) ([]string, error) {
 
 	isControlPlane := func(name string) bool {
 		for _, n := range nodeList.Items {
@@ -363,14 +332,18 @@ func getUnallocatableNodes(ss *SchedulingSession, pod *corev1.Pod, nodeList *cor
 		return false
 	}
 
-	var denyNodes []string
+	var allocatableNodes []string
 
 	// 十分に冗長配置されたので、どのノードにも配置できます
 	if ss.TotalDeployed >= ss.Redunduncy {
 
 		klog.V(1).InfoS("Reduduncy is enough")
 
-		return denyNodes, nil
+		for _, node := range nodeList.Items {
+			allocatableNodes = append(allocatableNodes, node.Name)
+		}
+
+		return allocatableNodes, nil
 	}
 
 	// Podをマスターノードに配置するための設定
@@ -442,12 +415,11 @@ func getUnallocatableNodes(ss *SchedulingSession, pod *corev1.Pod, nodeList *cor
 
 		for _, node := range nodeList.Items {
 			if _, ok := allowNodes[node.Name]; ok {
-				continue
+				allocatableNodes = append(allocatableNodes, node.Name)
 			}
-			denyNodes = append(denyNodes, node.Name)
 		}
 
-		return denyNodes, nil
+		return allocatableNodes, nil
 	case SpreadModeZone:
 		zoneDeployed := map[string]int{}
 		var minZone []string
@@ -496,12 +468,11 @@ func getUnallocatableNodes(ss *SchedulingSession, pod *corev1.Pod, nodeList *cor
 
 		for _, node := range nodeList.Items {
 			if _, ok := allowNodes[node.Name]; ok {
-				continue
+				allocatableNodes = append(allocatableNodes, node.Name)
 			}
-			denyNodes = append(denyNodes, node.Name)
 		}
 
-		return denyNodes, nil
+		return allocatableNodes, nil
 	case SpreadModeNode:
 		allowNodes := map[string]struct{}{}
 		minDeployed := math.MaxInt
@@ -529,14 +500,13 @@ func getUnallocatableNodes(ss *SchedulingSession, pod *corev1.Pod, nodeList *cor
 
 		for _, node := range nodeList.Items {
 			if _, ok := allowNodes[node.Name]; ok {
-				continue
+				allocatableNodes = append(allocatableNodes, node.Name)
 			}
-			denyNodes = append(denyNodes, node.Name)
 		}
 
 		// klog.V(1).InfoS("decide denyNodes", "denyNodes", denyNodes)
 
-		return denyNodes, nil
+		return allocatableNodes, nil
 	default:
 		return nil, fmt.Errorf("invalid SpreadMode :%v", ss.SpreadMode)
 	}
