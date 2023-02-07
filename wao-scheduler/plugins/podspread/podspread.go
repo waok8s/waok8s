@@ -156,6 +156,11 @@ func New(plArgs runtime.Object, _ framework.Handle) (framework.Plugin, error) {
 
 // PreFilter invoked at the prefilter extension point.
 func (pl *PodSpread) PreFilter(ctx context.Context, cycleState *framework.CycleState, pod *corev1.Pod) (*framework.PreFilterResult, *framework.Status) {
+	// PreFilter()でerrorを返すとpodが配置不可となるので特定のケースでフィルタをパスする
+	result := &framework.PreFilterResult{
+		NodeNames: nil,
+	}
+
 	// PodのReplicaSetを取得
 	replicaSetName := ""
 	for _, ref := range pod.OwnerReferences {
@@ -165,28 +170,33 @@ func (pl *PodSpread) PreFilter(ctx context.Context, cycleState *framework.CycleS
 	}
 	if replicaSetName == "" {
 		// no controller found
-		return nil, framework.NewStatus(framework.Error, ReasonNotControlledByReplicaSet)
+		klog.V(1).InfoS("error of PreFilter():", "ReasonNotControlledByReplicaSet", ReasonNotControlledByReplicaSet)
+		return result, nil
 	}
 	rs, err := pl.k8sClient.AppsV1().ReplicaSets(pod.Namespace).Get(ctx, replicaSetName, metav1.GetOptions{})
 	if err != nil {
-		return nil, framework.NewStatus(framework.Error, ReasonK8sClient+err.Error())
+		klog.V(1).InfoS("error of PreFilter():", "ReasonK8sClient", ReasonK8sClient+err.Error())
+		return result, nil
 	}
 
 	// PodListを取得
 	podList, err := pl.k8sClient.CoreV1().Pods(rs.Namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
-		return nil, framework.NewStatus(framework.Error, ReasonK8sClient+err.Error())
+		klog.V(1).InfoS("error of PreFilter():", "ReasonK8sClient", ReasonK8sClient+err.Error())
+		return result, nil
 	}
 
 	// NodeListを取得
 	nodeList, err := pl.k8sClient.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
 	if err != nil {
-		return nil, framework.NewStatus(framework.Error, ReasonK8sClient+err.Error())
+		klog.V(1).InfoS("error of PreFilter():", "ReasonK8sClient", ReasonK8sClient+err.Error())
+		return result, nil
 	}
 
 	// schedulingSessionの更新
 	if err := pl.updateSchedulingSession(ctx, rs, podList, nodeList); err != nil {
-		return nil, framework.NewStatus(framework.Error, ReasonSchedulingSession+err.Error())
+		klog.V(1).InfoS("error of PreFilter():", "ReasonSchedulingSession", ReasonSchedulingSession+err.Error())
+		return result, nil
 	}
 
 	// 配置できるノードをリストする
@@ -198,9 +208,7 @@ func (pl *PodSpread) PreFilter(ctx context.Context, cycleState *framework.CycleS
 	klog.V(1).InfoS("list allocatable node", "allocatableNodes", allocatableNodes)
 
 	nodenames := sets.NewString(allocatableNodes...)
-	result := &framework.PreFilterResult{
-		NodeNames: nodenames,
-	}
+	result.NodeNames = nodenames
 
 	return result, nil
 }
