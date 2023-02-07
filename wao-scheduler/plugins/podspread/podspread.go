@@ -170,7 +170,8 @@ func (pl *PodSpread) PreFilter(ctx context.Context, cycleState *framework.CycleS
 	}
 	if replicaSetName == "" {
 		// no controller found
-		return nil, framework.NewStatus(framework.Error, ReasonNotControlledByReplicaSet)
+		klog.V(1).InfoS("error of PreFilter():", "ReasonNotControlledByReplicaSet", ReasonNotControlledByReplicaSet)
+		return result, nil
 	}
 	rs, err := pl.k8sClient.AppsV1().ReplicaSets(pod.Namespace).Get(ctx, replicaSetName, metav1.GetOptions{})
 	if err != nil {
