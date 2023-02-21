@@ -2,6 +2,9 @@ apiVersion: kubescheduler.config.k8s.io/v1
 kind: KubeSchedulerConfiguration
 clientConnection:
   kubeconfig: "/etc/kubernetes/scheduler.conf"
+leaderElection:
+  # leaderElect causes CrashLoopBackOff in some environment
+  leaderElect: false
 profiles:
   - schedulerName: default-scheduler
     plugins:
