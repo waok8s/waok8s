@@ -29,6 +29,8 @@ type PodSpread struct {
 	rateAnnotation    string
 }
 
+var _ framework.PreFilterPlugin = &PodSpread{}
+
 type SchedulingSession struct {
 	TotalReplicas    int
 	Redunduncy       int
@@ -152,6 +154,11 @@ func New(plArgs runtime.Object, _ framework.Handle) (framework.Plugin, error) {
 	}
 
 	return pl, nil
+}
+
+// PreFilterExtensions do not exist for this plugin.
+func (pl *PodSpread) PreFilterExtensions() framework.PreFilterExtensions {
+	return nil
 }
 
 // PreFilter invoked at the prefilter extension point.

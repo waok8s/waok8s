@@ -5,7 +5,7 @@ clientConnection:
 profiles:
   - schedulerName: default-scheduler
     plugins:
-      filter:
+      preFilter:
         enabled:
           - name: PodSpread
     pluginConfig:
