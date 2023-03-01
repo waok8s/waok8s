@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: test-dep
+  labels:
+    app: sleep
+  annotations:
+    podspread/rate: "a"
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: sleep
+  template:
+    metadata:
+      labels:
+        app: sleep
+    spec:
+      containers:
+        - name: sleep
+          image: busybox:1.28
+          args:
+            - sleep
+            - "1000000"

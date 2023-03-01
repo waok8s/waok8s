@@ -13,6 +13,8 @@ jobs:
       - uses: actions/setup-go@v3
         with:
           go-version-file: go.mod
-      - name: "test: run test scripts"
+      - name: "test: unit tests"
         run: make test
+      - name: "test: integration tests"
+        run: ./test/reset-cluster.sh && ./test/run-tests.sh
       - uses: codecov/codecov-action@v3
