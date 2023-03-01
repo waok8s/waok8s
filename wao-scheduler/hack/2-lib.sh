@@ -50,3 +50,25 @@ function lib::start-docker {
     sudo sysctl fs.inotify.max_user_watches=524288 || true
     sudo sysctl fs.inotify.max_user_instances=512 || true
 }
+
+# Usage: lib::retry <max_attempts> <cmd>...
+# Example: lib::retry 5 ls foo
+#          lib::retry 5 timeout 3 curl 8.8.8.8
+# Ref.: https://stackoverflow.com/questions/12321469/retry-a-bash-command-with-timeout
+function lib::retry {
+    local -r -i max_attempts="$1"; shift
+    local -r cmd=$*
+    local -i attempt_num=1
+
+    until $cmd
+    do
+        if (( attempt_num == max_attempts ))
+        then
+            echo "attempt $attempt_num/$max_attempts failed, exit(1)"
+            return 1
+        else
+            echo "attempt $attempt_num/$max_attempts failed, trying again in $attempt_num seconds..."
+            sleep $(( attempt_num++ ))
+        fi
+    done
+}
