@@ -14,4 +14,4 @@ profiles:
     pluginConfig:
       - name: PodSpread
         args:
-          rateAnnotation: "podspread/rate"
+          rateAnnotation:
