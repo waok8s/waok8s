@@ -37,7 +37,7 @@ function load-scheduler {
 
     # reset the scheduler
     "$KUBECTL" delete pod "$SCHED_POD" -nkube-system
-    "$KUBECTL" wait pod "$SCHED_POD" -nkube-system --for condition=Ready --timeout=60s
+    "$KUBECTL" wait pod "$SCHED_POD" -nkube-system --for condition=Ready --timeout=120s
 }
 
 # Usage: run-test <cmd_file> <expected_stdout>
