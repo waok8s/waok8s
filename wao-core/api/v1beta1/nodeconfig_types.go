@@ -1,20 +1,44 @@
 package v1beta1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
-
 // NodeConfigSpec defines the desired state of NodeConfig
 type NodeConfigSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-
-	// Foo is an example field of NodeConfig. Edit nodeconfig_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	NodeName         string           `json:"nodeName"`
+	MetricsCollector MetricsCollector `json:"metricsCollector"`
+	Predictor        Predictor        `json:"predictor"`
 }
+
+type MetricsCollector struct {
+	InletTemp EndpointTerm `json:"inletTemp"`
+	DeltaP    EndpointTerm `json:"deltaP"`
+}
+
+type Predictor struct {
+	PowerConsumption EndpointTerm `json:"powerConsumption"`
+}
+
+type EndpointTerm struct {
+	// Type specifies the type of endpoint. This value means which client is used.
+	Type string `json:"type"`
+	// Endpoint specifies the endpoint URL. Behavior depends on the client specified by Type.
+	Endpoint string `json:"endpoint"`
+	// BasicAuthSecret specifies the name of the Secret in the same namespace used for basic auth. Some Types require this value.
+	// +optional
+	BasicAuthSecret *corev1.LocalObjectReference `json:"basicAuthSecret,omitempty"`
+	// FetchInterval specifies the data retrieval interval. Some Types require this value, and behavior depends on the client.
+	// +optional
+	FetchInterval *metav1.Duration `json:"fetchInterval,omitempty"`
+}
+
+const (
+	TypeRedfish  = "Redfish"
+	TypeDPAPI    = "DifferentialPressureAPI"
+	TypeMLServer = "MLServer"
+)
 
 // NodeConfigStatus defines the observed state of NodeConfig
 type NodeConfigStatus struct {
