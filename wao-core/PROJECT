@@ -7,4 +7,13 @@ layout:
 - go.kubebuilder.io/v4
 projectName: wao-nodeconfig
 repo: github.com/Nedopro2022/wao-nodeconfig
+resources:
+- api:
+    crdVersion: v1
+    namespaced: true
+  domain: bitmedia.co.jp
+  group: wao
+  kind: NodeConfig
+  path: github.com/Nedopro2022/wao-nodeconfig/api/v1beta1
+  version: v1beta1
 version: "3"

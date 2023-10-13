@@ -1,0 +1,12 @@
+apiVersion: wao.bitmedia.co.jp/v1beta1
+kind: NodeConfig
+metadata:
+  labels:
+    app.kubernetes.io/name: nodeconfig
+    app.kubernetes.io/instance: nodeconfig-sample
+    app.kubernetes.io/part-of: wao-nodeconfig
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: wao-nodeconfig
+  name: nodeconfig-sample
+spec:
+  # TODO(user): Add fields here
