@@ -1,0 +1,13 @@
+resources:
+- ns.yaml
+- apiservice-custommetrics.yaml
+# - apiservice-externalmetrics.yaml
+- sa.yaml
+# - sa-hpa.yaml
+- deploy.yaml
+- svc.yaml
+
+images:
+- name: wao-metrics-adapter
+  newName: ghcr.io/nedopro2022/wao-metrics-adapter
+  newTag: latest
