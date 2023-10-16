@@ -109,7 +109,7 @@ func (c *DifferentialPressureAPIClient) GetSensorValue(ctx context.Context, edit
 		}
 	}
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := c.client.Do(req)
 	if err != nil {
 		return v, fmt.Errorf("unable to send HTTP request: %w", err)
 	}
@@ -132,7 +132,6 @@ func (c *DifferentialPressureAPIClient) Fetch(ctx context.Context, editorFns ...
 	v, err := c.GetSensorValue(ctx, editorFns...)
 	if err != nil {
 		return 0.0, err
-	} else {
-		return v.Pressure, err
 	}
+	return v.Pressure, nil
 }

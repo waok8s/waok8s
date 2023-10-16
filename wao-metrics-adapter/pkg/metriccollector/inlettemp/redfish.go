@@ -3,8 +3,11 @@ package inlettemp
 import (
 	"context"
 	"crypto/tls"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/Nedopro2022/wao-metrics-adapter/pkg/metriccollector"
@@ -13,9 +16,9 @@ import (
 type ServerType string
 
 const (
-	TypeDelliDRAC      ServerType = "Dell-iDRAC"
-	TypeLenovoXClarity ServerType = "Lenovo-XClarity"
-	TypeSupermicroSSM  ServerType = "Supermicro-SSM"
+	TypeDelliDRAC      ServerType = "iDRAC"
+	TypeLenovoXClarity ServerType = "XClarity"
+	TypeSupermicroSSM  ServerType = "SSM"
 )
 
 type GetSensorValueFunc func(ctx context.Context, server string, client *http.Client, editorFns ...metriccollector.RequestEditorFn) (float64, error)
@@ -33,7 +36,41 @@ var (
 //   - URL: https://{SERVER}/redfish/v1/Chassis/System.Embedded.1/Sensors/SystemBoardInletTemp
 //   - Key: ["Reading"]
 func GetSensorValueForTypeDelliDRAC(ctx context.Context, server string, client *http.Client, editorFns ...metriccollector.RequestEditorFn) (float64, error) {
-	return 0.0, errors.New("not yet implemented") // TODO
+
+	type apiResponseForTypeDelliDRAC struct {
+		Reading float64 `json:"Reading"`
+		// ignore all other fields
+	}
+
+	u, err := url.JoinPath(server, "redfish/v1/Chassis/System.Embedded.1/Sensors/SystemBoardInletTemp")
+	if err != nil {
+		return 0.0, fmt.Errorf("could not build URL: %w", err)
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
+	if err != nil {
+		return 0.0, fmt.Errorf("unable to create HTTP request: %w", err)
+	}
+
+	for i, f := range editorFns {
+		if err := f(ctx, req); err != nil {
+			return 0.0, fmt.Errorf("editorFns[%d] got error: %w", i, err)
+		}
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return 0.0, fmt.Errorf("unable to send HTTP request: %w", err)
+	}
+	switch resp.StatusCode {
+	case http.StatusOK:
+		var apiResp apiResponseForTypeDelliDRAC
+		if err := json.NewDecoder(resp.Body).Decode(&apiResp); err != nil {
+			return 0.0, fmt.Errorf("could not decode resp: %w", err)
+		}
+		return apiResp.Reading, nil
+	default:
+		return 0.0, fmt.Errorf("HTTP status=%s", resp.Status)
+	}
 }
 
 // GetSensorValueForTypeLenovoXClarity returns inlet temp.
@@ -82,7 +119,7 @@ func (c *RedfishClient) Fetch(ctx context.Context, editorFns ...metriccollector.
 	fn, ok := GetSensorValueFn[c.serverType]
 	if !ok {
 		for st, fn := range GetSensorValueFn {
-			v, err := fn(ctx, c.address, c.client)
+			v, err := fn(ctx, c.address, c.client, editorFns...)
 			if err != nil {
 				time.Sleep(100 * time.Millisecond)
 				continue
@@ -92,6 +129,6 @@ func (c *RedfishClient) Fetch(ctx context.Context, editorFns ...metriccollector.
 		}
 		return 0.0, errors.New("all getSensorValueFn got error")
 	} else {
-		return fn(ctx, c.address, c.client)
+		return fn(ctx, c.address, c.client, editorFns...)
 	}
 }
