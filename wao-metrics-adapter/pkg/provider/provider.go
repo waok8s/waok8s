@@ -85,19 +85,23 @@ func fixedScale(r float64, precision int32) (n int64, scale int32) {
 }
 
 func metricValueMilli(objRef custom_metrics.ObjectReference, t time.Time, key string, value int64) *custom_metrics.MetricValue {
+	var window int64 = 0
 	return &custom_metrics.MetricValue{
 		DescribedObject: objRef,
 		Metric:          custom_metrics.MetricIdentifier{Name: key},
 		Timestamp:       metav1.Time{Time: t},
+		WindowSeconds:   &window,
 		Value:           *resource.NewMilliQuantity(value, resource.DecimalSI),
 	}
 }
 
 func metricValueScale(objRef custom_metrics.ObjectReference, t time.Time, key string, value int64, scale int32) *custom_metrics.MetricValue {
+	var window int64 = 0
 	return &custom_metrics.MetricValue{
 		DescribedObject: objRef,
 		Metric:          custom_metrics.MetricIdentifier{Name: key},
 		Timestamp:       metav1.Time{Time: t},
+		WindowSeconds:   &window,
 		Value:           *resource.NewScaledQuantity(value, resource.Scale(scale)),
 	}
 }
@@ -133,11 +137,11 @@ func (p *Provider) metricFor(namespace, name string, info provider.CustomMetricI
 	}
 }
 
-func (p *Provider) GetMetricByName(ctx context.Context, name types.NamespacedName, info provider.CustomMetricInfo, metricSelector labels.Selector) (*custom_metrics.MetricValue, error) {
+func (p *Provider) GetMetricByName(ctx context.Context, name types.NamespacedName, info provider.CustomMetricInfo, _ labels.Selector) (*custom_metrics.MetricValue, error) {
 	return p.metricFor(name.Namespace, name.Name, info)
 }
 
-func (p *Provider) GetMetricBySelector(ctx context.Context, namespace string, selector labels.Selector, info provider.CustomMetricInfo, metricSelector labels.Selector) (*custom_metrics.MetricValueList, error) {
+func (p *Provider) GetMetricBySelector(ctx context.Context, namespace string, selector labels.Selector, info provider.CustomMetricInfo, _ labels.Selector) (*custom_metrics.MetricValueList, error) {
 	names, err := helpers.ListObjectNames(p.mapper, p.client, namespace, selector, info)
 	if err != nil {
 		return nil, err
