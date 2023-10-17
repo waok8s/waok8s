@@ -97,12 +97,10 @@ func (c *DifferentialPressureAPIClient) GetSensorValue(ctx context.Context, edit
 	if err != nil {
 		return v, fmt.Errorf("unable to get endpoint URL: %w", err)
 	}
-
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return v, fmt.Errorf("unable to create HTTP request: %w", err)
 	}
-
 	for i, f := range editorFns {
 		if err := f(ctx, req); err != nil {
 			return v, fmt.Errorf("editorFns[%d] got error: %w", i, err)
