@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/Nedopro2022/wao-metrics-adapter/pkg/metric"
 	"github.com/Nedopro2022/wao-metrics-adapter/pkg/metriccollector"
 )
 
@@ -26,14 +27,15 @@ type DifferentialPressureAPIClient struct {
 	// E.g., "10.0.0.2"
 	nodeIP string
 
-	client *http.Client
+	client    *http.Client
+	editorFns []metriccollector.RequestEditorFn
 }
 
 var _ metriccollector.MetricCollector = (*DifferentialPressureAPIClient)(nil)
 
 // NewDifferentialPressureAPIClient inits the client.
 // At least one of sensorName, nodeName or nodeIP must be specified.
-func NewDifferentialPressureAPIClient(address string, sensorName, nodeName, nodeIP string, insecureSkipVerify bool, timeout time.Duration) *DifferentialPressureAPIClient {
+func NewDifferentialPressureAPIClient(address string, sensorName, nodeName, nodeIP string, insecureSkipVerify bool, timeout time.Duration, editorFns ...metriccollector.RequestEditorFn) *DifferentialPressureAPIClient {
 	return &DifferentialPressureAPIClient{
 		address:    address,
 		sensorName: sensorName,
@@ -43,6 +45,7 @@ func NewDifferentialPressureAPIClient(address string, sensorName, nodeName, node
 			Transport: &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: insecureSkipVerify}},
 			Timeout:   timeout,
 		},
+		editorFns: editorFns,
 	}
 }
 
@@ -90,7 +93,7 @@ type sensorValue struct {
 	Temperature float64 `json:"temperature"`
 }
 
-func (c *DifferentialPressureAPIClient) GetSensorValue(ctx context.Context, editorFns ...metriccollector.RequestEditorFn) (sensorValue, error) {
+func (c *DifferentialPressureAPIClient) GetSensorValue(ctx context.Context) (sensorValue, error) {
 	var v sensorValue
 
 	url, err := c.Endpoint()
@@ -101,7 +104,7 @@ func (c *DifferentialPressureAPIClient) GetSensorValue(ctx context.Context, edit
 	if err != nil {
 		return v, fmt.Errorf("unable to create HTTP request: %w", err)
 	}
-	for i, f := range editorFns {
+	for i, f := range c.editorFns {
 		if err := f(ctx, req); err != nil {
 			return v, fmt.Errorf("editorFns[%d] got error: %w", i, err)
 		}
@@ -126,10 +129,14 @@ func (c *DifferentialPressureAPIClient) GetSensorValue(ctx context.Context, edit
 	}
 }
 
-func (c *DifferentialPressureAPIClient) Fetch(ctx context.Context, editorFns ...metriccollector.RequestEditorFn) (float64, error) {
-	v, err := c.GetSensorValue(ctx, editorFns...)
+func (c *DifferentialPressureAPIClient) Fetch(ctx context.Context) (float64, error) {
+	v, err := c.GetSensorValue(ctx)
 	if err != nil {
 		return 0.0, err
 	}
 	return v.Pressure, nil
+}
+
+func (c *DifferentialPressureAPIClient) ValueType() metric.ValueType {
+	return metric.ValueDeltaPressure
 }

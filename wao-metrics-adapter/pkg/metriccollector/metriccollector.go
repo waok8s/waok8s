@@ -6,10 +6,13 @@ import (
 	"net/http"
 
 	"moul.io/http2curl/v2"
+
+	"github.com/Nedopro2022/wao-metrics-adapter/pkg/metric"
 )
 
 type MetricCollector interface {
-	Fetch(ctx context.Context, editorFns ...RequestEditorFn) (value float64, err error)
+	ValueType() metric.ValueType
+	Fetch(ctx context.Context) (value float64, err error)
 }
 
 type RequestEditorFn func(ctx context.Context, req *http.Request) error
@@ -35,7 +38,9 @@ func WithCurlLogger(w io.Writer) RequestEditorFn {
 
 func WithBasicAuth(username, password string) RequestEditorFn {
 	return func(_ context.Context, req *http.Request) error {
-		req.SetBasicAuth(username, password)
+		if username != "" && password != "" {
+			req.SetBasicAuth(username, password)
+		}
 		return nil
 	}
 }

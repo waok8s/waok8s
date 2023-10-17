@@ -7,14 +7,16 @@ import (
 	"sigs.k8s.io/custom-metrics-apiserver/pkg/provider"
 )
 
+type ValueType string
+
 const (
 	ValueInletTemperature = "inlet_temp"
 	ValueDeltaPressure    = "delta_p"
 )
 
 type Metric struct {
-	AmbientTemp  float64
-	AirflowDelta float64
+	InletTemp     float64
+	DeltaPressure float64
 }
 
 type storeKey string
@@ -39,20 +41,18 @@ func StoreKeyForNode(name string) storeKey {
 	return storeKey(fmt.Sprintf("/nodes/%s", name))
 }
 
-type Store struct{ sync.Map }
-
-func NewStore() *Store { return &Store{} }
+type Store struct{ m sync.Map }
 
 // Get returns a Metric for the given storeKey or inits it if not found.
 // Thread-safe.
 func (s *Store) Get(k storeKey) Metric {
-	if _, ok := s.Load(k); !ok {
+	if _, ok := s.m.Load(k); !ok {
 		s.Set(k, Metric{})
 	}
-	v, _ := s.Load(k)
+	v, _ := s.m.Load(k)
 	vv, _ := v.(Metric)
 	return vv
 }
 
 // Set sets a Metric. Thread-safe.
-func (s *Store) Set(k storeKey, m Metric) { s.Store(k, m) }
+func (s *Store) Set(k storeKey, m Metric) { s.m.Store(k, m) }

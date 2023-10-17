@@ -115,9 +115,6 @@ func (p *Provider) metricFor(namespace, name string, info provider.CustomMetricI
 	}
 	k := metric.StoreKey(namespace, name, info)
 	m := p.metricStore.Get(k)
-	m.AirflowDelta += 0.1
-	m.AmbientTemp += 1.5
-	p.metricStore.Set(k, m)
 
 	// construct objref
 	objRef, err := helpers.ReferenceFor(p.mapper, types.NamespacedName{Namespace: namespace, Name: name}, info)
@@ -127,10 +124,10 @@ func (p *Provider) metricFor(namespace, name string, info provider.CustomMetricI
 
 	switch info.Metric {
 	case metric.ValueInletTemperature:
-		v, s := fixedScale(m.AmbientTemp, 6)
+		v, s := fixedScale(m.InletTemp, 6)
 		return metricValueScale(objRef, time.Now(), info.Metric, v, s), nil
 	case metric.ValueDeltaPressure:
-		v, s := fixedScale(m.AirflowDelta, 6)
+		v, s := fixedScale(m.DeltaPressure, 6)
 		return metricValueScale(objRef, time.Now(), info.Metric, v, s), nil
 	default:
 		return nil, fmt.Errorf("metric not supported: name=%s", info.Metric)

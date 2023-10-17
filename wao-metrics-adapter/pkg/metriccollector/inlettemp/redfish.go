@@ -12,12 +12,15 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Nedopro2022/wao-metrics-adapter/pkg/metric"
 	"github.com/Nedopro2022/wao-metrics-adapter/pkg/metriccollector"
 )
 
 type ServerType string
 
 const (
+	TypeAutoDetect ServerType = ""
+
 	TypeDelliDRAC      ServerType = "iDRAC"
 	TypeLenovoXClarity ServerType = "XClarity"
 	TypeSupermicroSSM  ServerType = "SSM"
@@ -182,14 +185,15 @@ type RedfishClient struct {
 	// serverType contains server type.
 	serverType ServerType
 
-	client *http.Client
+	client    *http.Client
+	editorFns []metriccollector.RequestEditorFn
 }
 
 var _ metriccollector.MetricCollector = (*RedfishClient)(nil)
 
 // NewRedfishClient inits the client.
 // If serverType is not specified, the client will try all known endpoints.
-func NewRedfishClient(address string, serverType ServerType, insecureSkipVerify bool, timeout time.Duration) *RedfishClient {
+func NewRedfishClient(address string, serverType ServerType, insecureSkipVerify bool, timeout time.Duration, editorFns ...metriccollector.RequestEditorFn) *RedfishClient {
 	return &RedfishClient{
 		address:    address,
 		serverType: serverType,
@@ -197,10 +201,11 @@ func NewRedfishClient(address string, serverType ServerType, insecureSkipVerify 
 			Transport: &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: insecureSkipVerify}},
 			Timeout:   timeout,
 		},
+		editorFns: editorFns,
 	}
 }
 
-func (c *RedfishClient) Fetch(ctx context.Context, editorFns ...metriccollector.RequestEditorFn) (float64, error) {
+func (c *RedfishClient) Fetch(ctx context.Context) (float64, error) {
 	fn, ok := GetSensorValueFn[c.serverType]
 	if !ok {
 		type result struct {
@@ -217,7 +222,7 @@ func (c *RedfishClient) Fetch(ctx context.Context, editorFns ...metriccollector.
 			go func() {
 				time.Sleep(time.Duration(rand.Intn(500)) * time.Millisecond)
 
-				v, err := fn(ctx, c.address, c.client, editorFns...)
+				v, err := fn(ctx, c.address, c.client, c.editorFns...)
 				if err != nil {
 					errCh <- err
 				} else {
@@ -243,6 +248,10 @@ func (c *RedfishClient) Fetch(ctx context.Context, editorFns ...metriccollector.
 			return 0.0, err
 		}
 	} else {
-		return fn(ctx, c.address, c.client, editorFns...)
+		return fn(ctx, c.address, c.client, c.editorFns...)
 	}
+}
+
+func (c *RedfishClient) ValueType() metric.ValueType {
+	return metric.ValueInletTemperature
 }

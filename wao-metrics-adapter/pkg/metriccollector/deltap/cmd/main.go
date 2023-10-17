@@ -34,8 +34,6 @@ func main() {
 	flag.StringVar(&basicAuth, "basicAuth", "", "Basic auth in username@password format")
 	flag.Parse()
 
-	c := deltap.NewDifferentialPressureAPIClient(address, sensorName, nodeName, nodeIP, true, 2*time.Second)
-
 	requestEditorFns := []metriccollector.RequestEditorFn{}
 	ss := strings.Split(basicAuth, ":")
 	if len(ss) == 2 {
@@ -43,7 +41,9 @@ func main() {
 	}
 	requestEditorFns = append(requestEditorFns, metriccollector.WithCurlLogger(&curlWriter{W: log.Writer()}))
 
-	v, err := c.Fetch(context.TODO(), requestEditorFns...)
+	c := deltap.NewDifferentialPressureAPIClient(address, sensorName, nodeName, nodeIP, true, 2*time.Second, requestEditorFns...)
+
+	v, err := c.Fetch(context.TODO())
 	if err != nil {
 		log.Fatal(err)
 	}
