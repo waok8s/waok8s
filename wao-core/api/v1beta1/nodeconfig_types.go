@@ -35,6 +35,7 @@ type EndpointTerm struct {
 }
 
 const (
+	TypeFake     = "Fake"
 	TypeRedfish  = "Redfish"
 	TypeDPAPI    = "DifferentialPressureAPI"
 	TypeMLServer = "MLServer"
