@@ -6,8 +6,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math/rand"
 	"net/http"
 	"net/url"
+	"sync"
 	"time"
 
 	"github.com/Nedopro2022/wao-metrics-adapter/pkg/metriccollector"
@@ -201,16 +203,45 @@ func NewRedfishClient(address string, serverType ServerType, insecureSkipVerify 
 func (c *RedfishClient) Fetch(ctx context.Context, editorFns ...metriccollector.RequestEditorFn) (float64, error) {
 	fn, ok := GetSensorValueFn[c.serverType]
 	if !ok {
-		for st, fn := range GetSensorValueFn {
-			v, err := fn(ctx, c.address, c.client, editorFns...)
-			if err != nil {
-				time.Sleep(100 * time.Millisecond)
-				continue
-			}
-			c.serverType = st
-			return v, nil
+		type result struct {
+			ServerType  ServerType
+			MetricValue float64
 		}
-		return 0.0, errors.New("all getSensorValueFn got error")
+		resultCh := make(chan result, len(GetSensorValueFn))
+		errCh := make(chan error, len(GetSensorValueFn))
+		wg := &sync.WaitGroup{}
+		for st, fn := range GetSensorValueFn {
+			st := st
+			fn := fn
+			wg.Add(1)
+			go func() {
+				time.Sleep(time.Duration(rand.Intn(500)) * time.Millisecond)
+
+				v, err := fn(ctx, c.address, c.client, editorFns...)
+				if err != nil {
+					errCh <- err
+				} else {
+					resultCh <- result{ServerType: st, MetricValue: v}
+				}
+
+				wg.Done()
+			}()
+		}
+		wg.Wait()
+		close(resultCh)
+		close(errCh)
+
+		if len(resultCh) > 0 {
+			r := <-resultCh
+			c.serverType = r.ServerType
+			return r.MetricValue, nil
+		} else {
+			err := errors.New("all GetSensorValueFuncs got error")
+			for e := range errCh {
+				err = errors.Join(err, e)
+			}
+			return 0.0, err
+		}
 	} else {
 		return fn(ctx, c.address, c.client, editorFns...)
 	}
