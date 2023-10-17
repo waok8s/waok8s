@@ -75,7 +75,9 @@ func (r *NodeConfigReconciler) reconcileNodeConfigDeletion(ctx context.Context, 
 	lg := log.FromContext(ctx)
 	lg.Info("reconcileNodeConfigDeletion")
 
-	r.CollectorRegistry.Unregister(RegistryKey(objKey))
+	for _, vt := range metric.ValueTypes {
+		r.CollectorRegistry.Unregister(RegistryKey(objKey, vt))
+	}
 }
 
 type curlLogWriter struct {
@@ -102,6 +104,16 @@ func (r *NodeConfigReconciler) reconcileNodeConfig(ctx context.Context, objKey t
 
 	inletTempConfig := nc.Spec.MetricsCollector.InletTemp
 	switch inletTempConfig.Type {
+	case waov1beta1.TypeFake:
+		fetchTimeout := time.Second
+		respondDelay := 100 * time.Millisecond
+		c := &metriccollector.FakeClient{
+			Type:  metric.ValueInletTemperature,
+			Value: 15.5,
+			Error: nil,
+			Delay: respondDelay,
+		}
+		r.CollectorRegistry.Register(RegistryKey(objKey, metric.ValueInletTemperature), c, r.MetricStore, nc.Spec.NodeName, inletTempConfig.FetchInterval.Duration, fetchTimeout)
 	case waov1beta1.TypeRedfish:
 		serverType := inlettemp.TypeAutoDetect
 		insecureSkipVerify := true
@@ -114,13 +126,23 @@ func (r *NodeConfigReconciler) reconcileNodeConfig(ctx context.Context, objKey t
 			metriccollector.WithCurlLogger(&curlLogWriter{Logger: lg, Msg: "fetch inletTemp"}),
 		}
 		c := inlettemp.NewRedfishClient(inletTempConfig.Endpoint, serverType, insecureSkipVerify, requestTimeout, requestEditorFns...)
-		r.CollectorRegistry.Register(RegistryKey(objKey), c, r.MetricStore, nc.Spec.NodeName, inletTempConfig.FetchInterval.Duration, fetchTimeout)
+		r.CollectorRegistry.Register(RegistryKey(objKey, metric.ValueInletTemperature), c, r.MetricStore, nc.Spec.NodeName, inletTempConfig.FetchInterval.Duration, fetchTimeout)
 	default:
 		return fmt.Errorf("unsupported metricsCollector.inletTemp.type: %s", inletTempConfig.Type)
 	}
 
 	deltapConfig := nc.Spec.MetricsCollector.DeltaP
 	switch deltapConfig.Type {
+	case waov1beta1.TypeFake:
+		fetchTimeout := time.Second
+		respondDelay := 100 * time.Millisecond
+		c := &metriccollector.FakeClient{
+			Type:  metric.ValueDeltaPressure,
+			Value: 7.5,
+			Error: nil,
+			Delay: respondDelay,
+		}
+		r.CollectorRegistry.Register(RegistryKey(objKey, metric.ValueDeltaPressure), c, r.MetricStore, nc.Spec.NodeName, inletTempConfig.FetchInterval.Duration, fetchTimeout)
 	case waov1beta1.TypeDPAPI:
 		insecureSkipVerify := true
 		fetchTimeout := 3 * time.Second
@@ -132,7 +154,7 @@ func (r *NodeConfigReconciler) reconcileNodeConfig(ctx context.Context, objKey t
 			metriccollector.WithCurlLogger(&curlLogWriter{Logger: lg, Msg: "fetch deltaP"}),
 		}
 		c := deltap.NewDifferentialPressureAPIClient(deltapConfig.Endpoint, "", nc.Spec.NodeName, "", insecureSkipVerify, requestTimeout, requestEditorFns...)
-		r.CollectorRegistry.Register(RegistryKey(objKey), c, r.MetricStore, nc.Spec.NodeName, inletTempConfig.FetchInterval.Duration, fetchTimeout)
+		r.CollectorRegistry.Register(RegistryKey(objKey, metric.ValueDeltaPressure), c, r.MetricStore, nc.Spec.NodeName, inletTempConfig.FetchInterval.Duration, fetchTimeout)
 	default:
 		return fmt.Errorf("unsupported metricsCollector.deltaP.type: %s", deltapConfig.Type)
 	}

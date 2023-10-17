@@ -2,6 +2,7 @@ package collector
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
 
@@ -63,7 +64,9 @@ func (r *metricCollectorRunner) Stop() { close(r.stopCh) }
 
 type registryKey string
 
-func RegistryKey(objKey types.NamespacedName) registryKey { return registryKey(objKey.String()) }
+func RegistryKey(objKey types.NamespacedName, valueType metric.ValueType) registryKey {
+	return registryKey(fmt.Sprintf("%s#%s", objKey, valueType))
+}
 
 type Registry struct{ m sync.Map }
 

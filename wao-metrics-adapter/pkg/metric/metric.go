@@ -14,6 +14,11 @@ const (
 	ValueDeltaPressure    = "delta_p"
 )
 
+var ValueTypes = []ValueType{
+	ValueInletTemperature,
+	ValueDeltaPressure,
+}
+
 type Metric struct {
 	InletTemp     float64
 	DeltaPressure float64
