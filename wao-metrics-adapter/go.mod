@@ -3,7 +3,9 @@ module github.com/Nedopro2022/wao-metrics-adapter
 go 1.21.1
 
 require (
-	github.com/Nedopro2022/wao-nodeconfig v0.0.0-20231013091306-9a41e45af5d9
+	github.com/Nedopro2022/wao-nodeconfig v0.0.0-20231017084604-e8a87f181629
+	github.com/go-logr/logr v1.2.4
+	k8s.io/api v0.27.3
 	k8s.io/apimachinery v0.27.3
 	k8s.io/client-go v0.27.3
 	k8s.io/component-base v0.27.3
@@ -30,8 +32,8 @@ require (
 	github.com/evanphx/json-patch/v5 v5.7.0 // indirect
 	github.com/felixge/httpsnoop v1.0.3 // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
-	github.com/go-logr/logr v1.2.4 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
+	github.com/go-logr/zapr v1.2.4 // indirect
 	github.com/go-openapi/jsonpointer v0.20.0 // indirect
 	github.com/go-openapi/jsonreference v0.20.2 // indirect
 	github.com/go-openapi/swag v0.22.4 // indirect
@@ -98,7 +100,6 @@ require (
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/api v0.27.3 // indirect
 	k8s.io/apiextensions-apiserver v0.27.3 // indirect
 	k8s.io/apiserver v0.27.3 // indirect
 	k8s.io/kms v0.27.3 // indirect
