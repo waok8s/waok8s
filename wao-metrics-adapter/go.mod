@@ -3,11 +3,13 @@ module github.com/Nedopro2022/wao-metrics-adapter
 go 1.21.1
 
 require (
+	github.com/Nedopro2022/wao-nodeconfig v0.0.0-20231013091306-9a41e45af5d9
 	k8s.io/apimachinery v0.27.3
 	k8s.io/client-go v0.27.3
 	k8s.io/component-base v0.27.3
 	k8s.io/klog/v2 v2.100.1
 	k8s.io/metrics v0.27.3
+	moul.io/http2curl/v2 v2.3.0
 	sigs.k8s.io/controller-runtime v0.15.2
 	sigs.k8s.io/custom-metrics-apiserver v1.27.0
 )
