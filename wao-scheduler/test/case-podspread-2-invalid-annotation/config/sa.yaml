@@ -1,0 +1,156 @@
+# https://kubernetes.io/docs/tasks/extend-kubernetes/configure-multiple-schedulers
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: wao-scheduler
+  namespace: kube-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: wao-scheduler-as-kube-scheduler
+subjects:
+- kind: ServiceAccount
+  name: wao-scheduler
+  namespace: kube-system
+roleRef:
+  kind: ClusterRole
+  name: system:kube-scheduler
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: wao-scheduler-as-volume-scheduler
+subjects:
+- kind: ServiceAccount
+  name: wao-scheduler
+  namespace: kube-system
+roleRef:
+  kind: ClusterRole
+  name: system:volume-scheduler
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: wao-scheduler-extension-apiserver-authentication-reader
+  namespace: kube-system
+roleRef:
+  kind: Role
+  name: extension-apiserver-authentication-reader
+  apiGroup: rbac.authorization.k8s.io
+subjects:
+- kind: ServiceAccount
+  name: wao-scheduler
+  namespace: kube-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: metrics-reader
+rules:
+  - apiGroups: ["metrics.k8s.io"]
+    resources: [pods, nodes]
+    verbs: [get, list, watch]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: wao-scheduler-as-metrics-reader
+subjects:
+- kind: ServiceAccount
+  name: wao-scheduler
+  namespace: kube-system
+roleRef:
+  kind: ClusterRole
+  name: metrics-reader
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: custom-metrics-server-resources
+rules:
+- apiGroups:
+  - custom.metrics.k8s.io
+  resources: ["*"]
+  verbs: ["*"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: wao-scheduler-as-custom-metrics-server-resources
+subjects:
+- kind: ServiceAccount
+  name: wao-scheduler
+  namespace: kube-system
+roleRef:
+  kind: ClusterRole
+  name: custom-metrics-server-resources
+  apiGroup: rbac.authorization.k8s.io
+---
+# permissions for end users to view nodeconfigs.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: clusterrole
+    app.kubernetes.io/instance: nodeconfig-viewer-role
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: wao-nodeconfig
+    app.kubernetes.io/part-of: wao-nodeconfig
+    app.kubernetes.io/managed-by: kustomize
+  name: nodeconfig-viewer-role
+rules:
+- apiGroups:
+  - wao.bitmedia.co.jp
+  resources:
+  - nodeconfigs
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - wao.bitmedia.co.jp
+  resources:
+  - nodeconfigs/status
+  verbs:
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: wao-scheduler-as-nodeconfig-viewer-role
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: nodeconfig-viewer-role
+subjects:
+- kind: ServiceAccount
+  name: wao-scheduler
+  namespace: kube-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: secret-reader
+  namespace: wao-system
+rules:
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: wao-scheduler-as-secret-reader
+  namespace: wao-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: secret-reader
+subjects:
+- kind: ServiceAccount
+  name: wao-scheduler
+  namespace: kube-system

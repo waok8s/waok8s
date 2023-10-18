@@ -1,2 +1,0 @@
-# any system-Pods not ready?
-kubectl get pods -n kube-system --field-selector=status.phase!=Running | wc -l
