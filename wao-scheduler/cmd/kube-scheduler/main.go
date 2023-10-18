@@ -6,7 +6,7 @@ import (
 	"k8s.io/component-base/logs"
 	"k8s.io/kubernetes/cmd/kube-scheduler/app"
 
-	"github.com/waok8s/wao-scheduler-v2/plugins/podspread"
+	"github.com/waok8s/wao-scheduler/plugins/podspread"
 )
 
 func main() {

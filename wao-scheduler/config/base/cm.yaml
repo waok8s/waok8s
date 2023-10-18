@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: wao-scheduler-config
+  namespace: kube-system
+data:
+  scheduler-config.yaml: |
+    apiVersion: kubescheduler.config.k8s.io/v1
+    kind: KubeSchedulerConfiguration
+    leaderElection:
+      leaderElect: false
+    profiles:
+      - schedulerName: wao-scheduler
+        plugins:
+          multiPoint:
+            enabled:
+            - name: MinimizePower
+            - name: PodSpread
+        pluginConfig:
+          - name: PodSpread
+            args:
+              rateAnnotation: "wao.bitmedia.co.jp/podspread-rate"
