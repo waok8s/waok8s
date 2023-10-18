@@ -18,24 +18,6 @@ import (
 	"k8s.io/utils/pointer"
 )
 
-type PodSpread struct {
-	mu                sync.Mutex
-	schedulingSession map[string]*SchedulingSession
-	clientset         kubernetes.Interface
-}
-
-var _ framework.PreFilterPlugin = &PodSpread{}
-
-type SchedulingSession struct {
-	TotalReplicas    int
-	Redunduncy       int
-	DeployedNodes    map[string]int
-	TotalDeployed    int
-	SpreadMode       SpreadMode
-	SpreadInfoRegion SpreadInfo
-	SpreadInfoZone   SpreadInfo
-}
-
 // SpreadInfo holds area info.
 //
 //	area1:           # nodes has "area1" label (zone or region)
@@ -82,6 +64,23 @@ const (
 	SpreadModeNode   SpreadMode = "SpreadModeNode"
 )
 
+type SchedulingSession struct {
+	TotalReplicas int
+	Redunduncy    int
+	DeployedNodes map[string]int
+	TotalDeployed int
+	SpreadMode    SpreadMode
+	SpreadInfo    SpreadInfo
+}
+
+type PodSpread struct {
+	mu                sync.Mutex
+	schedulingSession map[string]*SchedulingSession
+	clientset         kubernetes.Interface
+}
+
+var _ framework.PreFilterPlugin = &PodSpread{}
+
 var (
 	Name = "PodSpread"
 
@@ -102,20 +101,15 @@ const (
 )
 
 // New initializes a new plugin and returns it.
-func New(plArgs runtime.Object, fh framework.Handle) (framework.Plugin, error) {
-	// initialize the plugin
-	pl := &PodSpread{
+func New(_ runtime.Object, fh framework.Handle) (framework.Plugin, error) {
+	return &PodSpread{
 		schedulingSession: map[string]*SchedulingSession{},
 		clientset:         fh.ClientSet(),
-	}
-
-	return pl, nil
+	}, nil
 }
 
 // PreFilterExtensions do not exist for this plugin.
-func (pl *PodSpread) PreFilterExtensions() framework.PreFilterExtensions {
-	return nil
-}
+func (pl *PodSpread) PreFilterExtensions() framework.PreFilterExtensions { return nil }
 
 // PreFilter invoked at the prefilter extension point.
 func (pl *PodSpread) PreFilter(ctx context.Context, cycleState *framework.CycleState, pod *corev1.Pod) (*framework.PreFilterResult, *framework.Status) {
@@ -178,6 +172,7 @@ func (pl *PodSpread) PreFilter(ctx context.Context, cycleState *framework.CycleS
 
 const (
 	// https://kubernetes.io/docs/reference/labels-annotations-taints/
+
 	labelZone         = "topology.kubernetes.io/zone"
 	labelRegion       = "topology.kubernetes.io/region"
 	labelControlPlane = "node-role.kubernetes.io/control-plane"
@@ -265,8 +260,14 @@ func (pl *PodSpread) updateSchedulingSession(ctx context.Context, rs *appsv1.Rep
 	// SpreadModeを更新する
 	mode, regions, zones := getSpreadMode(nodeList)
 	ss.SpreadMode = mode
-	ss.SpreadInfoRegion = regions
-	ss.SpreadInfoZone = zones
+	switch mode {
+	case SpreadModeRegion:
+		ss.SpreadInfo = regions
+	case SpreadModeZone:
+		ss.SpreadInfo = zones
+	default:
+		ss.SpreadInfo = SpreadInfo{}
+	}
 
 	return nil
 }
@@ -344,10 +345,10 @@ func getAllocatableNodes(ss *SchedulingSession, pod *corev1.Pod, nodeList *corev
 
 		// 各regionの総配置数取得
 		// cp1つしかないregionは配置対象外
-		for region := range ss.SpreadInfoRegion {
+		for region := range ss.SpreadInfo {
 			deployed := 0
-			for node, cp := range ss.SpreadInfoRegion[region] {
-				if cp && len(ss.SpreadInfoRegion[region]) == 1 {
+			for node, cp := range ss.SpreadInfo[region] {
+				if cp && len(ss.SpreadInfo[region]) == 1 {
 					skip = true
 				}
 				deployed += ss.DeployedNodes[node]
@@ -376,7 +377,7 @@ func getAllocatableNodes(ss *SchedulingSession, pod *corev1.Pod, nodeList *corev
 		allowNodes := map[string]struct{}{}
 
 		for _, region := range minRegion {
-			for node, cp := range ss.SpreadInfoRegion[region] {
+			for node, cp := range ss.SpreadInfo[region] {
 				if cp && !isControlPlaneSchedulable {
 					continue
 				}
@@ -391,16 +392,17 @@ func getAllocatableNodes(ss *SchedulingSession, pod *corev1.Pod, nodeList *corev
 		}
 
 		return allocatableNodes, nil
+
 	case SpreadModeZone:
 		zoneDeployed := map[string]int{}
 		var minZone []string
 		skip := false
 
 		// 各zoneの総配置数取得
-		for zone := range ss.SpreadInfoZone {
+		for zone := range ss.SpreadInfo {
 			deployed := 0
-			for node, cp := range ss.SpreadInfoZone[zone] {
-				if cp && len(ss.SpreadInfoZone[zone]) == 1 {
+			for node, cp := range ss.SpreadInfo[zone] {
+				if cp && len(ss.SpreadInfo[zone]) == 1 {
 					skip = true
 				}
 				deployed += ss.DeployedNodes[node]
@@ -429,7 +431,7 @@ func getAllocatableNodes(ss *SchedulingSession, pod *corev1.Pod, nodeList *corev
 		allowNodes := map[string]struct{}{}
 
 		for _, zone := range minZone {
-			for node, cp := range ss.SpreadInfoZone[zone] {
+			for node, cp := range ss.SpreadInfo[zone] {
 				if cp && !isControlPlaneSchedulable {
 					continue
 				}
@@ -444,6 +446,7 @@ func getAllocatableNodes(ss *SchedulingSession, pod *corev1.Pod, nodeList *corev
 		}
 
 		return allocatableNodes, nil
+
 	case SpreadModeNode:
 		allowNodes := map[string]struct{}{}
 		minDeployed := math.MaxInt
@@ -478,6 +481,7 @@ func getAllocatableNodes(ss *SchedulingSession, pod *corev1.Pod, nodeList *corev
 		// klog.V(1).InfoS("decide denyNodes", "denyNodes", denyNodes)
 
 		return allocatableNodes, nil
+
 	default:
 		return nil, fmt.Errorf("invalid SpreadMode :%v", ss.SpreadMode)
 	}
