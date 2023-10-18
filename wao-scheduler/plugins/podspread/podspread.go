@@ -2,8 +2,6 @@ package podspread
 
 import (
 	"context"
-	"encoding/json"
-	"errors"
 	"fmt"
 	"math"
 	"strconv"
@@ -15,8 +13,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/kubernetes"
-
-	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/klog/v2"
 	framework "k8s.io/kubernetes/pkg/scheduler/framework"
 	"k8s.io/utils/pointer"
@@ -25,8 +21,7 @@ import (
 type PodSpread struct {
 	mu                sync.Mutex
 	schedulingSession map[string]*SchedulingSession
-	k8sClient         *kubernetes.Clientset
-	rateAnnotation    string
+	clientset         kubernetes.Interface
 }
 
 var _ framework.PreFilterPlugin = &PodSpread{}
@@ -103,54 +98,15 @@ func (*PodSpread) Name() string {
 }
 
 const (
-	DefaultAnnotationPodSpreadRate = "podspread/rate"
+	AnnotationPodSpreadRate = "wao.bitmedia.co.jp/podspread-rate"
 )
 
 // New initializes a new plugin and returns it.
-func New(plArgs runtime.Object, _ framework.Handle) (framework.Plugin, error) {
-	// parse args
-	// See: https://github.com/kubernetes/enhancements/blob/master/keps/sig-scheduling/624-scheduling-framework/README.md#optional-args
-	if plArgs == nil {
-		return nil, errors.New("cannot find PodSpread plugin config")
-	}
-	args, ok := plArgs.(*runtime.Unknown)
-	if !ok {
-		return nil, errors.New("cannot cast plArgs to *runtime.Unknown")
-	}
-	if args.ContentType != "application/json" {
-		return nil, fmt.Errorf("cannot parse content type: %v", args.ContentType)
-	}
-	var conf struct {
-		RateAnnotation string `json:"rateAnnotation"`
-	}
-	var rateannotation string
-	err := json.Unmarshal(args.Raw, &conf)
-	if err != nil {
-		klog.V(1).InfoS("could not parse args and use default annotation name", "DefaultAnnotationPodSpreadRate", DefaultAnnotationPodSpreadRate)
-		rateannotation = DefaultAnnotationPodSpreadRate
-	} else {
-		rateannotation = conf.RateAnnotation
-	}
-
-	// initialize a K8s client
-	klog.V(1).InfoS("initializing client-go")
-	// NOTE: kube-scheduler does not have in cluster config
-	// config, err := rest.InClusterConfig()
-	config, err := clientcmd.BuildConfigFromFlags("", "/etc/kubernetes/scheduler.conf")
-	if err != nil {
-		return nil, err
-	}
-	clientset, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		return nil, err
-	}
-	klog.V(1).InfoS("initialized client-go")
-
+func New(plArgs runtime.Object, fh framework.Handle) (framework.Plugin, error) {
 	// initialize the plugin
 	pl := &PodSpread{
 		schedulingSession: map[string]*SchedulingSession{},
-		k8sClient:         clientset,
-		rateAnnotation:    rateannotation,
+		clientset:         fh.ClientSet(),
 	}
 
 	return pl, nil
@@ -180,21 +136,21 @@ func (pl *PodSpread) PreFilter(ctx context.Context, cycleState *framework.CycleS
 		klog.V(1).InfoS("error of PreFilter():", "ReasonNotControlledByReplicaSet", ReasonNotControlledByReplicaSet)
 		return result, nil
 	}
-	rs, err := pl.k8sClient.AppsV1().ReplicaSets(pod.Namespace).Get(ctx, replicaSetName, metav1.GetOptions{})
+	rs, err := pl.clientset.AppsV1().ReplicaSets(pod.Namespace).Get(ctx, replicaSetName, metav1.GetOptions{})
 	if err != nil {
 		klog.V(1).InfoS("error of PreFilter():", "ReasonK8sClient", ReasonK8sClient+err.Error())
 		return result, nil
 	}
 
 	// PodListを取得
-	podList, err := pl.k8sClient.CoreV1().Pods(rs.Namespace).List(ctx, metav1.ListOptions{})
+	podList, err := pl.clientset.CoreV1().Pods(rs.Namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		klog.V(1).InfoS("error of PreFilter():", "ReasonK8sClient", ReasonK8sClient+err.Error())
 		return result, nil
 	}
 
 	// NodeListを取得
-	nodeList, err := pl.k8sClient.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
+	nodeList, err := pl.clientset.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
 	if err != nil {
 		klog.V(1).InfoS("error of PreFilter():", "ReasonK8sClient", ReasonK8sClient+err.Error())
 		return result, nil
@@ -273,16 +229,16 @@ func (pl *PodSpread) updateSchedulingSession(ctx context.Context, rs *appsv1.Rep
 	// スケジュール対象Podが所属するReplicaSetのschedulingSessionがなければ初期化
 	if _, ok := pl.schedulingSession[rs.Name]; !ok {
 		totalReplicas := int(pointer.Int32Deref(rs.Spec.Replicas, 0))
-		podspreadRate, ok := rs.Annotations[pl.rateAnnotation]
+		podspreadRate, ok := rs.Annotations[AnnotationPodSpreadRate]
 		if !ok {
-			return fmt.Errorf("ReplicaSet %s does not have annotation %s", rs.Name, pl.rateAnnotation)
+			return fmt.Errorf("ReplicaSet %s does not have annotation %s", rs.Name, AnnotationPodSpreadRate)
 		}
 		rate, err := strconv.ParseFloat(podspreadRate, 64)
 		if err != nil {
-			return fmt.Errorf("parse annotation %s got error: %w", pl.rateAnnotation, err)
+			return fmt.Errorf("parse annotation %s got error: %w", AnnotationPodSpreadRate, err)
 		}
 		if !(0 <= rate && rate <= 1) {
-			return fmt.Errorf("annotation %s is inavalid value", pl.rateAnnotation)
+			return fmt.Errorf("annotation %s is inavalid value", AnnotationPodSpreadRate)
 		}
 		redunduncy := int(float64(totalReplicas) * rate)
 

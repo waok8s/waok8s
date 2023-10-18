@@ -16,7 +16,3 @@ data:
             enabled:
             - name: MinimizePower
             - name: PodSpread
-        pluginConfig:
-          - name: PodSpread
-            args:
-              rateAnnotation: "wao.bitmedia.co.jp/podspread-rate"
