@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # scripts must be run from project root
-. hack/1-bin.sh || exit 1
+. hack/2-lib.sh || exit 1
 
 # consts
 KIND_CLUSTER_NAME=$PROJECT_NAME
@@ -15,7 +15,7 @@ IMAGE=$IMAGE_REGISTRY/$IMAGE_NAME:$VERSION
 
 # main
 
-make build-image IMAGE_REGISTRY=$IMAGE_REGISTRY IMAGE_NAME=$IMAGE_NAME VERSION="$VERSION"
+make image IMAGE_REGISTRY=$IMAGE_REGISTRY IMAGE_NAME=$IMAGE_NAME VERSION="$VERSION"
 
 lib::deploy-scheduler config/base "$IMAGE" "$KIND_CLUSTER_NAME"
 
