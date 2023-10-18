@@ -1,12 +1,22 @@
 apiVersion: wao.bitmedia.co.jp/v1beta1
 kind: NodeConfig
 metadata:
-  labels:
-    app.kubernetes.io/name: nodeconfig
-    app.kubernetes.io/instance: nodeconfig-sample
-    app.kubernetes.io/part-of: wao-nodeconfig
-    app.kubernetes.io/managed-by: kustomize
-    app.kubernetes.io/created-by: wao-nodeconfig
   name: nodeconfig-sample
+  namespace: wao-system
 spec:
-  # TODO(user): Add fields here
+  nodeName: worker-0
+  metricsCollector:
+    inletTemp:
+      type: Redfish
+      endpoint: "https://10.0.0.1"
+      basicAuthSecret:
+        name: "worker-0-redfish-basicauth"
+      fetchInterval: 10s
+    deltaP:
+      type: DifferentialPressureAPI
+      endpoint: "http://10.0.0.1:5000"
+      fetchInterval: 10s
+  predictor:
+    powerConsumption:
+      type: V2InferenceProtocol
+      endpoint: "http://10.0.0.1:8080/v2/models/myModel/versions/v0.1.0/infer"

@@ -35,10 +35,10 @@ type EndpointTerm struct {
 }
 
 const (
-	TypeFake     = "Fake"
-	TypeRedfish  = "Redfish"
-	TypeDPAPI    = "DifferentialPressureAPI"
-	TypeMLServer = "MLServer"
+	TypeFake                = "Fake"
+	TypeRedfish             = "Redfish"
+	TypeDPAPI               = "DifferentialPressureAPI"
+	TypeV2InferenceProtocol = "V2InferenceProtocol"
 )
 
 // NodeConfigStatus defines the observed state of NodeConfig
