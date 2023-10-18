@@ -1,4 +1,6 @@
 resources:
+- nodeconfig/crd.yaml
+- nodeconfig/nodeconfig_editor_role.yaml
 - ns.yaml
 - apiservice-custommetrics.yaml
 # - apiservice-externalmetrics.yaml

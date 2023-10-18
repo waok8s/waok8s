@@ -33,6 +33,12 @@ func init() {
 	utilruntime.Must(waov1beta1.AddToScheme(Scheme))
 }
 
+// NOTE: This project does not use kubebuilder, so this is just a note.
+//+kubebuilder:rbac:groups=wao.bitmedia.co.jp,resources=nodeconfigs,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=wao.bitmedia.co.jp,resources=nodeconfigs/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=wao.bitmedia.co.jp,resources=nodeconfigs/finalizers,verbs=update
+//+kubebuilder:rbac:groups=core,namespace=wao-system,resources=secrets,verbs=get
+
 // NodeConfigReconciler reconciles a NodeConfig object
 type NodeConfigReconciler struct {
 	client.Client
@@ -90,11 +96,19 @@ func (w *curlLogWriter) Write(p []byte) (n int, err error) {
 	return len(p), nil
 }
 
-func (r *NodeConfigReconciler) getBasicAuthFromSecret(ctx context.Context, ref *corev1.LocalObjectReference) (username, password string) {
+func (r *NodeConfigReconciler) getBasicAuthFromSecret(ctx context.Context, namespace string, ref *corev1.LocalObjectReference) (username, password string) {
 	if ref == nil || ref.Name == "" {
 		return
 	}
-	// TODO
+	secret := &corev1.Secret{}
+	if err := r.Client.Get(context.TODO(), client.ObjectKey{Namespace: namespace, Name: ref.Name}, secret); err != nil {
+		// TODO: log
+		return "", ""
+	}
+
+	username = string(secret.Data["username"])
+	password = string(secret.Data["password"])
+
 	return
 }
 
@@ -119,7 +133,7 @@ func (r *NodeConfigReconciler) reconcileNodeConfig(ctx context.Context, objKey t
 		insecureSkipVerify := true
 		fetchTimeout := 3 * time.Second
 		requestTimeout := fetchTimeout - 1*time.Second
-		username, password := r.getBasicAuthFromSecret(ctx, inletTempConfig.BasicAuthSecret)
+		username, password := r.getBasicAuthFromSecret(ctx, objKey.Namespace, inletTempConfig.BasicAuthSecret)
 
 		requestEditorFns := []metriccollector.RequestEditorFn{
 			metriccollector.WithBasicAuth(username, password),
@@ -147,7 +161,7 @@ func (r *NodeConfigReconciler) reconcileNodeConfig(ctx context.Context, objKey t
 		insecureSkipVerify := true
 		fetchTimeout := 3 * time.Second
 		requestTimeout := fetchTimeout - 1*time.Second
-		username, password := r.getBasicAuthFromSecret(ctx, inletTempConfig.BasicAuthSecret)
+		username, password := r.getBasicAuthFromSecret(ctx, objKey.Namespace, inletTempConfig.BasicAuthSecret)
 
 		requestEditorFns := []metriccollector.RequestEditorFn{
 			metriccollector.WithBasicAuth(username, password),

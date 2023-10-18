@@ -17,6 +17,7 @@ type FakeClient struct {
 var _ MetricCollector = (*FakeClient)(nil)
 
 func (c *FakeClient) Fetch(ctx context.Context) (float64, error) {
+	// TODO: log
 	<-time.After(c.Delay)
 	if c.Error != nil {
 		return 0.0, c.Error
