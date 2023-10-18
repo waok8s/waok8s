@@ -1,3 +1,4 @@
+# NodeConfigReconciler only reads secrets in this namespace
 apiVersion: v1
 kind: Namespace
 metadata:
