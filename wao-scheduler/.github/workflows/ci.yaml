@@ -1,9 +1,9 @@
 name: CI
 on:
   push:
-    branches: [main]
+    branches: [main, release-*]
   pull_request:
-    branches: [main]
+    branches: [main, release-*]
 jobs:
   test:
     name: Test
@@ -18,5 +18,5 @@ jobs:
       - name: "test: unit tests"
         run: make test
       - name: "test: integration tests"
-        run: ./test/reset-cluster.sh && ./test/run-tests.sh
+        run: ./test/reset-test-cluster.sh && ./test/run-tests.sh
       - uses: codecov/codecov-action@v3

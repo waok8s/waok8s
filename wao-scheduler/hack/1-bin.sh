@@ -7,10 +7,12 @@
 
 test -s "$KIND" || GOBIN="$LOCALBIN" go install sigs.k8s.io/kind@"$KIND_VERSION"
 test -s "$KUBECTL" || (mkdir -p "$KUBECTL_DIR" ; curl -L https://dl.k8s.io/release/"$KUBECTL_VERSION"/bin/linux/amd64/kubectl > "$KUBECTL" ; chmod +x "$KUBECTL")
+test -s "$DOCKER" || (echo "[ERROR] command not found: docker" && exit 1)
 
-echo -e "= version info ="
+echo -e "= version info =\n"
 
 "$KIND" version
-"$KUBECTL" version --client
+"$KUBECTL" version -oyaml
+"$DOCKER" version
 
 echo -e "================\n"

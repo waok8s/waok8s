@@ -9,7 +9,7 @@ KIND_IMAGE=${KIND_IMAGE:-"kindest/node:v1.27.3@sha256:3966ac761ae0136263ffdb6cfd
 
 # main
 
-cluster=$PROJECT_NAME
+cluster=$PROJECT_NAME-test
 
 lib::start-docker
 

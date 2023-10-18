@@ -4,8 +4,6 @@ metadata:
   name: test-dep
   labels:
     app: sleep
-  annotations:
-    wao.bitmedia.co.jp/podspread-rate: "0.6"
 spec:
   replicas: 3
   selector:
@@ -16,6 +14,7 @@ spec:
       labels:
         app: sleep
     spec:
+      schedulerName: wao-scheduler
       containers:
         - name: sleep
           image: busybox:1.28

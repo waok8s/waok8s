@@ -1,21 +1,19 @@
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
-  name: test-dep
-  labels:
-    app: sleep
-  annotations:
-    wao.bitmedia.co.jp/podspread-rate: "0.6"
+  name: test-sts
 spec:
   replicas: 3
   selector:
     matchLabels:
-      app: sleep
+      app: test-sts
+  serviceName: test-sts
   template:
     metadata:
       labels:
-        app: sleep
+        app: test-sts
     spec:
+      schedulerName: wao-scheduler
       containers:
         - name: sleep
           image: busybox:1.28

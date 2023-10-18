@@ -16,6 +16,7 @@ spec:
       labels:
         app: sleep
     spec:
+      schedulerName: wao-scheduler
       containers:
         - name: sleep
           image: busybox:1.28

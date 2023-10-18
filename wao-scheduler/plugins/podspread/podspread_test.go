@@ -118,15 +118,15 @@ var (
 			Namespace: testNS,
 		},
 		Spec: appsv1.ReplicaSetSpec{
-			Replicas: pointer.Int32Ptr(10),
+			Replicas: pointer.Int32(10),
 		},
 	}
 	ownedByRS1 = metav1.OwnerReference{
 		APIVersion:         testRS1.APIVersion,
 		Kind:               testRS1.Kind,
 		Name:               testRS1.Name,
-		Controller:         pointer.BoolPtr(true),
-		BlockOwnerDeletion: pointer.BoolPtr(true),
+		Controller:         pointer.Bool(true),
+		BlockOwnerDeletion: pointer.Bool(true),
 	}
 	testPod1 = &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
@@ -443,7 +443,7 @@ func Test_getAllocatableNodes(t *testing.T) {
 				},
 				TotalDeployed: 3,
 				SpreadMode:    SpreadModeRegion,
-				SpreadInfoRegion: SpreadInfo{
+				SpreadInfo: SpreadInfo{
 					"r0": map[string]bool{
 						"n00": true, "n01": false,
 					},
@@ -451,7 +451,6 @@ func Test_getAllocatableNodes(t *testing.T) {
 						"n10": false, "n11": false,
 					},
 				},
-				SpreadInfoZone: SpreadInfo{},
 			},
 			pod: testPod1,
 			nodeList: &corev1.NodeList{Items: []corev1.Node{
@@ -472,7 +471,7 @@ func Test_getAllocatableNodes(t *testing.T) {
 				},
 				TotalDeployed: 3,
 				SpreadMode:    SpreadModeRegion,
-				SpreadInfoRegion: SpreadInfo{
+				SpreadInfo: SpreadInfo{
 					"r0": map[string]bool{
 						"n00": true, "n01": false,
 					},
@@ -483,7 +482,6 @@ func Test_getAllocatableNodes(t *testing.T) {
 						"n20": false, "n21": false,
 					},
 				},
-				SpreadInfoZone: SpreadInfo{},
 			},
 			pod: testPod1,
 			nodeList: &corev1.NodeList{Items: []corev1.Node{
@@ -502,10 +500,9 @@ func Test_getAllocatableNodes(t *testing.T) {
 					"n11": 1,
 					"n12": 0,
 				},
-				TotalDeployed:    5,
-				SpreadMode:       SpreadModeZone,
-				SpreadInfoRegion: SpreadInfo{},
-				SpreadInfoZone: SpreadInfo{
+				TotalDeployed: 5,
+				SpreadMode:    SpreadModeZone,
+				SpreadInfo: SpreadInfo{
 					"z0": map[string]bool{
 						"n00": true, "n01": false, "n02": false,
 					},
@@ -529,10 +526,9 @@ func Test_getAllocatableNodes(t *testing.T) {
 					"n02": 1,
 					"n03": 1,
 				},
-				TotalDeployed:    4,
-				SpreadMode:       SpreadModeNode,
-				SpreadInfoRegion: SpreadInfo{},
-				SpreadInfoZone:   SpreadInfo{},
+				TotalDeployed: 4,
+				SpreadMode:    SpreadModeNode,
+				SpreadInfo:    SpreadInfo{},
 			},
 			pod: testPod1,
 			nodeList: &corev1.NodeList{Items: []corev1.Node{
@@ -549,10 +545,9 @@ func Test_getAllocatableNodes(t *testing.T) {
 					"n02": 2,
 					"n03": 1,
 				},
-				TotalDeployed:    5,
-				SpreadMode:       SpreadModeNode,
-				SpreadInfoRegion: SpreadInfo{},
-				SpreadInfoZone:   SpreadInfo{},
+				TotalDeployed: 5,
+				SpreadMode:    SpreadModeNode,
+				SpreadInfo:    SpreadInfo{},
 			},
 			pod: testPod1,
 			nodeList: &corev1.NodeList{Items: []corev1.Node{
@@ -569,10 +564,9 @@ func Test_getAllocatableNodes(t *testing.T) {
 					"n02": 2,
 					"n03": 2,
 				},
-				TotalDeployed:    6,
-				SpreadMode:       SpreadModeNode,
-				SpreadInfoRegion: SpreadInfo{},
-				SpreadInfoZone:   SpreadInfo{},
+				TotalDeployed: 6,
+				SpreadMode:    SpreadModeNode,
+				SpreadInfo:    SpreadInfo{},
 			},
 			pod: testPod1,
 			nodeList: &corev1.NodeList{Items: []corev1.Node{
