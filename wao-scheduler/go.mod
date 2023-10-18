@@ -1,6 +1,6 @@
-module github.com/Nedopro2022/wao-scheduler-v2
+module github.com/waok8s/wao-scheduler-v2
 
-go 1.19
+go 1.21.3
 
 require (
 	k8s.io/api v0.25.4
