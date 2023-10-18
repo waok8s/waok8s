@@ -11,9 +11,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	basecmd "sigs.k8s.io/custom-metrics-apiserver/pkg/cmd"
 
-	waocollector "github.com/Nedopro2022/wao-metrics-adapter/pkg/collector"
-	waometric "github.com/Nedopro2022/wao-metrics-adapter/pkg/metric"
-	waoprovider "github.com/Nedopro2022/wao-metrics-adapter/pkg/provider"
+	waocollector "github.com/waok8s/wao-metrics-adapter/pkg/collector"
+	waometric "github.com/waok8s/wao-metrics-adapter/pkg/metric"
+	waoprovider "github.com/waok8s/wao-metrics-adapter/pkg/provider"
 )
 
 type Adapter struct {

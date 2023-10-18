@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/Nedopro2022/wao-metrics-adapter/pkg/metric"
+	"github.com/waok8s/wao-metrics-adapter/pkg/metric"
 )
 
 type FakeClient struct {

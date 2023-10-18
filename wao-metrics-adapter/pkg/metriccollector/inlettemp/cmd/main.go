@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Nedopro2022/wao-metrics-adapter/pkg/metriccollector"
-	"github.com/Nedopro2022/wao-metrics-adapter/pkg/metriccollector/inlettemp"
+	"github.com/waok8s/wao-metrics-adapter/pkg/metriccollector"
+	"github.com/waok8s/wao-metrics-adapter/pkg/metriccollector/inlettemp"
 )
 
 type curlWriter struct {

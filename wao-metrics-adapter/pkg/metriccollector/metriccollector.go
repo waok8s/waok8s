@@ -7,7 +7,7 @@ import (
 
 	"moul.io/http2curl/v2"
 
-	"github.com/Nedopro2022/wao-metrics-adapter/pkg/metric"
+	"github.com/waok8s/wao-metrics-adapter/pkg/metric"
 )
 
 type MetricCollector interface {

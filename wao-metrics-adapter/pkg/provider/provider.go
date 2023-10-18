@@ -18,7 +18,7 @@ import (
 	"sigs.k8s.io/custom-metrics-apiserver/pkg/provider/defaults"
 	"sigs.k8s.io/custom-metrics-apiserver/pkg/provider/helpers"
 
-	"github.com/Nedopro2022/wao-metrics-adapter/pkg/metric"
+	"github.com/waok8s/wao-metrics-adapter/pkg/metric"
 )
 
 type Provider struct {

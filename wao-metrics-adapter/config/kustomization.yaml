@@ -11,5 +11,5 @@ resources:
 
 images:
 - name: wao-metrics-adapter
-  newName: ghcr.io/nedopro2022/wao-metrics-adapter
+  newName: ghcr.io/waok8s/wao-metrics-adapter
   newTag: latest

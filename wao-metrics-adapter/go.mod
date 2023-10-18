@@ -1,10 +1,10 @@
-module github.com/Nedopro2022/wao-metrics-adapter
+module github.com/waok8s/wao-metrics-adapter
 
 go 1.21.1
 
 require (
-	github.com/Nedopro2022/wao-nodeconfig v0.0.0-20231017084604-e8a87f181629
 	github.com/go-logr/logr v1.2.4
+	github.com/waok8s/wao-nodeconfig v0.0.0-20231018072704-173870a97d5c
 	k8s.io/api v0.27.3
 	k8s.io/apimachinery v0.27.3
 	k8s.io/client-go v0.27.3

@@ -8,8 +8,8 @@ import (
 
 	"k8s.io/apimachinery/pkg/types"
 
-	"github.com/Nedopro2022/wao-metrics-adapter/pkg/metric"
-	"github.com/Nedopro2022/wao-metrics-adapter/pkg/metriccollector"
+	"github.com/waok8s/wao-metrics-adapter/pkg/metric"
+	"github.com/waok8s/wao-metrics-adapter/pkg/metriccollector"
 )
 
 type metricCollectorRunner struct {

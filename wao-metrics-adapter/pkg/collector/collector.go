@@ -16,12 +16,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	waov1beta1 "github.com/Nedopro2022/wao-nodeconfig/api/v1beta1"
+	waov1beta1 "github.com/waok8s/wao-nodeconfig/api/v1beta1"
 
-	"github.com/Nedopro2022/wao-metrics-adapter/pkg/metric"
-	"github.com/Nedopro2022/wao-metrics-adapter/pkg/metriccollector"
-	"github.com/Nedopro2022/wao-metrics-adapter/pkg/metriccollector/deltap"
-	"github.com/Nedopro2022/wao-metrics-adapter/pkg/metriccollector/inlettemp"
+	"github.com/waok8s/wao-metrics-adapter/pkg/metric"
+	"github.com/waok8s/wao-metrics-adapter/pkg/metriccollector"
+	"github.com/waok8s/wao-metrics-adapter/pkg/metriccollector/deltap"
+	"github.com/waok8s/wao-metrics-adapter/pkg/metriccollector/inlettemp"
 )
 
 var (
