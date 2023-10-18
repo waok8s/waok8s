@@ -1,4 +1,4 @@
-module github.com/Nedopro2022/wao-nodeconfig
+module github.com/waok8s/wao-nodeconfig
 
 go 1.20
 
