@@ -1,20 +1,32 @@
-BIN_NAME=kube-scheduler
 VERSION?=$(shell git describe --tags --match "v*")
+GO_BUILD_ARGS=-trimpath -ldflags "-s -w -X main.version=$(VERSION)"
 IMAGE_REGISTRY=localhost
-IMAGE_NAME=wao-scheduler-v2
+IMAGE_NAME=wao-scheduler
 
 -include .env
 
+.PHONY: all
 all: test build-bin build-image
 
-push-image:
-	docker push $(IMAGE_REGISTRY)/$(IMAGE_NAME):$(VERSION)
+.PHONY: gen
+gen:
+	go generate ./...
 
-build-image:
+.PHONY: test
+test: gen
+	go test -v -race -coverprofile=cover.out ./...
+
+.PHONY: image
+image: gen
 	docker build -f ./Dockerfile -t $(IMAGE_REGISTRY)/$(IMAGE_NAME):$(VERSION) .
 
-build-bin:
-	go build -trimpath -ldflags "-s -w -X k8s.io/component-base/version.gitVersion=$(VERSION)" -o bin/$(BIN_NAME) cmd/$(BIN_NAME)/main.go
+.PHONY: push
+push:
+	docker push $(IMAGE_REGISTRY)/$(IMAGE_NAME):$(VERSION)
 
-test:
-	go test -race -coverprofile=cover.out ./...
+.PHONY: build
+build: gen kube-scheduler
+
+.PHONY: kube-scheduler
+kube-scheduler:
+	go build $(GO_BUILD_ARGS) -o bin/kube-scheduler cmd/kube-scheduler/main.go
