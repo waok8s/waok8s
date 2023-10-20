@@ -14,5 +14,5 @@ data:
         plugins:
           multiPoint:
             enabled:
-            # - name: MinimizePower
+            - name: MinimizePower
             - name: PodSpread

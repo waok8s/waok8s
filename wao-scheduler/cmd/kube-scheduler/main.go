@@ -6,11 +6,13 @@ import (
 	"k8s.io/component-base/logs"
 	"k8s.io/kubernetes/cmd/kube-scheduler/app"
 
-	"github.com/waok8s/wao-scheduler/plugins/podspread"
+	"github.com/waok8s/wao-scheduler/pkg/plugins/minimizepower"
+	"github.com/waok8s/wao-scheduler/pkg/plugins/podspread"
 )
 
 func main() {
 	command := app.NewSchedulerCommand(
+		app.WithPlugin(minimizepower.Name, minimizepower.New),
 		app.WithPlugin(podspread.Name, podspread.New),
 	)
 

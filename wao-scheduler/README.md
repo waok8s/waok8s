@@ -17,9 +17,9 @@ A kube-scheduler with MinimizePower plugin and PodSpread plugin to schedule pods
 
 ### Components
 
-- `plugins/minimizepower`: MinimizePower plugin.
-- `plugins/podspread`: PodSpread plugin.
-
+- `pkg/plugins/minimizepower`: MinimizePower plugin.
+- `pkg/plugins/podspread`: PodSpread plugin.
+- `pkg/predictor`: Predictor clients.
 
 ## Usage
 
