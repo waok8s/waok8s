@@ -426,10 +426,9 @@ func Test_getAllocatableNodes(t *testing.T) {
 		nodeList *corev1.NodeList
 	}
 	tests := []struct {
-		name    string
-		args    args
-		want    []string
-		wantErr bool
+		name string
+		args args
+		want []string
 	}{
 		{"0zone/2region/01-11", args{
 			ss: &SchedulingSession{
@@ -456,7 +455,7 @@ func Test_getAllocatableNodes(t *testing.T) {
 			nodeList: &corev1.NodeList{Items: []corev1.Node{
 				newNode("n00", "", "r0", true), newNode("n01", "", "r0", false), newNode("n10", "", "r1", false), newNode("n11", "", "r1", false),
 			}},
-		}, []string{"n01"}, false},
+		}, []string{"n01"}},
 		{"0zone/3region/01-01-01", args{
 			ss: &SchedulingSession{
 				TotalReplicas: 10,
@@ -487,7 +486,7 @@ func Test_getAllocatableNodes(t *testing.T) {
 			nodeList: &corev1.NodeList{Items: []corev1.Node{
 				newNode("n00", "", "r0", true), newNode("n01", "", "r0", false), newNode("n10", "", "r1", false), newNode("n11", "", "r1", false), newNode("n20", "", "r2", false), newNode("n21", "", "r2", false),
 			}},
-		}, []string{"n01", "n10", "n11", "n20", "n21"}, false},
+		}, []string{"n01", "n10", "n11", "n20", "n21"}},
 		{"2zone/0region/012-110", args{
 			ss: &SchedulingSession{
 				TotalReplicas: 10,
@@ -515,7 +514,7 @@ func Test_getAllocatableNodes(t *testing.T) {
 			nodeList: &corev1.NodeList{Items: []corev1.Node{
 				newNode("n00", "z0", "", true), newNode("n01", "z0", "", false), newNode("n02", "z0", "", false), newNode("n10", "z1", "", false), newNode("n11", "z1", "", false), newNode("n12", "z1", "", false),
 			}},
-		}, []string{"n10", "n11", "n12"}, false},
+		}, []string{"n10", "n11", "n12"}},
 		{"node_0211", args{
 			ss: &SchedulingSession{
 				TotalReplicas: 10,
@@ -534,7 +533,7 @@ func Test_getAllocatableNodes(t *testing.T) {
 			nodeList: &corev1.NodeList{Items: []corev1.Node{
 				newNode("n00", "", "", true), newNode("n01", "", "", false), newNode("n02", "", "", false), newNode("n03", "", "", false),
 			}},
-		}, []string{"n02", "n03"}, false},
+		}, []string{"n02", "n03"}},
 		{"node_0221", args{
 			ss: &SchedulingSession{
 				TotalReplicas: 10,
@@ -553,7 +552,7 @@ func Test_getAllocatableNodes(t *testing.T) {
 			nodeList: &corev1.NodeList{Items: []corev1.Node{
 				newNode("n00", "", "", true), newNode("n01", "", "", false), newNode("n02", "", "", false), newNode("n03", "", "", false),
 			}},
-		}, []string{"n03"}, false},
+		}, []string{"n03"}},
 		{"node_0222", args{
 			ss: &SchedulingSession{
 				TotalReplicas: 10,
@@ -572,15 +571,11 @@ func Test_getAllocatableNodes(t *testing.T) {
 			nodeList: &corev1.NodeList{Items: []corev1.Node{
 				newNode("n00", "", "", true), newNode("n01", "", "", false), newNode("n02", "", "", false), newNode("n03", "", "", false),
 			}},
-		}, []string{"n00", "n01", "n02", "n03"}, false},
+		}, []string{"n00", "n01", "n02", "n03"}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := getAllocatableNodes(tt.args.ss, tt.args.pod, tt.args.nodeList)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("getAllocatableNodes() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
+			got := getAllocatableNodes(tt.args.ss, tt.args.pod, tt.args.nodeList)
 			gotM := map[string]struct{}{}
 			for _, v := range got {
 				gotM[v] = struct{}{}

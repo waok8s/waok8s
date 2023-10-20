@@ -86,15 +86,12 @@ var (
 
 	ReasonEmptyNodeName             = "node not found"
 	ReasonNotControlledByReplicaSet = "the pod is not controlled by any ReplicaSet"
-	ReasonK8sClient                 = "skip this plugin as k8sClient got error: "
-	ReasonShouldBeSpread            = "pod allocation should be spread"
-	ReasonSchedulingSession         = "skip this plugin as wrong SchedulingSession status: "
+	ReasonK8sClient                 = "skip this plugin as k8s client got error"
+	ReasonSchedulingSession         = "skip this plugin as wrong SchedulingSession status"
 )
 
 // Name returns name of the plugin. It is used in logs, etc.
-func (*PodSpread) Name() string {
-	return Name
-}
+func (*PodSpread) Name() string { return Name }
 
 const (
 	AnnotationPodSpreadRate = "wao.bitmedia.co.jp/podspread-rate"
@@ -127,42 +124,38 @@ func (pl *PodSpread) PreFilter(ctx context.Context, cycleState *framework.CycleS
 	}
 	if replicaSetName == "" {
 		// no controller found
-		klog.V(1).InfoS("error of PreFilter():", "ReasonNotControlledByReplicaSet", ReasonNotControlledByReplicaSet)
+		klog.InfoS("PodSpread.PreFilter skipped", "reason", ReasonNotControlledByReplicaSet)
 		return result, nil
 	}
 	rs, err := pl.clientset.AppsV1().ReplicaSets(pod.Namespace).Get(ctx, replicaSetName, metav1.GetOptions{})
 	if err != nil {
-		klog.V(1).InfoS("error of PreFilter():", "ReasonK8sClient", ReasonK8sClient+err.Error())
+		klog.ErrorS(err, "PodSpread.PreFilter skipped", "reason", ReasonK8sClient)
 		return result, nil
 	}
 
 	// PodListを取得
 	podList, err := pl.clientset.CoreV1().Pods(rs.Namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
-		klog.V(1).InfoS("error of PreFilter():", "ReasonK8sClient", ReasonK8sClient+err.Error())
+		klog.ErrorS(err, "PodSpread.PreFilter skipped", "reason", ReasonK8sClient)
 		return result, nil
 	}
 
 	// NodeListを取得
 	nodeList, err := pl.clientset.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
 	if err != nil {
-		klog.V(1).InfoS("error of PreFilter():", "ReasonK8sClient", ReasonK8sClient+err.Error())
+		klog.ErrorS(err, "PodSpread.PreFilter skipped", "reason", ReasonK8sClient)
 		return result, nil
 	}
 
 	// schedulingSessionの更新
 	if err := pl.updateSchedulingSession(ctx, rs, podList, nodeList); err != nil {
-		klog.V(1).InfoS("error of PreFilter():", "ReasonSchedulingSession", ReasonSchedulingSession+err.Error())
+		klog.ErrorS(err, "PodSpread.PreFilter skipped", "reason", ReasonSchedulingSession)
 		return result, nil
 	}
 
 	// 配置できるノードをリストする
-	allocatableNodes, err := getAllocatableNodes(pl.schedulingSession[rs.Name], pod, nodeList)
-	if err != nil {
-		return nil, framework.NewStatus(framework.UnschedulableAndUnresolvable, ReasonShouldBeSpread)
-	}
-
-	klog.V(1).InfoS("list allocatable node", "allocatableNodes", allocatableNodes)
+	allocatableNodes := getAllocatableNodes(pl.schedulingSession[rs.Name], pod, nodeList)
+	klog.InfoS("list allocatable node", "allocatableNodes", allocatableNodes)
 
 	nodenames := sets.NewString(allocatableNodes...)
 	result.NodeNames = nodenames
@@ -233,7 +226,7 @@ func (pl *PodSpread) updateSchedulingSession(ctx context.Context, rs *appsv1.Rep
 			return fmt.Errorf("parse annotation %s got error: %w", AnnotationPodSpreadRate, err)
 		}
 		if !(0 <= rate && rate <= 1) {
-			return fmt.Errorf("annotation %s is inavalid value", AnnotationPodSpreadRate)
+			return fmt.Errorf("annotation %s has inavalid value", AnnotationPodSpreadRate)
 		}
 		redunduncy := int(float64(totalReplicas) * rate)
 
@@ -246,7 +239,7 @@ func (pl *PodSpread) updateSchedulingSession(ctx context.Context, rs *appsv1.Rep
 	// schedulingSessionを更新する
 	ss := pl.schedulingSession[rs.Name]
 
-	klog.V(1).InfoS("get scheduling session", "ss", ss)
+	klog.InfoS("get scheduling session", "ss", ss)
 
 	// DeployedInfoを更新する
 	ss.DeployedNodes = map[string]int{}
@@ -290,7 +283,7 @@ func (ss *SchedulingSession) setDeployNodes(rs *appsv1.ReplicaSet, podList *core
 	}
 }
 
-func getAllocatableNodes(ss *SchedulingSession, pod *corev1.Pod, nodeList *corev1.NodeList) ([]string, error) {
+func getAllocatableNodes(ss *SchedulingSession, pod *corev1.Pod, nodeList *corev1.NodeList) []string {
 
 	isControlPlane := func(name string) bool {
 		for _, n := range nodeList.Items {
@@ -309,13 +302,13 @@ func getAllocatableNodes(ss *SchedulingSession, pod *corev1.Pod, nodeList *corev
 	// 十分に冗長配置されたので、どのノードにも配置できます
 	if ss.TotalDeployed >= ss.Redunduncy {
 
-		klog.V(1).InfoS("Reduduncy is enough")
+		klog.InfoS("Reduduncy is enough")
 
 		for _, node := range nodeList.Items {
 			allocatableNodes = append(allocatableNodes, node.Name)
 		}
 
-		return allocatableNodes, nil
+		return allocatableNodes
 	}
 
 	// Podをマスターノードに配置するための設定
@@ -391,7 +384,7 @@ func getAllocatableNodes(ss *SchedulingSession, pod *corev1.Pod, nodeList *corev
 			}
 		}
 
-		return allocatableNodes, nil
+		return allocatableNodes
 
 	case SpreadModeZone:
 		zoneDeployed := map[string]int{}
@@ -445,9 +438,9 @@ func getAllocatableNodes(ss *SchedulingSession, pod *corev1.Pod, nodeList *corev
 			}
 		}
 
-		return allocatableNodes, nil
+		return allocatableNodes
 
-	case SpreadModeNode:
+	default: // SpreadModeNode
 		allowNodes := map[string]struct{}{}
 		minDeployed := math.MaxInt
 
@@ -455,7 +448,7 @@ func getAllocatableNodes(ss *SchedulingSession, pod *corev1.Pod, nodeList *corev
 			if isControlPlane(node) && !isControlPlaneSchedulable {
 				continue
 			}
-			// klog.V(1).InfoS("make node map", "node", node, "deployed", deployed)
+			// klog.InfoS("make node map", "node", node, "deployed", deployed)
 			if deployed < minDeployed {
 				minDeployed = deployed
 			}
@@ -470,7 +463,7 @@ func getAllocatableNodes(ss *SchedulingSession, pod *corev1.Pod, nodeList *corev
 			}
 		}
 
-		// klog.V(1).InfoS("decide allowNodes", "allowNodes", allowNodes)
+		// klog.InfoS("decide allowNodes", "allowNodes", allowNodes)
 
 		for _, node := range nodeList.Items {
 			if _, ok := allowNodes[node.Name]; ok {
@@ -478,11 +471,8 @@ func getAllocatableNodes(ss *SchedulingSession, pod *corev1.Pod, nodeList *corev
 			}
 		}
 
-		// klog.V(1).InfoS("decide denyNodes", "denyNodes", denyNodes)
+		// klog.InfoS("decide denyNodes", "denyNodes", denyNodes)
 
-		return allocatableNodes, nil
-
-	default:
-		return nil, fmt.Errorf("invalid SpreadMode :%v", ss.SpreadMode)
+		return allocatableNodes
 	}
 }
