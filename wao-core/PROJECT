@@ -5,8 +5,8 @@
 domain: bitmedia.co.jp
 layout:
 - go.kubebuilder.io/v4
-projectName: wao-nodeconfig
-repo: github.com/waok8s/wao-nodeconfig
+projectName: wao-core
+repo: github.com/waok8s/wao-core
 resources:
 - api:
     crdVersion: v1
@@ -14,6 +14,6 @@ resources:
   domain: bitmedia.co.jp
   group: wao
   kind: NodeConfig
-  path: github.com/waok8s/wao-nodeconfig/api/v1beta1
+  path: github.com/waok8s/wao-core/api/v1beta1
   version: v1beta1
 version: "3"

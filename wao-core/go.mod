@@ -1,4 +1,4 @@
-module github.com/waok8s/wao-nodeconfig
+module github.com/waok8s/wao-core
 
 go 1.20
 
