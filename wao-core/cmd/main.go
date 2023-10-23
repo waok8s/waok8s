@@ -16,6 +16,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	waov1beta1 "github.com/waok8s/wao-core/api/wao/v1beta1"
+	waocontroller "github.com/waok8s/wao-core/internal/controller/wao"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -72,6 +73,13 @@ func main() {
 		os.Exit(1)
 	}
 
+	if err = (&waocontroller.NodeConfigTemplateReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "NodeConfigTemplate")
+		os.Exit(1)
+	}
 	//+kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
