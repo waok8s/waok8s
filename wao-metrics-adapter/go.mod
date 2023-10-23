@@ -4,7 +4,7 @@ go 1.21.1
 
 require (
 	github.com/go-logr/logr v1.2.4
-	github.com/waok8s/wao-nodeconfig v0.0.0-20231018072704-173870a97d5c
+	github.com/waok8s/wao-nodeconfig v0.0.0-20231023121300-9087eba473b0
 	k8s.io/api v0.27.3
 	k8s.io/apimachinery v0.27.3
 	k8s.io/client-go v0.27.3
