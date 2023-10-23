@@ -18,7 +18,10 @@ type MetricsCollector struct {
 }
 
 type Predictor struct {
-	PowerConsumption EndpointTerm `json:"powerConsumption"`
+	// +optional
+	PowerConsumption *EndpointTerm `json:"powerConsumption,omitempty"`
+	// +optional
+	PowerConsumptionEndpointProvider *EndpointTerm `json:"powerConsumptionEndpointProvider,omitempty"`
 }
 
 type EndpointTerm struct {

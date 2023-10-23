@@ -20,3 +20,8 @@ spec:
     powerConsumption:
       type: V2InferenceProtocol
       endpoint: "http://10.0.0.1:8080/v2/models/myModel/versions/v0.1.0/infer"
+    # powerConsumptionEndpointProvider:
+    #   type: Redfish
+    #   endpoint: "https://10.0.0.1"
+    #   basicAuthSecret:
+    #     name: "worker-0-redfish-basicauth"
