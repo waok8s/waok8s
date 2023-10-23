@@ -101,7 +101,7 @@ func (r *NodeConfigReconciler) getBasicAuthFromSecret(ctx context.Context, names
 		return
 	}
 	secret := &corev1.Secret{}
-	if err := r.Client.Get(context.TODO(), client.ObjectKey{Namespace: namespace, Name: ref.Name}, secret); err != nil {
+	if err := r.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: ref.Name}, secret); err != nil {
 		// TODO: log
 		return "", ""
 	}
