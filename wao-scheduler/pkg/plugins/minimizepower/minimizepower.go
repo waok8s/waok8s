@@ -7,18 +7,23 @@ import (
 	"time"
 
 	waometric "github.com/waok8s/wao-metrics-adapter/pkg/metric"
+	waov1beta1 "github.com/waok8s/wao-nodeconfig/api/v1beta1"
 	"github.com/waok8s/wao-scheduler/pkg/predictor"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/discovery"
 	cacheddiscovery "k8s.io/client-go/discovery/cached"
 	"k8s.io/client-go/kubernetes"
+	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/restmapper"
 	"k8s.io/klog/v2"
 	framework "k8s.io/kubernetes/pkg/scheduler/framework"
 	metricsv1beta1 "k8s.io/metrics/pkg/apis/metrics/v1beta1"
 	metricsclientv1beta1 "k8s.io/metrics/pkg/client/clientset/versioned/typed/metrics/v1beta1"
 	custommetricsclient "k8s.io/metrics/pkg/client/custom_metrics"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
@@ -34,11 +39,12 @@ const (
 )
 
 type MinimizePower struct {
-	clientset            kubernetes.Interface
-	metricsclientset     metricsclientv1beta1.MetricsV1beta1Interface
-	custommetricsclient  custommetricsclient.CustomMetricsClient
-	metricscache         *MetricsCache
 	snapshotSharedLister framework.SharedLister
+	clientset            kubernetes.Interface
+	ctrlclient           client.Client
+
+	metricsclient   *CachedMetricsClient
+	predictorclient *CachedPredictorClient
 }
 
 var _ framework.ScorePlugin = (*MinimizePower)(nil)
@@ -47,6 +53,15 @@ var _ framework.ScoreExtensions = (*MinimizePower)(nil)
 var (
 	Name = "MinimizePower"
 )
+
+var (
+	scheme = runtime.NewScheme()
+)
+
+func init() {
+	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
+	utilruntime.Must(waov1beta1.AddToScheme(scheme))
+}
 
 // New initializes a new plugin and returns it.
 func New(_ runtime.Object, fh framework.Handle) (framework.Plugin, error) {
@@ -70,19 +85,33 @@ func New(_ runtime.Object, fh framework.Handle) (framework.Plugin, error) {
 	avg := custommetricsclient.NewAvailableAPIsGetter(dc)
 	cmc := custommetricsclient.NewForConfig(cfg, rm, avg)
 
+	// init controller-runtime client
+	ca, err := cache.New(fh.KubeConfig(), cache.Options{
+		Scheme: scheme,
+	})
+	if err != nil {
+		return nil, err
+	}
+	go ca.Start(context.TODO())
+	c, err := client.New(fh.KubeConfig(), client.Options{
+		Scheme: scheme,
+		Cache:  &client.CacheOptions{Reader: ca},
+	})
+	if err != nil {
+		return nil, err
+	}
+
 	return &MinimizePower{
-		clientset:            fh.ClientSet(),
-		metricsclientset:     mc,
-		custommetricsclient:  cmc,
-		metricscache:         NewMetricsCache(mc, cmc, MetricsCacheTTL),
 		snapshotSharedLister: fh.SnapshotSharedLister(),
+		clientset:            fh.ClientSet(),
+		ctrlclient:           c,
+		metricsclient:        NewCachedMetricsClient(mc, cmc, MetricsCacheTTL),
+		predictorclient:      NewCachedPredictorClient(c, PredictorCacheTTL),
 	}, nil
 }
 
 // Name returns name of the plugin. It is used in logs, etc.
-func (*MinimizePower) Name() string {
-	return Name
-}
+func (*MinimizePower) Name() string { return Name }
 
 // ScoreExtensions returns a ScoreExtensions interface.
 func (pl *MinimizePower) ScoreExtensions() framework.ScoreExtensions { return pl }
@@ -102,8 +131,7 @@ func (pl *MinimizePower) Score(ctx context.Context, state *framework.CycleState,
 
 	// get node and node metrics
 	node := nodeInfo.Node()
-	// nodeMetrics, err := pl.metricsclientset.NodeMetricses().Get(ctx, node.Name, metav1.GetOptions{}) // non-cached
-	nodeMetrics, err := pl.metricscache.GetNodeMetrics(ctx, node.Name) // cached
+	nodeMetrics, err := pl.metricsclient.GetNodeMetrics(ctx, node.Name)
 	if err != nil {
 		klog.ErrorS(err, "MinimizePower.Score score=MaxInt64 as error occurred", "node", nodeName, "pod", pod.Name)
 		return math.MaxInt64, nil
@@ -113,8 +141,7 @@ func (pl *MinimizePower) Score(ctx context.Context, state *framework.CycleState,
 	var nodePods []*corev1.Pod
 	var nodePodsMetricses []*metricsv1beta1.PodMetrics
 	for i, p := range nodeInfo.Pods {
-		// podMetrics, err := pl.metricsclientset.PodMetricses(p.Pod.Namespace).Get(ctx, p.Pod.Name, metav1.GetOptions{}) // non-cached
-		podMetrics, err := pl.metricscache.GetPodMetrics(ctx, p.Pod.Namespace, p.Pod.Name) // cached
+		podMetrics, err := pl.metricsclient.GetPodMetrics(ctx, p.Pod.Namespace, p.Pod.Name)
 		if err != nil {
 			klog.ErrorS(err, "MinimizePower.Score skip pod as error occurred", "node", nodeName, "pod", pod.Name, "nodeInfo.Pods[i]", i)
 			continue
@@ -134,28 +161,62 @@ func (pl *MinimizePower) Score(ctx context.Context, state *framework.CycleState,
 	}
 
 	// get custom metrics
-	// inletTemp, err := pl.custommetricsclient.RootScopedMetrics().GetForObject(schema.GroupKind{Group: "", Kind: "node"}, nodeName, waometric.ValueInletTemperature, labels.NewSelector()) // non-cached
-	inletTemp, err := pl.metricscache.GetCustomMetricForNode(ctx, nodeName, waometric.ValueInletTemperature) // cached
+	inletTemp, err := pl.metricsclient.GetCustomMetricForNode(ctx, nodeName, waometric.ValueInletTemperature)
 	if err != nil {
-		klog.ErrorS(err, "MinimizePower.Score score=0 as error occurred", "node", nodeName, "pod", pod.Name)
+		klog.ErrorS(err, "MinimizePower.Score score=MaxInt64 as error occurred", "node", nodeName, "pod", pod.Name)
 		return math.MaxInt64, nil
 	}
-	// deltaP, err := pl.custommetricsclient.RootScopedMetrics().GetForObject(schema.GroupKind{Group: "", Kind: "node"}, nodeName, waometric.ValueDeltaPressure, labels.NewSelector()) // non-cached
-	deltaP, err := pl.metricscache.GetCustomMetricForNode(ctx, nodeName, waometric.ValueDeltaPressure) // cached
+	deltaP, err := pl.metricsclient.GetCustomMetricForNode(ctx, nodeName, waometric.ValueDeltaPressure)
 	if err != nil {
-		klog.ErrorS(err, "MinimizePower.Score score=0 as error occurred", "node", nodeName, "pod", pod.Name)
+		klog.ErrorS(err, "MinimizePower.Score score=MaxInt64 as error occurred", "node", nodeName, "pod", pod.Name)
 		return math.MaxInt64, nil
 	}
 
-	var pcp predictor.PowerConsumptionPredictor // TODO: init predictor
-	beforeWatt, err := pcp.Predict(ctx, beforeUsage, inletTemp.Value.AsApproximateFloat64(), deltaP.Value.AsApproximateFloat64())
-	if err != nil {
-		klog.ErrorS(err, "MinimizePower.Score score=0 as error occurred", "node", nodeName, "pod", pod.Name)
+	// get NodeConfig
+	var nc *waov1beta1.NodeConfig
+	var ncs waov1beta1.NodeConfigList
+	if err := pl.ctrlclient.List(ctx, &ncs); err != nil {
+		klog.ErrorS(err, "MinimizePower.Score score=MaxInt64 as error occurred", "node", nodeName, "pod", pod.Name)
 		return math.MaxInt64, nil
 	}
-	afterWatt, err := pcp.Predict(ctx, afterUsage, inletTemp.Value.AsApproximateFloat64(), deltaP.Value.AsApproximateFloat64())
+	for _, e := range ncs.Items {
+		if e.Spec.NodeName == nodeName {
+			nc = &e
+			break
+		}
+	}
+	if nc == nil {
+		klog.ErrorS(fmt.Errorf("nodeconfig == nil"), "MinimizePower.Score score=MaxInt64 as error occurred", "node", nodeName, "pod", pod.Name)
+		return math.MaxInt64, nil
+	}
+
+	// init predictor endpoint
+	var ep *waov1beta1.EndpointTerm
+	if nc.Spec.Predictor.PowerConsumption != nil {
+		ep = nc.Spec.Predictor.PowerConsumption
+	} else {
+		ep = &waov1beta1.EndpointTerm{}
+	}
+
+	if nc.Spec.Predictor.PowerConsumptionEndpointProvider != nil {
+		ep2, err := pl.predictorclient.GetPredictorEndpoint(ctx, nc.Namespace, nc.Spec.Predictor.PowerConsumptionEndpointProvider, predictor.TypePowerConsumption)
+		if err != nil {
+			klog.ErrorS(err, "MinimizePower.Score score=MaxInt64 as error occurred", "node", nodeName, "pod", pod.Name)
+			return math.MaxInt64, nil
+		}
+		ep.Type = ep2.Type
+		ep.Endpoint = ep2.Endpoint
+	}
+
+	// do predict
+	beforeWatt, err := pl.predictorclient.PredictPowerConsumption(ctx, nc.Namespace, ep, beforeUsage, inletTemp.Value.AsApproximateFloat64(), deltaP.Value.AsApproximateFloat64())
 	if err != nil {
-		klog.ErrorS(err, "MinimizePower.Score score=0 as error occurred", "node", nodeName, "pod", pod.Name)
+		klog.ErrorS(err, "MinimizePower.Score score=MaxInt64 as error occurred", "node", nodeName, "pod", pod.Name)
+		return math.MaxInt64, nil
+	}
+	afterWatt, err := pl.predictorclient.PredictPowerConsumption(ctx, nc.Namespace, ep, afterUsage, inletTemp.Value.AsApproximateFloat64(), deltaP.Value.AsApproximateFloat64())
+	if err != nil {
+		klog.ErrorS(err, "MinimizePower.Score score=MaxInt64 as error occurred", "node", nodeName, "pod", pod.Name)
 		return math.MaxInt64, nil
 	}
 

@@ -17,7 +17,7 @@ import (
 	custommetricsclient "k8s.io/metrics/pkg/client/custom_metrics"
 )
 
-type MetricsCache struct {
+type CachedMetricsClient struct {
 	metricsclientset    metricsclientv1beta1.MetricsV1beta1Interface
 	custommetricsclient custommetricsclient.CustomMetricsClient
 
@@ -25,15 +25,15 @@ type MetricsCache struct {
 	cache sync.Map
 }
 
-func NewMetricsCache(metricsclientset metricsclientv1beta1.MetricsV1beta1Interface, custommetricsclient custommetricsclient.CustomMetricsClient, expiration time.Duration) *MetricsCache {
-	return &MetricsCache{
+func NewCachedMetricsClient(metricsclientset metricsclientv1beta1.MetricsV1beta1Interface, custommetricsclient custommetricsclient.CustomMetricsClient, ttl time.Duration) *CachedMetricsClient {
+	return &CachedMetricsClient{
 		metricsclientset:    metricsclientset,
 		custommetricsclient: custommetricsclient,
-		ttl:                 expiration,
+		ttl:                 ttl,
 	}
 }
 
-func cacheKey(obj types.NamespacedName, metricType, metricName string) string {
+func metricsCacheKey(obj types.NamespacedName, metricType, metricName string) string {
 	return fmt.Sprintf("%s#%s#%s", obj.String(), metricType, metricName)
 }
 
@@ -46,7 +46,7 @@ const (
 	metricNameDeltaP    = waometric.ValueDeltaPressure
 )
 
-type cachedObject struct {
+type metricsCache struct {
 	NodeMetrics   *metricsv1beta1.NodeMetrics
 	PodMetrics    *metricsv1beta1.PodMetrics
 	CustomMetrics map[string]*custommetricsv1beta2.MetricValue
@@ -54,19 +54,19 @@ type cachedObject struct {
 	ExpiredAt time.Time
 }
 
-func (c *MetricsCache) get(ctx context.Context, obj types.NamespacedName, metricType string, metricName string) (*cachedObject, error) {
+func (c *CachedMetricsClient) get(ctx context.Context, obj types.NamespacedName, metricType string, metricName string) (*metricsCache, error) {
 
-	key := cacheKey(obj, metricType, metricName)
+	key := metricsCacheKey(obj, metricType, metricName)
 
 	if v, ok1 := c.cache.Load(key); ok1 {
-		if co, ok2 := v.(*cachedObject); ok2 {
-			if co.ExpiredAt.After(time.Now()) {
-				return co, nil
+		if cv, ok2 := v.(*metricsCache); ok2 {
+			if cv.ExpiredAt.After(time.Now()) {
+				return cv, nil
 			}
 		}
 	}
 
-	co := &cachedObject{
+	cv := &metricsCache{
 		CustomMetrics: make(map[string]*custommetricsv1beta2.MetricValue),
 		ExpiredAt:     time.Now().Add(c.ttl),
 	}
@@ -79,13 +79,13 @@ func (c *MetricsCache) get(ctx context.Context, obj types.NamespacedName, metric
 			if err != nil {
 				return nil, fmt.Errorf("unable to get metrics for obj=%s metricType=%s metricName=%s: %w", obj, metricType, metricName, err)
 			}
-			co.NodeMetrics = nodeMetrics
+			cv.NodeMetrics = nodeMetrics
 		case metricNameInletTemp, metricNameDeltaP:
 			metricValue, err := c.custommetricsclient.RootScopedMetrics().GetForObject(schema.GroupKind{Group: "", Kind: "node"}, obj.Name, metricName, labels.NewSelector())
 			if err != nil {
 				return nil, fmt.Errorf("unable to get metrics for obj=%s metricType=%s metricName=%s: %w", obj, metricType, metricName, err)
 			}
-			co.CustomMetrics[metricName] = metricValue
+			cv.CustomMetrics[metricName] = metricValue
 		default:
 			return nil, fmt.Errorf("unknown metricName=%s for metricType=%s", metricName, metricType)
 		}
@@ -96,7 +96,7 @@ func (c *MetricsCache) get(ctx context.Context, obj types.NamespacedName, metric
 			if err != nil {
 				return nil, fmt.Errorf("unable to get metrics for obj=%s metricType=%s metricName=%s: %w", obj, metricType, metricName, err)
 			}
-			co.PodMetrics = podMetrics
+			cv.PodMetrics = podMetrics
 		default:
 			return nil, fmt.Errorf("unknown metricName=%s for metricType=%s", metricName, metricType)
 		}
@@ -104,31 +104,31 @@ func (c *MetricsCache) get(ctx context.Context, obj types.NamespacedName, metric
 		return nil, fmt.Errorf("unknown metricType=%s", metricType)
 	}
 
-	c.cache.Store(key, co)
+	c.cache.Store(key, cv)
 
-	return co, nil
+	return cv, nil
 }
 
-func (c *MetricsCache) GetNodeMetrics(ctx context.Context, name string) (*metricsv1beta1.NodeMetrics, error) {
-	co, err := c.get(ctx, types.NamespacedName{Name: name}, metricTypeNode, metricNameMetrics)
+func (c *CachedMetricsClient) GetNodeMetrics(ctx context.Context, name string) (*metricsv1beta1.NodeMetrics, error) {
+	cv, err := c.get(ctx, types.NamespacedName{Name: name}, metricTypeNode, metricNameMetrics)
 	if err != nil {
 		return nil, err
 	}
-	return co.NodeMetrics, nil
+	return cv.NodeMetrics, nil
 }
 
-func (c *MetricsCache) GetPodMetrics(ctx context.Context, namespace string, name string) (*metricsv1beta1.PodMetrics, error) {
-	co, err := c.get(ctx, types.NamespacedName{Namespace: namespace, Name: name}, metricTypePod, metricNameMetrics)
+func (c *CachedMetricsClient) GetPodMetrics(ctx context.Context, namespace string, name string) (*metricsv1beta1.PodMetrics, error) {
+	cv, err := c.get(ctx, types.NamespacedName{Namespace: namespace, Name: name}, metricTypePod, metricNameMetrics)
 	if err != nil {
 		return nil, err
 	}
-	return co.PodMetrics, nil
+	return cv.PodMetrics, nil
 }
 
-func (c *MetricsCache) GetCustomMetricForNode(ctx context.Context, name string, metricName string) (*custommetricsv1beta2.MetricValue, error) {
-	co, err := c.get(ctx, types.NamespacedName{Name: name}, metricTypeNode, metricName)
+func (c *CachedMetricsClient) GetCustomMetricForNode(ctx context.Context, name string, metricName string) (*custommetricsv1beta2.MetricValue, error) {
+	cv, err := c.get(ctx, types.NamespacedName{Name: name}, metricTypeNode, metricName)
 	if err != nil {
 		return nil, err
 	}
-	return co.CustomMetrics[metricName], nil
+	return cv.CustomMetrics[metricName], nil
 }

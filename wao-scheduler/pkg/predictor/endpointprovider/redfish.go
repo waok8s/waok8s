@@ -11,9 +11,10 @@ import (
 	"time"
 
 	"github.com/waok8s/wao-metrics-adapter/pkg/metriccollector"
+	waov1beta1 "github.com/waok8s/wao-nodeconfig/api/v1beta1"
+
 	"github.com/waok8s/wao-scheduler/pkg/predictor"
 	"github.com/waok8s/wao-scheduler/pkg/predictor/endpointprovider/api"
-	"github.com/waok8s/wao-scheduler/pkg/predictor/v2inferenceprotocol"
 )
 
 type RedfishEndpointProvider struct {
@@ -26,6 +27,8 @@ type RedfishEndpointProvider struct {
 
 	editorFns []metriccollector.RequestEditorFn
 }
+
+var _ predictor.EndpointProvider = (*RedfishEndpointProvider)(nil)
 
 func NewRedfishEndpointProvider(address string, insecureSkipVerify bool, timeout time.Duration, editorFns ...metriccollector.RequestEditorFn) (*RedfishEndpointProvider, error) {
 	c, err := api.NewClientWithResponses(
@@ -120,27 +123,50 @@ func (p *RedfishEndpointProvider) GetModels(ctx context.Context) (*api.MachineLe
 
 }
 
-func (p *RedfishEndpointProvider) GetPowerConsumptionPredictor(ctx context.Context) (predictor.PowerConsumptionPredictor, error) {
+func (p *RedfishEndpointProvider) Get(ctx context.Context, predictorType predictor.PredictorType) (*waov1beta1.EndpointTerm, error) {
 
-	insecureSkipVerify := true
+	modelType := waov1beta1.TypeV2InferenceProtocol
+	modelAddress := ""
+	modelName := ""
 	modelVersion := "v0.1.0"
-	requestTimeout := 3 * time.Second
 
 	models, err := p.GetModels(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	if models.PowerConsumptionModel == nil || models.PowerConsumptionModel.Name == nil || models.PowerConsumptionModel.Url == nil {
-		return nil, fmt.Errorf("invalid model: %+v", models.PowerConsumptionModel)
+	switch predictorType {
+	case predictor.TypePowerConsumption:
+		if models.PowerConsumptionModel == nil ||
+			models.PowerConsumptionModel.Name == nil || models.PowerConsumptionModel.Url == nil {
+			return nil, fmt.Errorf("invalid model: %+v", models.PowerConsumptionModel)
+		}
+		modelAddress = *models.PowerConsumptionModel.Url
+		modelName = *models.PowerConsumptionModel.Name
+	case predictor.TypeResponseTime:
+		if models.ResponseTimeModel == nil ||
+			models.ResponseTimeModel.Name == nil || models.ResponseTimeModel.Url == nil {
+			return nil, fmt.Errorf("invalid model: %+v", models.ResponseTimeModel)
+		}
+		modelAddress = *models.ResponseTimeModel.Url
+		modelName = *models.ResponseTimeModel.Name
+	default:
+		return nil, fmt.Errorf("unknown predictorType=%s", predictorType)
 	}
 
-	modelAddress := *models.PowerConsumptionModel.Url
-	modelName := *models.PowerConsumptionModel.Name
+	ep, err := url.JoinPath(modelAddress, "v2/models", modelName, "versions", modelVersion, "infer")
+	if err != nil {
+		return nil, err
+	}
 
-	// NOTE: basic auth is not yet supported
-	// TODO: read auth, tls, timeout, etc. (from args?)
-	c := v2inferenceprotocol.NewPowerConsumptionClient(modelAddress, modelName, modelVersion, insecureSkipVerify, requestTimeout)
+	et := &waov1beta1.EndpointTerm{
+		Type:            modelType,
+		Endpoint:        ep,
+		BasicAuthSecret: nil,
+		FetchInterval:   nil,
+	}
 
-	return predictor.PowerConsumptionPredictor(c), nil
+	return et, nil
 }
+
+func (p *RedfishEndpointProvider) Endpoint() (string, error) { return p.address, nil }

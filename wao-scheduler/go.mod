@@ -5,7 +5,7 @@ go 1.21.3
 require (
 	github.com/oapi-codegen/runtime v1.0.0
 	github.com/waok8s/wao-metrics-adapter v0.0.0-20231018073128-d5012cde6205
-	github.com/waok8s/wao-nodeconfig v0.0.0-20231018072704-173870a97d5c
+	github.com/waok8s/wao-nodeconfig v0.0.0-20231023121300-9087eba473b0
 	k8s.io/api v0.27.3
 	k8s.io/apimachinery v0.27.3
 	k8s.io/client-go v0.27.3
@@ -14,6 +14,7 @@ require (
 	k8s.io/kubernetes v1.27.3
 	k8s.io/metrics v0.27.3
 	k8s.io/utils v0.0.0-20230406110748-d93618cff8a2
+	sigs.k8s.io/controller-runtime v0.15.2
 )
 
 require (
@@ -33,6 +34,7 @@ require (
 	github.com/docker/distribution v2.8.1+incompatible // indirect
 	github.com/emicklei/go-restful/v3 v3.10.2 // indirect
 	github.com/evanphx/json-patch v4.12.0+incompatible // indirect
+	github.com/evanphx/json-patch/v5 v5.6.0 // indirect
 	github.com/felixge/httpsnoop v1.0.3 // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
 	github.com/go-logr/logr v1.2.4 // indirect
@@ -117,7 +119,6 @@ require (
 	k8s.io/mount-utils v0.27.3 // indirect
 	moul.io/http2curl/v2 v2.3.0 // indirect
 	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.1.2 // indirect
-	sigs.k8s.io/controller-runtime v0.15.2 // indirect
 	sigs.k8s.io/custom-metrics-apiserver v1.27.0 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.3 // indirect

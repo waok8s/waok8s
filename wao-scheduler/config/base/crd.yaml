@@ -150,8 +150,41 @@ spec:
                         - endpoint
                         - type
                       type: object
-                  required:
-                    - powerConsumption
+                    powerConsumptionEndpointProvider:
+                      properties:
+                        basicAuthSecret:
+                          description:
+                            BasicAuthSecret specifies the name of the Secret
+                            in the same namespace used for basic auth. Some Types require
+                            this value.
+                          properties:
+                            name:
+                              description:
+                                "Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                TODO: Add other useful fields. apiVersion, kind, uid?"
+                              type: string
+                          type: object
+                          x-kubernetes-map-type: atomic
+                        endpoint:
+                          description:
+                            Endpoint specifies the endpoint URL. Behavior
+                            depends on the client specified by Type.
+                          type: string
+                        fetchInterval:
+                          description:
+                            FetchInterval specifies the data retrieval interval.
+                            Some Types require this value, and behavior depends on the
+                            client.
+                          type: string
+                        type:
+                          description:
+                            Type specifies the type of endpoint. This value
+                            means which client is used.
+                          type: string
+                      required:
+                        - endpoint
+                        - type
+                      type: object
                   type: object
               required:
                 - metricsCollector
