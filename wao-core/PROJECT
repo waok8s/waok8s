@@ -5,6 +5,7 @@
 domain: bitmedia.co.jp
 layout:
 - go.kubebuilder.io/v4
+multigroup: true
 projectName: wao-core
 repo: github.com/waok8s/wao-core
 resources:
@@ -14,6 +15,6 @@ resources:
   domain: bitmedia.co.jp
   group: wao
   kind: NodeConfig
-  path: github.com/waok8s/wao-core/api/v1beta1
+  path: github.com/waok8s/wao-core/api/wao/v1beta1
   version: v1beta1
 version: "3"

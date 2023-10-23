@@ -15,7 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	waov1beta1 "github.com/waok8s/wao-core/api/v1beta1"
+	waov1beta1 "github.com/waok8s/wao-core/api/wao/v1beta1"
 	//+kubebuilder:scaffold:imports
 )
 
