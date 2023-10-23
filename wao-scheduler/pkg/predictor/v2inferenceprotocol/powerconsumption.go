@@ -10,7 +10,7 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/waok8s/wao-metrics-adapter/pkg/metriccollector"
+	waocollector "github.com/waok8s/wao-metrics-adapter/pkg/metriccollector"
 	"github.com/waok8s/wao-scheduler/pkg/predictor"
 )
 
@@ -24,12 +24,12 @@ type PowerConsumptionClient struct {
 	modelVersion string
 
 	client    *http.Client
-	editorFns []metriccollector.RequestEditorFn
+	editorFns []waocollector.RequestEditorFn
 }
 
 var _ predictor.PowerConsumptionPredictor = (*PowerConsumptionClient)(nil)
 
-func NewPowerConsumptionClient(address, modelName, modelVersion string, insecureSkipVerify bool, timeout time.Duration, editorFns ...metriccollector.RequestEditorFn) *PowerConsumptionClient {
+func NewPowerConsumptionClient(address, modelName, modelVersion string, insecureSkipVerify bool, timeout time.Duration, editorFns ...waocollector.RequestEditorFn) *PowerConsumptionClient {
 	return &PowerConsumptionClient{
 		address:      address,
 		modelName:    modelName,
@@ -124,7 +124,7 @@ var (
 
 func newInferPowerConsumptionRequest(cpuUsage, ambientTemp, staticPressureDiff float64) *inferPowerConsumptionRequest {
 	var (
-		name = InferPowerConsumptionRequestInputName
+		name     = InferPowerConsumptionRequestInputName
 		datatype = "FP32"
 		shapeX   = 1
 		shapeY   = 3

@@ -2,24 +2,23 @@ package minimizepower
 
 import (
 	"context"
+	"fmt"
 	"math"
+	"time"
 
 	waometric "github.com/waok8s/wao-metrics-adapter/pkg/metric"
 	"github.com/waok8s/wao-scheduler/pkg/predictor"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/discovery"
 	cacheddiscovery "k8s.io/client-go/discovery/cached"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/restmapper"
 	"k8s.io/klog/v2"
 	framework "k8s.io/kubernetes/pkg/scheduler/framework"
-	v1beta1 "k8s.io/metrics/pkg/apis/metrics/v1beta1"
-	metricsv1beta1 "k8s.io/metrics/pkg/client/clientset/versioned/typed/metrics/v1beta1"
-	custommetrics "k8s.io/metrics/pkg/client/custom_metrics"
+	metricsv1beta1 "k8s.io/metrics/pkg/apis/metrics/v1beta1"
+	metricsclientv1beta1 "k8s.io/metrics/pkg/client/clientset/versioned/typed/metrics/v1beta1"
+	custommetricsclient "k8s.io/metrics/pkg/client/custom_metrics"
 )
 
 const (
@@ -27,12 +26,18 @@ const (
 	AssumedCPUUsageRate = 0.85
 	// LowerLimitCPUUsageRate sets the lowest Pod CPU usage to (limits.cpu * LowerLimitCPUUsageRate) for the score calculation.
 	LowerLimitCPUUsageRate = 0.50
+
+	// MetricsCacheTTL is the expiration time of the metrics cache.
+	MetricsCacheTTL = 15 * time.Second
+	// PredictorCacheTTL is the expiration time of the predictor cache.
+	PredictorCacheTTL = 15 * time.Second
 )
 
 type MinimizePower struct {
 	clientset            kubernetes.Interface
-	metricsclientset     metricsv1beta1.MetricsV1beta1Interface
-	custommetricsclient  custommetrics.CustomMetricsClient
+	metricsclientset     metricsclientv1beta1.MetricsV1beta1Interface
+	custommetricsclient  custommetricsclient.CustomMetricsClient
+	metricscache         *MetricsCache
 	snapshotSharedLister framework.SharedLister
 }
 
@@ -48,7 +53,8 @@ func New(_ runtime.Object, fh framework.Handle) (framework.Plugin, error) {
 
 	cfg := fh.KubeConfig()
 
-	mc, err := metricsv1beta1.NewForConfig(cfg)
+	// init metrics client
+	mc, err := metricsclientv1beta1.NewForConfig(cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -61,13 +67,14 @@ func New(_ runtime.Object, fh framework.Handle) (framework.Plugin, error) {
 	}
 	rm := restmapper.NewDeferredDiscoveryRESTMapper(cacheddiscovery.NewMemCacheClient(dc))
 	rm.Reset()
-	avg := custommetrics.NewAvailableAPIsGetter(dc)
-	cmc := custommetrics.NewForConfig(cfg, rm, avg)
+	avg := custommetricsclient.NewAvailableAPIsGetter(dc)
+	cmc := custommetricsclient.NewForConfig(cfg, rm, avg)
 
 	return &MinimizePower{
 		clientset:            fh.ClientSet(),
 		metricsclientset:     mc,
 		custommetricsclient:  cmc,
+		metricscache:         NewMetricsCache(mc, cmc, MetricsCacheTTL),
 		snapshotSharedLister: fh.SnapshotSharedLister(),
 	}, nil
 }
@@ -80,70 +87,98 @@ func (*MinimizePower) Name() string {
 // ScoreExtensions returns a ScoreExtensions interface.
 func (pl *MinimizePower) ScoreExtensions() framework.ScoreExtensions { return pl }
 
+// Score returns how many watts will be increased by the given pod (lower is better).
+//
+// This function never returns an error (as errors cause the pod to be rejected).
+// If an error occurs, it is logged and the score is set to math.MaxInt64.
 func (pl *MinimizePower) Score(ctx context.Context, state *framework.CycleState, pod *corev1.Pod, nodeName string) (int64, *framework.Status) {
 	klog.InfoS("MinimizePower.Score", "node", nodeName, "pod", pod.Name)
 
 	nodeInfo, err := pl.snapshotSharedLister.NodeInfos().Get(nodeName)
 	if err != nil {
-		klog.ErrorS(err, "MinimizePower.Score score=0 as error occurred", "node", nodeName, "pod", pod.Name)
-		return 0, nil
+		klog.ErrorS(err, "MinimizePower.Score score=MaxInt64 as error occurred", "node", nodeName, "pod", pod.Name)
+		return math.MaxInt64, nil
 	}
+
+	// get node and node metrics
 	node := nodeInfo.Node()
-	nodeMetrics, err := pl.metricsclientset.NodeMetricses().Get(ctx, node.Name, metav1.GetOptions{})
+	// nodeMetrics, err := pl.metricsclientset.NodeMetricses().Get(ctx, node.Name, metav1.GetOptions{}) // non-cached
+	nodeMetrics, err := pl.metricscache.GetNodeMetrics(ctx, node.Name) // cached
 	if err != nil {
-		// TODO: fail
+		klog.ErrorS(err, "MinimizePower.Score score=MaxInt64 as error occurred", "node", nodeName, "pod", pod.Name)
+		return math.MaxInt64, nil
 	}
-	nodePods := make([]*corev1.Pod, len(nodeInfo.Pods))
-	nodePodsMetricses := make([]*v1beta1.PodMetrics, len(nodeInfo.Pods))
+
+	// get pods and pods metrics, ignore pods that cannot get metrics
+	var nodePods []*corev1.Pod
+	var nodePodsMetricses []*metricsv1beta1.PodMetrics
 	for i, p := range nodeInfo.Pods {
-		podMetrics, err := pl.metricsclientset.PodMetricses(p.Pod.Namespace).Get(ctx, p.Pod.Name, metav1.GetOptions{})
+		// podMetrics, err := pl.metricsclientset.PodMetricses(p.Pod.Namespace).Get(ctx, p.Pod.Name, metav1.GetOptions{}) // non-cached
+		podMetrics, err := pl.metricscache.GetPodMetrics(ctx, p.Pod.Namespace, p.Pod.Name) // cached
 		if err != nil {
-			// TODO: skip the pod and log
+			klog.ErrorS(err, "MinimizePower.Score skip pod as error occurred", "node", nodeName, "pod", pod.Name, "nodeInfo.Pods[i]", i)
+			continue
 		}
-		nodePods[i] = p.Pod
-		nodePodsMetricses[i] = podMetrics
+		nodePods = append(nodePods, p.Pod)
+		nodePodsMetricses = append(nodePodsMetricses, podMetrics)
 	}
 
-	beforeUsage, afterUsage := pl.CalcCPUUsage(ctx, node, nodeMetrics, nodePods, nodePodsMetricses, pod, AssumedCPUUsageRate, LowerLimitCPUUsageRate)
-	if beforeUsage == afterUsage {
-		// TODO: cannot fail so score 0?
+	beforeUsage, afterUsage := pl.AssumedCPUUsage(ctx, node, nodeMetrics, nodePods, nodePodsMetricses, pod, AssumedCPUUsageRate, LowerLimitCPUUsageRate)
+	if beforeUsage == afterUsage { // Both requests.cpu and limits.cpu are empty or zero. Normally, this should not happen.
+		klog.ErrorS(fmt.Errorf("beforeUsage == afterUsage v=%v", beforeUsage), "MinimizePower.Score score=MaxInt64 as error occurred", "node", nodeName, "pod", pod.Name)
+		return math.MaxInt64, nil
 	}
-	if afterUsage > 1 {
-		// TODO: cannot fail so score 0?
+	if afterUsage > 1 { // CPU overcommitment, make the node lowest priority.
+		klog.InfoS("MinimizePower.Score score=MaxInt64 as CPU overcommitment", "node", nodeName, "pod", pod.Name)
+		return math.MaxInt64, nil
 	}
 
-	inletTemp, err := GetCustomMetricForNode(pl.custommetricsclient, nodeName, waometric.ValueInletTemperature)
+	// get custom metrics
+	// inletTemp, err := pl.custommetricsclient.RootScopedMetrics().GetForObject(schema.GroupKind{Group: "", Kind: "node"}, nodeName, waometric.ValueInletTemperature, labels.NewSelector()) // non-cached
+	inletTemp, err := pl.metricscache.GetCustomMetricForNode(ctx, nodeName, waometric.ValueInletTemperature) // cached
 	if err != nil {
-		// TODO: score 0 ?
+		klog.ErrorS(err, "MinimizePower.Score score=0 as error occurred", "node", nodeName, "pod", pod.Name)
+		return math.MaxInt64, nil
 	}
-	deltaP, err := GetCustomMetricForNode(pl.custommetricsclient, nodeName, waometric.ValueDeltaPressure)
+	// deltaP, err := pl.custommetricsclient.RootScopedMetrics().GetForObject(schema.GroupKind{Group: "", Kind: "node"}, nodeName, waometric.ValueDeltaPressure, labels.NewSelector()) // non-cached
+	deltaP, err := pl.metricscache.GetCustomMetricForNode(ctx, nodeName, waometric.ValueDeltaPressure) // cached
 	if err != nil {
-		// TODO: score 0 ?
+		klog.ErrorS(err, "MinimizePower.Score score=0 as error occurred", "node", nodeName, "pod", pod.Name)
+		return math.MaxInt64, nil
 	}
 
 	var pcp predictor.PowerConsumptionPredictor // TODO: init predictor
-	beforeWatt, err := pcp.Predict(ctx, beforeUsage, inletTemp, deltaP)
+	beforeWatt, err := pcp.Predict(ctx, beforeUsage, inletTemp.Value.AsApproximateFloat64(), deltaP.Value.AsApproximateFloat64())
 	if err != nil {
-		// TODO: score 0 ?
+		klog.ErrorS(err, "MinimizePower.Score score=0 as error occurred", "node", nodeName, "pod", pod.Name)
+		return math.MaxInt64, nil
 	}
-	afterWatt, err := pcp.Predict(ctx, afterUsage, inletTemp, deltaP)
+	afterWatt, err := pcp.Predict(ctx, afterUsage, inletTemp.Value.AsApproximateFloat64(), deltaP.Value.AsApproximateFloat64())
 	if err != nil {
-		// TODO: score 0 ?
+		klog.ErrorS(err, "MinimizePower.Score score=0 as error occurred", "node", nodeName, "pod", pod.Name)
+		return math.MaxInt64, nil
 	}
-	score := int64(afterWatt - beforeWatt)
-	return score, nil
+
+	podPowerConsumption := int64(afterWatt - beforeWatt)
+	if podPowerConsumption < 0 {
+		klog.InfoS("MinimizePower.Score round podPowerConsumption to 0", "node", nodeName, "pod", pod.Name, "podPowerConsumption", podPowerConsumption)
+		podPowerConsumption = 0
+	}
+
+	return podPowerConsumption, nil
 }
 
-func (pl *MinimizePower) NormalizeScore(ctx context.Context, state *framework.CycleState, pod *corev1.Pod, scores framework.NodeScoreList) *framework.Status {
-	klog.InfoS("MinimizePower.NormalizeScore", "pod", pod.Name)
+func (pl *MinimizePower) NormalizeScore(_ context.Context, _ *framework.CycleState, pod *corev1.Pod, scores framework.NodeScoreList) *framework.Status {
+	klog.InfoS("MinimizePower.NormalizeScore before", "pod", pod.Name, "scores", scores)
 
-	for node, score := range scores {
-		if score.Score < 0 {
-			// TODO: print warning
-			scores[node].Score = 0
-		}
-	}
+	PowerConsumptions2Scores(scores)
 
+	klog.InfoS("MinimizePower.NormalizeScore after", "pod", pod.Name, "scores", scores)
+
+	return nil
+}
+
+func PowerConsumptions2Scores(scores framework.NodeScoreList) {
 	highest := int64(math.MinInt64)
 	lowest := int64(math.MaxInt64)
 
@@ -163,21 +198,17 @@ func (pl *MinimizePower) NormalizeScore(ctx context.Context, state *framework.Cy
 			scores[node].Score = 0
 		}
 	}
-
-	klog.InfoS("MinimizePower.NormalizeScore", "pod", pod.Name, "scores", scores)
-
-	return nil
 }
 
-// CalcCPUUsage calcs node CPU usage.
+// AssumedCPUUsage assumes the CPU usage increment by allocating the given Pod.
 //
 //   - Node CPU usage may be greater than 1.0.
 //   - Containers are ignored when it has empty requests.cpu and empty limit.cpu.
 //   - assumedCPUUsageRate is used when a container has empty requests.cpu and non-empty limits.cpu.
 //   - lowerLimitCPUUsageRate is the lower limit CPU usage rate of a pod.
-func (pl *MinimizePower) CalcCPUUsage(ctx context.Context,
-	node *corev1.Node, nodeMetrics *v1beta1.NodeMetrics,
-	nodePods []*corev1.Pod, nodePodsMetricses []*v1beta1.PodMetrics,
+func (pl *MinimizePower) AssumedCPUUsage(ctx context.Context,
+	node *corev1.Node, nodeMetrics *metricsv1beta1.NodeMetrics,
+	nodePods []*corev1.Pod, nodePodsMetricses []*metricsv1beta1.PodMetrics,
 	pod *corev1.Pod,
 	assumedCPUUsageRate float64, lowerLimitCPUUsageRate float64,
 ) (before float64, after float64) {
@@ -224,7 +255,7 @@ func AssumedPodCPUUsage(pod *corev1.Pod, assumedCPUUsageRate float64) (v float64
 	return
 }
 
-func PodCPUUsage(podMetrics *v1beta1.PodMetrics) (v float64) {
+func PodCPUUsage(podMetrics *metricsv1beta1.PodMetrics) (v float64) {
 	for _, c := range podMetrics.Containers {
 		v += c.Usage.Cpu().AsApproximateFloat64()
 	}
@@ -243,12 +274,4 @@ func PodCPULimit(pod *corev1.Pod) (v float64) {
 		v += c.Resources.Limits.Cpu().AsApproximateFloat64()
 	}
 	return
-}
-
-func GetCustomMetricForNode(client custommetrics.CustomMetricsClient, nodeName, metricName string) (float64, error) {
-	mv, err := client.RootScopedMetrics().GetForObject(schema.GroupKind{Group: "", Kind: "node"}, nodeName, metricName, labels.NewSelector())
-	if err != nil {
-		return 0.0, err
-	}
-	return mv.Value.AsApproximateFloat64(), nil
 }

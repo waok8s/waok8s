@@ -79,7 +79,7 @@ type PodSpread struct {
 	clientset         kubernetes.Interface
 }
 
-var _ framework.PreFilterPlugin = &PodSpread{}
+var _ framework.PreFilterPlugin = (*PodSpread)(nil)
 
 var (
 	Name = "PodSpread"
