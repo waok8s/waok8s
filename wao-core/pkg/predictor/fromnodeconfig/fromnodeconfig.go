@@ -56,7 +56,20 @@ func newEndpointProvider(
 
 	switch endpointType {
 	case waov1beta1.TypeFake:
-		// TODO: implement
+
+		var prov predictor.EndpointProvider
+		prov = &predictor.FakeEndpointProvider{
+			EndpointValue: endpoint,
+			EndpointError: nil,
+			GetValue: &waov1beta1.EndpointTerm{
+				Type:     waov1beta1.TypeFake,
+				Endpoint: "https://fake-endpoint",
+			},
+			GetError: nil,
+			GetDelay: 50 * time.Millisecond,
+		}
+
+		return prov, nil
 	case waov1beta1.TypeRedfish:
 
 		requestEditorFns := []util.RequestEditorFn{
@@ -91,7 +104,17 @@ func newPowerConsumptionPredictor(
 
 	switch endpointType {
 	case waov1beta1.TypeFake:
-		// TODO: implement
+
+		var client predictor.PowerConsumptionPredictor
+		client = &predictor.FakePowerConsumptionPredictor{
+			EndpointValue: endpoint,
+			EndpointError: nil,
+			PredictValue:  3.14,
+			PredictError:  nil,
+			PredictDelay:  50 * time.Millisecond,
+		}
+
+		return client, nil
 	case waov1beta1.TypeV2InferenceProtocol:
 		u, err := url.Parse(endpoint)
 		if err != nil {
