@@ -49,8 +49,8 @@ type NodeConfigReconciler struct {
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
 func (r *NodeConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	lg := log.FromContext(ctx)
-	lg.Info("Reconcile")
+	lg := log.FromContext(ctx).WithValues("func", "Reconcile")
+	lg.Info("called")
 
 	var nc waov1beta1.NodeConfig
 	err := r.Get(ctx, req.NamespacedName, &nc)
@@ -76,8 +76,8 @@ func (r *NodeConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 }
 
 func (r *NodeConfigReconciler) reconcileNodeConfigDeletion(ctx context.Context, objKey types.NamespacedName) {
-	lg := log.FromContext(ctx)
-	lg.Info("reconcileNodeConfigDeletion")
+	lg := log.FromContext(ctx).WithValues("func", "reconcileNodeConfigDeletion")
+	lg.Info("called")
 
 	for _, vt := range metrics.ValueTypes {
 		r.MetricsCollector.Unregister(metrics.CollectorKey(objKey, vt))
@@ -85,8 +85,8 @@ func (r *NodeConfigReconciler) reconcileNodeConfigDeletion(ctx context.Context, 
 }
 
 func (r *NodeConfigReconciler) getBasicAuthFromSecret(ctx context.Context, namespace string, ref *corev1.LocalObjectReference) (username, password string) {
-	lg := log.FromContext(ctx)
-	lg.Info("getBasicAuthFromSecret")
+	lg := log.FromContext(ctx).WithValues("func", "getBasicAuthFromSecret")
+	lg.Info("called")
 
 	if ref == nil || ref.Name == "" {
 		return
@@ -104,8 +104,8 @@ func (r *NodeConfigReconciler) getBasicAuthFromSecret(ctx context.Context, names
 }
 
 func (r *NodeConfigReconciler) reconcileNodeConfig(ctx context.Context, objKey types.NamespacedName, nc *waov1beta1.NodeConfig) error {
-	lg := log.FromContext(ctx)
-	lg.Info("reconcileNodeConfig")
+	lg := log.FromContext(ctx).WithValues("func", "reconcileNodeConfig")
+	lg.Info("called")
 
 	inletTempConfig := nc.Spec.MetricsCollector.InletTemp
 	switch inletTempConfig.Type {
