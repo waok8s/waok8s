@@ -32,13 +32,13 @@ func init() {
 	utilruntime.Must(waov1beta1.AddToScheme(Scheme))
 }
 
+// NodeConfigReconciler reconciles a NodeConfig object.
+//
 // NOTE: This reconciler is used in wao-metrics-adaptor instead of the controller. So RBAC rules below should be applied to wao-metrics-adaptor.
-//+kubebuilder:rbac:groups=wao.bitmedia.co.jp,resources=nodeconfigs,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=wao.bitmedia.co.jp,resources=nodeconfigs/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=wao.bitmedia.co.jp,resources=nodeconfigs/finalizers,verbs=update
-//+kubebuilder:rbac:groups=core,namespace=wao-system,resources=secrets,verbs=get
-
-// NodeConfigReconciler reconciles a NodeConfig object
+// kubebuilder:rbac:groups=wao.bitmedia.co.jp,resources=nodeconfigs,verbs=get;list;watch;create;update;patch;delete
+// kubebuilder:rbac:groups=wao.bitmedia.co.jp,resources=nodeconfigs/status,verbs=get;update;patch
+// kubebuilder:rbac:groups=wao.bitmedia.co.jp,resources=nodeconfigs/finalizers,verbs=update
+// kubebuilder:rbac:groups=core,namespace=wao-system,resources=secrets,verbs=get
 type NodeConfigReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
@@ -100,7 +100,7 @@ func (r *NodeConfigReconciler) getBasicAuthFromSecret(ctx context.Context, names
 		return
 	}
 	secret := &corev1.Secret{}
-	if err := r.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: ref.Name}, secret); err != nil {
+	if err := r.Get(ctx, types.NamespacedName{Namespace: namespace, Name: ref.Name}, secret); err != nil {
 		// TODO: log
 		return "", ""
 	}

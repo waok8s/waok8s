@@ -82,7 +82,7 @@ func GetSensorValueForTypeDelliDRAC(ctx context.Context, server string, client *
 //   - Key: ["Reading"]
 //   - SENSOR_ID: ["Name"] == "Ambient Temp" in range [ https://{SERVER}/redfish/v1/Chassis/1/Sensors "Members" ]
 //
-// TODO: sensor_id is currently fixed to "128L0" as all our servers have the same ID for the ambient temperature sensor.
+// NOTE: sensor_id is currently fixed to "128L0" as all our servers have the same ID for the ambient temperature sensor.
 // For more flexibility, search for a sensor with `Name: "Ambient Temp"` and cache its ID
 // (servers typically have dozens of sensors, so caching is necessary for performance).
 // This may require an additional variable (e.g., a sync.Map) in RedfishClient for data sharing.

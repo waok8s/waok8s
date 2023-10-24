@@ -44,7 +44,9 @@ func main() {
 
 	c := inlettemp.NewRedfishClient(address, inlettemp.ServerType(serverType), true, 2*time.Second, requestEditorFns...)
 
-	v, err := c.Fetch(context.TODO())
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	v, err := c.Fetch(ctx)
+	cancel()
 	if err != nil {
 		log.Fatal(err)
 	}

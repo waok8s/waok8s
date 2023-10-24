@@ -23,7 +23,7 @@ func getBasicAuthFromSecret(ctx context.Context, client client.Client, namespace
 		return
 	}
 	secret := &corev1.Secret{}
-	if err := client.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: ref.Name}, secret); err != nil {
+	if err := client.Get(ctx, types.NamespacedName{Namespace: namespace, Name: ref.Name}, secret); err != nil {
 		// TODO: log
 		return "", ""
 	}
@@ -50,12 +50,12 @@ func newEndpointProvider(
 
 	switch endpointType {
 	case waov1beta1.TypeFake:
-		// TODO
+		// TODO: implement
 	case waov1beta1.TypeRedfish:
 
 		requestEditorFns := []util.RequestEditorFn{
 			util.WithBasicAuth(basicAuthUsername, basicAuthPassword),
-			// util.WithCurlLogger(nil), // TODO
+			// util.WithCurlLogger(nil), // TODO: implement
 		}
 
 		prov, err := endpointprovider.NewRedfishEndpointProvider(endpoint, insecureSkipVerify, requestTimeout, requestEditorFns...)
@@ -84,7 +84,7 @@ func newPowerConsumptionPredictor(
 
 	switch endpointType {
 	case waov1beta1.TypeFake:
-		// TODO
+		// TODO: implement
 	case waov1beta1.TypeV2InferenceProtocol:
 		u, err := url.Parse(endpoint)
 		if err != nil {
@@ -109,7 +109,7 @@ func newPowerConsumptionPredictor(
 
 		requestEditorFns := []util.RequestEditorFn{
 			util.WithBasicAuth(basicAuthUsername, basicAuthPassword),
-			// util.WithCurlLogger(nil), // TODO
+			// util.WithCurlLogger(nil), // TODO: implement
 		}
 
 		var client predictor.PowerConsumptionPredictor
