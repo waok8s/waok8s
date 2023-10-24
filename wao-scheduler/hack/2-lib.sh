@@ -71,7 +71,7 @@ function lib::deploy-scheduler {
     # apply manifests
     "$KUBECTL" delete -k "$sched_yaml" || true
     "$KUBECTL" apply -k "$sched_yaml"
-
+    sleep 2
     "$KUBECTL" wait pod $($KUBECTL get pods -l component=scheduler -o jsonpath="{.items[0].metadata.name}" -n kube-system) -nkube-system --for condition=Ready --timeout=120s
 }
 
