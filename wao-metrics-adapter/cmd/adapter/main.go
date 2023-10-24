@@ -11,8 +11,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	basecmd "sigs.k8s.io/custom-metrics-apiserver/pkg/cmd"
 
-	waocollector "github.com/waok8s/wao-metrics-adapter/pkg/collector"
-	waometric "github.com/waok8s/wao-metrics-adapter/pkg/metric"
+	"github.com/waok8s/wao-core/pkg/controller"
+	"github.com/waok8s/wao-core/pkg/metrics"
+
 	waoprovider "github.com/waok8s/wao-metrics-adapter/pkg/provider"
 )
 
@@ -28,8 +29,8 @@ func main() {
 	defer logs.FlushLogs()
 
 	// init components
-	collectorRegistry := &waocollector.Registry{}
-	metricStore := &waometric.Store{}
+	metricsCollector := &metrics.Collector{}
+	metricsStore := &metrics.Store{}
 
 	// init adapter
 	cmd := &Adapter{
@@ -50,7 +51,7 @@ func main() {
 	if err != nil {
 		klog.Fatalf("unable to construct discovery REST mapper: %v", err)
 	}
-	provider := waoprovider.New(client, mapper, metricStore)
+	provider := waoprovider.New(client, mapper, metricsStore)
 	cmd.WithCustomMetrics(provider)
 	// cmd.WithExternalMetrics(provider) // waoprovider.Provider don't support external metrics
 
@@ -66,7 +67,7 @@ func main() {
 	setupLog := ctrl.Log.WithName("setup")
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&zap.Options{Development: true})))
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
-		Scheme:                 waocollector.Scheme,
+		Scheme:                 controller.Scheme,
 		MetricsBindAddress:     "0",
 		HealthProbeBindAddress: "",
 		LeaderElection:         false,
@@ -75,11 +76,11 @@ func main() {
 		setupLog.Error(err, "unable to start manager")
 		os.Exit(1)
 	}
-	if err := (&waocollector.NodeConfigReconciler{
-		Client:            mgr.GetClient(),
-		Scheme:            mgr.GetScheme(),
-		CollectorRegistry: collectorRegistry,
-		MetricStore:       metricStore,
+	if err := (&controller.NodeConfigReconciler{
+		Client:           mgr.GetClient(),
+		Scheme:           mgr.GetScheme(),
+		MetricsCollector: metricsCollector,
+		MetricsStore:     metricsStore,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Operator")
 		os.Exit(1)
