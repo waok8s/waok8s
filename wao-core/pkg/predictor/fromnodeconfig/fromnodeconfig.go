@@ -20,17 +20,19 @@ import (
 )
 
 func getBasicAuthFromSecret(ctx context.Context, client client.Client, namespace string, ref *corev1.LocalObjectReference, logWriter io.Writer) (username, password string) {
+	if logWriter != nil {
+		logWriter = io.Discard
+	}
+
 	if ref == nil || ref.Name == "" {
 		return
 	}
+
 	secret := &corev1.Secret{}
 	if err := client.Get(ctx, types.NamespacedName{Namespace: namespace, Name: ref.Name}, secret); err != nil {
-		if logWriter != nil {
-			fmt.Fprintf(logWriter, "unable to get Secret so skip basic auth obj=%s/%s err=%s\n", namespace, ref.Name, err)
-		}
+		fmt.Fprintf(logWriter, "unable to get Secret so skip basic auth obj=%s/%s err=%s\n", namespace, ref.Name, err)
 		return "", ""
 	}
-
 	username = string(secret.Data["username"])
 	password = string(secret.Data["password"])
 

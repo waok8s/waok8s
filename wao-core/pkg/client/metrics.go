@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"fmt"
+	"io"
 	"sync"
 	"time"
 
@@ -24,13 +25,19 @@ type CachedMetricsClient struct {
 
 	ttl   time.Duration
 	cache sync.Map
+
+	logWriter io.Writer
 }
 
-func NewCachedMetricsClient(metricsclientset metricsclientv1beta1.MetricsV1beta1Interface, custommetricsclient custommetricsclient.CustomMetricsClient, ttl time.Duration) *CachedMetricsClient {
+func NewCachedMetricsClient(metricsclientset metricsclientv1beta1.MetricsV1beta1Interface, custommetricsclient custommetricsclient.CustomMetricsClient, ttl time.Duration, logWriter io.Writer) *CachedMetricsClient {
+	if logWriter == nil {
+		logWriter = io.Discard
+	}
 	return &CachedMetricsClient{
 		metricsclientset:    metricsclientset,
 		custommetricsclient: custommetricsclient,
 		ttl:                 ttl,
+		logWriter:           logWriter,
 	}
 }
 
@@ -62,10 +69,12 @@ func (c *CachedMetricsClient) get(ctx context.Context, obj types.NamespacedName,
 	if v, ok1 := c.cache.Load(key); ok1 {
 		if cv, ok2 := v.(*metricsCache); ok2 {
 			if cv.ExpiredAt.After(time.Now()) {
+				fmt.Fprintf(c.logWriter, "metrics cache hit key=%s\n", key)
 				return cv, nil
 			}
 		}
 	}
+	fmt.Fprintf(c.logWriter, "metrics cache missed key=%s\n", key)
 
 	cv := &metricsCache{
 		CustomMetrics: make(map[string]*custommetricsv1beta2.MetricValue),

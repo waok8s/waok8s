@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"fmt"
+	"io"
 	"sync"
 	"time"
 
@@ -18,12 +19,18 @@ type CachedPredictorClient struct {
 
 	ttl   time.Duration
 	cache sync.Map
+
+	logWriter io.Writer
 }
 
-func NewCachedPredictorClient(client client.Client, ttl time.Duration) *CachedPredictorClient {
+func NewCachedPredictorClient(client client.Client, ttl time.Duration, logWriter io.Writer) *CachedPredictorClient {
+	if logWriter == nil {
+		logWriter = io.Discard
+	}
 	return &CachedPredictorClient{
-		client: client,
-		ttl:    ttl,
+		client:    client,
+		ttl:       ttl,
+		logWriter: logWriter,
 	}
 }
 
@@ -65,10 +72,12 @@ func (c *CachedPredictorClient) do(ctx context.Context, valueType string,
 	if v, ok1 := c.cache.Load(key); ok1 {
 		if cv, ok2 := v.(*predictionCache); ok2 {
 			if cv.ExpiredAt.After(time.Now()) {
+				fmt.Fprintf(c.logWriter, "predictor cache hit key=%s\n", key)
 				return cv, nil
 			}
 		}
 	}
+	fmt.Fprintf(c.logWriter, "predictor cache missed key=%s\n", key)
 
 	cv := &predictionCache{
 		ExpiredAt: time.Now().Add(c.ttl),
@@ -76,7 +85,7 @@ func (c *CachedPredictorClient) do(ctx context.Context, valueType string,
 
 	switch valueType {
 	case valueTypePowerConsumptionEndpoint:
-		prov, err := fromnodeconfig.NewEndpointProvider(c.client, namespace, endpointTerm)
+		prov, err := fromnodeconfig.NewEndpointProvider(c.client, namespace, endpointTerm, c.logWriter)
 		if err != nil {
 			return nil, err
 		}
@@ -86,7 +95,7 @@ func (c *CachedPredictorClient) do(ctx context.Context, valueType string,
 		}
 		cv.PowerConsumptionEndpoint = ep
 	case valueTypeWatt:
-		pred, err := fromnodeconfig.NewPowerConsumptionPredictor(c.client, namespace, endpointTerm)
+		pred, err := fromnodeconfig.NewPowerConsumptionPredictor(c.client, namespace, endpointTerm, c.logWriter)
 		if err != nil {
 			return nil, err
 		}
