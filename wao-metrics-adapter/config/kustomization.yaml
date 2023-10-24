@@ -1,15 +1,17 @@
 resources:
-- nodeconfig/crd.yaml
-- nodeconfig/nodeconfig_editor_role.yaml
-- ns.yaml
-- apiservice-custommetrics.yaml
-# - apiservice-externalmetrics.yaml
-- sa.yaml
-# - sa-hpa.yaml
-- deploy.yaml
-- svc.yaml
+  - wao-core.yaml
+  - ns.yaml
+  - apiservice-custommetrics.yaml
+  # - apiservice-externalmetrics.yaml
+  - sa.yaml
+  # - sa-hpa.yaml
+  - deploy.yaml
+  - svc.yaml
 
 images:
-- name: wao-metrics-adapter
-  newName: ghcr.io/waok8s/wao-metrics-adapter
-  newTag: latest
+  - name: wao-metrics-adapter
+    newName: ghcr.io/waok8s/wao-metrics-adapter
+    newTag: latest
+  - name: wao-controller
+    newName: ghcr.io/waok8s/wao-controller
+    newTag: latest
