@@ -6,9 +6,6 @@ import (
 	"math"
 	"time"
 
-	waometric "github.com/waok8s/wao-metrics-adapter/pkg/metric"
-	waov1beta1 "github.com/waok8s/wao-nodeconfig/api/v1beta1"
-	"github.com/waok8s/wao-scheduler/pkg/predictor"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -24,6 +21,11 @@ import (
 	custommetricsclient "k8s.io/metrics/pkg/client/custom_metrics"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	waov1beta1 "github.com/waok8s/wao-core/api/wao/v1beta1"
+	waoclient "github.com/waok8s/wao-core/pkg/client"
+	waometrics "github.com/waok8s/wao-core/pkg/metrics"
+	"github.com/waok8s/wao-core/pkg/predictor"
 )
 
 const (
@@ -43,8 +45,8 @@ type MinimizePower struct {
 	clientset            kubernetes.Interface
 	ctrlclient           client.Client
 
-	metricsclient   *CachedMetricsClient
-	predictorclient *CachedPredictorClient
+	metricsclient   *waoclient.CachedMetricsClient
+	predictorclient *waoclient.CachedPredictorClient
 }
 
 var _ framework.ScorePlugin = (*MinimizePower)(nil)
@@ -105,8 +107,8 @@ func New(_ runtime.Object, fh framework.Handle) (framework.Plugin, error) {
 		snapshotSharedLister: fh.SnapshotSharedLister(),
 		clientset:            fh.ClientSet(),
 		ctrlclient:           c,
-		metricsclient:        NewCachedMetricsClient(mc, cmc, MetricsCacheTTL),
-		predictorclient:      NewCachedPredictorClient(c, PredictorCacheTTL),
+		metricsclient:        waoclient.NewCachedMetricsClient(mc, cmc, MetricsCacheTTL),
+		predictorclient:      waoclient.NewCachedPredictorClient(c, PredictorCacheTTL),
 	}, nil
 }
 
@@ -161,12 +163,12 @@ func (pl *MinimizePower) Score(ctx context.Context, state *framework.CycleState,
 	}
 
 	// get custom metrics
-	inletTemp, err := pl.metricsclient.GetCustomMetricForNode(ctx, nodeName, waometric.ValueInletTemperature)
+	inletTemp, err := pl.metricsclient.GetCustomMetricForNode(ctx, nodeName, waometrics.ValueInletTemperature)
 	if err != nil {
 		klog.ErrorS(err, "MinimizePower.Score score=MaxInt64 as error occurred", "node", nodeName, "pod", pod.Name)
 		return math.MaxInt64, nil
 	}
-	deltaP, err := pl.metricsclient.GetCustomMetricForNode(ctx, nodeName, waometric.ValueDeltaPressure)
+	deltaP, err := pl.metricsclient.GetCustomMetricForNode(ctx, nodeName, waometrics.ValueDeltaPressure)
 	if err != nil {
 		klog.ErrorS(err, "MinimizePower.Score score=MaxInt64 as error occurred", "node", nodeName, "pod", pod.Name)
 		return math.MaxInt64, nil
