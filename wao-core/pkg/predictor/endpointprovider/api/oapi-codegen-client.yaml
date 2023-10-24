@@ -1,0 +1,4 @@
+package: api
+generate:
+  client: true
+output: estimator-client.gen.go
