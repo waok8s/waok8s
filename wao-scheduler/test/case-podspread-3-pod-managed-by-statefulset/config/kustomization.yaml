@@ -1,0 +1,6 @@
+resources:
+  - crd.yaml
+  - ns.yaml
+  - sa.yaml
+  - cm.yaml
+  - deploy.yaml

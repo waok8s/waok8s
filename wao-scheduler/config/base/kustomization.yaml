@@ -1,0 +1,6 @@
+resources:
+  - wao-metrics-adapter.yaml
+  - wao-core.yaml
+  - sa.yaml
+  - cm.yaml
+  - deploy.yaml

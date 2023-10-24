@@ -69,8 +69,8 @@ function lib::deploy-scheduler {
     "$KIND" load docker-image "$sched_image" -n "$kind_cluster_name"
 
     # apply manifests
-    "$KUBECTL" delete -f "$sched_yaml" || true
-    "$KUBECTL" apply -f "$sched_yaml"
+    "$KUBECTL" delete -k "$sched_yaml" || true
+    "$KUBECTL" apply -k "$sched_yaml"
 
     "$KUBECTL" wait pod $($KUBECTL get pods -l component=scheduler -o jsonpath="{.items[0].metadata.name}" -n kube-system) -nkube-system --for condition=Ready --timeout=120s
 }

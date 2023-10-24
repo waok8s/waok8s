@@ -90,34 +90,6 @@ roleRef:
   name: custom-metrics-server-resources
   apiGroup: rbac.authorization.k8s.io
 ---
-# permissions for end users to view nodeconfigs.
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  labels:
-    app.kubernetes.io/name: clusterrole
-    app.kubernetes.io/instance: nodeconfig-viewer-role
-    app.kubernetes.io/component: rbac
-    app.kubernetes.io/created-by: wao-nodeconfig
-    app.kubernetes.io/part-of: wao-nodeconfig
-    app.kubernetes.io/managed-by: kustomize
-  name: nodeconfig-viewer-role
-rules:
-- apiGroups:
-  - wao.bitmedia.co.jp
-  resources:
-  - nodeconfigs
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - wao.bitmedia.co.jp
-  resources:
-  - nodeconfigs/status
-  verbs:
-  - get
----
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
@@ -130,16 +102,16 @@ subjects:
 - kind: ServiceAccount
   name: wao-scheduler
   namespace: kube-system
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
-metadata:
-  name: secret-reader
-  namespace: wao-system
-rules:
-- apiGroups: [""]
-  resources: ["secrets"]
-  verbs: ["get"]
+# ---
+# apiVersion: rbac.authorization.k8s.io/v1
+# kind: Role
+# metadata:
+#   name: secret-reader
+#   namespace: wao-system
+# rules:
+# - apiGroups: [""]
+#   resources: ["secrets"]
+#   verbs: ["get"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
