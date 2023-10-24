@@ -3,7 +3,7 @@ package client
 import (
 	"context"
 	"fmt"
-	"io"
+	"log/slog"
 	"sync"
 	"time"
 
@@ -25,19 +25,13 @@ type CachedMetricsClient struct {
 
 	ttl   time.Duration
 	cache sync.Map
-
-	logWriter io.Writer
 }
 
-func NewCachedMetricsClient(metricsclientset metricsclientv1beta1.MetricsV1beta1Interface, custommetricsclient custommetricsclient.CustomMetricsClient, ttl time.Duration, logWriter io.Writer) *CachedMetricsClient {
-	if logWriter == nil {
-		logWriter = io.Discard
-	}
+func NewCachedMetricsClient(metricsclientset metricsclientv1beta1.MetricsV1beta1Interface, custommetricsclient custommetricsclient.CustomMetricsClient, ttl time.Duration) *CachedMetricsClient {
 	return &CachedMetricsClient{
 		metricsclientset:    metricsclientset,
 		custommetricsclient: custommetricsclient,
 		ttl:                 ttl,
-		logWriter:           logWriter,
 	}
 }
 
@@ -65,16 +59,17 @@ type metricsCache struct {
 func (c *CachedMetricsClient) get(ctx context.Context, obj types.NamespacedName, metricType string, metricName string) (*metricsCache, error) {
 
 	key := metricsCacheKey(obj, metricType, metricName)
+	lg := slog.With("func", "CachedMetricsClient.get", "key", key)
 
 	if v, ok1 := c.cache.Load(key); ok1 {
 		if cv, ok2 := v.(*metricsCache); ok2 {
 			if cv.ExpiredAt.After(time.Now()) {
-				fmt.Fprintf(c.logWriter, "metrics cache hit key=%s\n", key)
+				lg.Debug("metrics cache hit")
 				return cv, nil
 			}
 		}
 	}
-	fmt.Fprintf(c.logWriter, "metrics cache missed key=%s\n", key)
+	lg.Debug("metrics cache missed")
 
 	cv := &metricsCache{
 		CustomMetrics: make(map[string]*custommetricsv1beta2.MetricValue),

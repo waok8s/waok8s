@@ -3,7 +3,7 @@ package fromnodeconfig
 import (
 	"context"
 	"fmt"
-	"io"
+	"log/slog"
 	"net/url"
 	"strings"
 	"time"
@@ -19,10 +19,8 @@ import (
 	"github.com/waok8s/wao-core/pkg/util"
 )
 
-func getBasicAuthFromSecret(ctx context.Context, client client.Client, namespace string, ref *corev1.LocalObjectReference, logWriter io.Writer) (username, password string) {
-	if logWriter != nil {
-		logWriter = io.Discard
-	}
+func getBasicAuthFromSecret(ctx context.Context, client client.Client, namespace string, ref *corev1.LocalObjectReference) (username, password string) {
+	lg := slog.With("func", "getBasicAuthFromSecret")
 
 	if ref == nil || ref.Name == "" {
 		return
@@ -30,7 +28,7 @@ func getBasicAuthFromSecret(ctx context.Context, client client.Client, namespace
 
 	secret := &corev1.Secret{}
 	if err := client.Get(ctx, types.NamespacedName{Namespace: namespace, Name: ref.Name}, secret); err != nil {
-		fmt.Fprintf(logWriter, "unable to get Secret so skip basic auth obj=%s/%s err=%s\n", namespace, ref.Name, err)
+		lg.Error("unable to get Secret so skip basic auth", "err", err, "obj", types.NamespacedName{Namespace: namespace, Name: ref.Name})
 		return "", ""
 	}
 	username = string(secret.Data["username"])
@@ -39,19 +37,18 @@ func getBasicAuthFromSecret(ctx context.Context, client client.Client, namespace
 	return
 }
 
-func NewEndpointProvider(client client.Client, namespace string, endpointTerm *waov1beta1.EndpointTerm, logWriter io.Writer) (predictor.EndpointProvider, error) {
+func NewEndpointProvider(client client.Client, namespace string, endpointTerm *waov1beta1.EndpointTerm) (predictor.EndpointProvider, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
-	username, password := getBasicAuthFromSecret(ctx, client, namespace, endpointTerm.BasicAuthSecret, logWriter)
+	username, password := getBasicAuthFromSecret(ctx, client, namespace, endpointTerm.BasicAuthSecret)
 
-	return newEndpointProvider(endpointTerm.Type, endpointTerm.Endpoint, username, password, true, 3*time.Second, logWriter)
+	return newEndpointProvider(endpointTerm.Type, endpointTerm.Endpoint, username, password, true, 3*time.Second)
 }
 
 func newEndpointProvider(
 	endpointType, endpoint string,
 	basicAuthUsername, basicAuthPassword string,
 	insecureSkipVerify bool, requestTimeout time.Duration,
-	logWriter io.Writer,
 ) (predictor.EndpointProvider, error) {
 
 	switch endpointType {
@@ -74,7 +71,7 @@ func newEndpointProvider(
 
 		requestEditorFns := []util.RequestEditorFn{
 			util.WithBasicAuth(basicAuthUsername, basicAuthPassword),
-			util.WithCurlLogger(logWriter),
+			util.WithCurlLogger(slog.With("func", "WithCurlLogger(RedfishEndpointProvider.Get)")),
 		}
 
 		prov, err := endpointprovider.NewRedfishEndpointProvider(endpoint, insecureSkipVerify, requestTimeout, requestEditorFns...)
@@ -87,19 +84,18 @@ func newEndpointProvider(
 	return nil, fmt.Errorf("unknown endpoint type: %s", endpointType)
 }
 
-func NewPowerConsumptionPredictor(client client.Client, namespace string, endpointTerm *waov1beta1.EndpointTerm, logWriter io.Writer) (predictor.PowerConsumptionPredictor, error) {
+func NewPowerConsumptionPredictor(client client.Client, namespace string, endpointTerm *waov1beta1.EndpointTerm) (predictor.PowerConsumptionPredictor, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
-	username, password := getBasicAuthFromSecret(ctx, client, namespace, endpointTerm.BasicAuthSecret, logWriter)
+	username, password := getBasicAuthFromSecret(ctx, client, namespace, endpointTerm.BasicAuthSecret)
 
-	return newPowerConsumptionPredictor(endpointTerm.Type, endpointTerm.Endpoint, username, password, true, 3*time.Second, logWriter)
+	return newPowerConsumptionPredictor(endpointTerm.Type, endpointTerm.Endpoint, username, password, true, 3*time.Second)
 }
 
 func newPowerConsumptionPredictor(
 	endpointType, endpoint string,
 	basicAuthUsername, basicAuthPassword string,
 	insecureSkipVerify bool, requestTimeout time.Duration,
-	logWriter io.Writer,
 ) (predictor.PowerConsumptionPredictor, error) {
 
 	switch endpointType {
@@ -139,7 +135,7 @@ func newPowerConsumptionPredictor(
 
 		requestEditorFns := []util.RequestEditorFn{
 			util.WithBasicAuth(basicAuthUsername, basicAuthPassword),
-			util.WithCurlLogger(logWriter),
+			util.WithCurlLogger(slog.With("func", "WithCurlLogger(v2inferenceprotocol.PowerConsumptionClient.Predict)")),
 		}
 
 		var client predictor.PowerConsumptionPredictor

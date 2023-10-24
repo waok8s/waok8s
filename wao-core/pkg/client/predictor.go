@@ -3,7 +3,7 @@ package client
 import (
 	"context"
 	"fmt"
-	"io"
+	"log/slog"
 	"sync"
 	"time"
 
@@ -19,18 +19,12 @@ type CachedPredictorClient struct {
 
 	ttl   time.Duration
 	cache sync.Map
-
-	logWriter io.Writer
 }
 
-func NewCachedPredictorClient(client client.Client, ttl time.Duration, logWriter io.Writer) *CachedPredictorClient {
-	if logWriter == nil {
-		logWriter = io.Discard
-	}
+func NewCachedPredictorClient(client client.Client, ttl time.Duration) *CachedPredictorClient {
 	return &CachedPredictorClient{
-		client:    client,
-		ttl:       ttl,
-		logWriter: logWriter,
+		client: client,
+		ttl:    ttl,
 	}
 }
 
@@ -68,16 +62,17 @@ func (c *CachedPredictorClient) do(ctx context.Context, valueType string,
 ) (*predictionCache, error) {
 
 	key := predictorCacheKey(valueType, namespace, endpointTerm, predictorType, cpuUsage, inletTemp, deltaP)
+	lg := slog.With("func", "CachedPredictorClient.do", "key", key)
 
 	if v, ok1 := c.cache.Load(key); ok1 {
 		if cv, ok2 := v.(*predictionCache); ok2 {
 			if cv.ExpiredAt.After(time.Now()) {
-				fmt.Fprintf(c.logWriter, "predictor cache hit key=%s\n", key)
+				lg.Debug("predictor cache hit")
 				return cv, nil
 			}
 		}
 	}
-	fmt.Fprintf(c.logWriter, "predictor cache missed key=%s\n", key)
+	lg.Debug("predictor cache missed")
 
 	cv := &predictionCache{
 		ExpiredAt: time.Now().Add(c.ttl),
@@ -85,7 +80,7 @@ func (c *CachedPredictorClient) do(ctx context.Context, valueType string,
 
 	switch valueType {
 	case valueTypePowerConsumptionEndpoint:
-		prov, err := fromnodeconfig.NewEndpointProvider(c.client, namespace, endpointTerm, c.logWriter)
+		prov, err := fromnodeconfig.NewEndpointProvider(c.client, namespace, endpointTerm)
 		if err != nil {
 			return nil, err
 		}
@@ -95,7 +90,7 @@ func (c *CachedPredictorClient) do(ctx context.Context, valueType string,
 		}
 		cv.PowerConsumptionEndpoint = ep
 	case valueTypeWatt:
-		pred, err := fromnodeconfig.NewPowerConsumptionPredictor(c.client, namespace, endpointTerm, c.logWriter)
+		pred, err := fromnodeconfig.NewPowerConsumptionPredictor(c.client, namespace, endpointTerm)
 		if err != nil {
 			return nil, err
 		}
