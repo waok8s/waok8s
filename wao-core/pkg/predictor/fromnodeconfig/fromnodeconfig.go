@@ -3,6 +3,7 @@ package fromnodeconfig
 import (
 	"context"
 	"fmt"
+	"io"
 	"net/url"
 	"strings"
 	"time"
@@ -18,13 +19,15 @@ import (
 	"github.com/waok8s/wao-core/pkg/util"
 )
 
-func getBasicAuthFromSecret(ctx context.Context, client client.Client, namespace string, ref *corev1.LocalObjectReference) (username, password string) {
+func getBasicAuthFromSecret(ctx context.Context, client client.Client, namespace string, ref *corev1.LocalObjectReference, logWriter io.Writer) (username, password string) {
 	if ref == nil || ref.Name == "" {
 		return
 	}
 	secret := &corev1.Secret{}
 	if err := client.Get(ctx, types.NamespacedName{Namespace: namespace, Name: ref.Name}, secret); err != nil {
-		// TODO: log
+		if logWriter != nil {
+			fmt.Fprintf(logWriter, "unable to get Secret so skip basic auth obj=%s/%s err=%s\n", namespace, ref.Name, err)
+		}
 		return "", ""
 	}
 
@@ -34,18 +37,19 @@ func getBasicAuthFromSecret(ctx context.Context, client client.Client, namespace
 	return
 }
 
-func NewEndpointProvider(client client.Client, namespace string, endpointTerm *waov1beta1.EndpointTerm) (predictor.EndpointProvider, error) {
+func NewEndpointProvider(client client.Client, namespace string, endpointTerm *waov1beta1.EndpointTerm, logWriter io.Writer) (predictor.EndpointProvider, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
-	username, password := getBasicAuthFromSecret(ctx, client, namespace, endpointTerm.BasicAuthSecret)
+	username, password := getBasicAuthFromSecret(ctx, client, namespace, endpointTerm.BasicAuthSecret, logWriter)
 
-	return newEndpointProvider(endpointTerm.Type, endpointTerm.Endpoint, username, password, true, 3*time.Second)
+	return newEndpointProvider(endpointTerm.Type, endpointTerm.Endpoint, username, password, true, 3*time.Second, logWriter)
 }
 
 func newEndpointProvider(
 	endpointType, endpoint string,
 	basicAuthUsername, basicAuthPassword string,
 	insecureSkipVerify bool, requestTimeout time.Duration,
+	logWriter io.Writer,
 ) (predictor.EndpointProvider, error) {
 
 	switch endpointType {
@@ -55,7 +59,7 @@ func newEndpointProvider(
 
 		requestEditorFns := []util.RequestEditorFn{
 			util.WithBasicAuth(basicAuthUsername, basicAuthPassword),
-			// util.WithCurlLogger(nil), // TODO: implement
+			util.WithCurlLogger(logWriter),
 		}
 
 		prov, err := endpointprovider.NewRedfishEndpointProvider(endpoint, insecureSkipVerify, requestTimeout, requestEditorFns...)
@@ -68,18 +72,19 @@ func newEndpointProvider(
 	return nil, fmt.Errorf("unknown endpoint type: %s", endpointType)
 }
 
-func NewPowerConsumptionPredictor(client client.Client, namespace string, endpointTerm *waov1beta1.EndpointTerm) (predictor.PowerConsumptionPredictor, error) {
+func NewPowerConsumptionPredictor(client client.Client, namespace string, endpointTerm *waov1beta1.EndpointTerm, logWriter io.Writer) (predictor.PowerConsumptionPredictor, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
-	username, password := getBasicAuthFromSecret(ctx, client, namespace, endpointTerm.BasicAuthSecret)
+	username, password := getBasicAuthFromSecret(ctx, client, namespace, endpointTerm.BasicAuthSecret, logWriter)
 
-	return newPowerConsumptionPredictor(endpointTerm.Type, endpointTerm.Endpoint, username, password, true, 3*time.Second)
+	return newPowerConsumptionPredictor(endpointTerm.Type, endpointTerm.Endpoint, username, password, true, 3*time.Second, logWriter)
 }
 
 func newPowerConsumptionPredictor(
 	endpointType, endpoint string,
 	basicAuthUsername, basicAuthPassword string,
 	insecureSkipVerify bool, requestTimeout time.Duration,
+	logWriter io.Writer,
 ) (predictor.PowerConsumptionPredictor, error) {
 
 	switch endpointType {
@@ -109,7 +114,7 @@ func newPowerConsumptionPredictor(
 
 		requestEditorFns := []util.RequestEditorFn{
 			util.WithBasicAuth(basicAuthUsername, basicAuthPassword),
-			// util.WithCurlLogger(nil), // TODO: implement
+			util.WithCurlLogger(logWriter),
 		}
 
 		var client predictor.PowerConsumptionPredictor

@@ -36,10 +36,12 @@ func (r *agentRunner) Run() {
 		case <-r.stopCh:
 			return
 		case <-time.After(r.interval):
-			ctx, cf := context.WithTimeout(context.Background(), r.timeout)
+			ctx, cancel := context.WithTimeout(context.Background(), r.timeout)
 			v, err := r.agent.Fetch(ctx)
+			cancel()
 			if err != nil {
-				// TODO: log
+				// TODO: notify error?
+				continue
 			}
 
 			k := StoreKeyForNode(r.nodeName)
@@ -51,8 +53,6 @@ func (r *agentRunner) Run() {
 				m.DeltaPressure = v
 			}
 			r.store.Set(k, m)
-
-			cf()
 		}
 	}
 }

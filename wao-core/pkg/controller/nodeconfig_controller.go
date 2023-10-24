@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -85,23 +84,16 @@ func (r *NodeConfigReconciler) reconcileNodeConfigDeletion(ctx context.Context, 
 	}
 }
 
-type curlLogWriter struct {
-	Logger logr.Logger
-	Msg    string
-}
-
-func (w *curlLogWriter) Write(p []byte) (n int, err error) {
-	w.Logger.Info(w.Msg, "curl", string(p))
-	return len(p), nil
-}
-
 func (r *NodeConfigReconciler) getBasicAuthFromSecret(ctx context.Context, namespace string, ref *corev1.LocalObjectReference) (username, password string) {
+	lg := log.FromContext(ctx)
+	lg.Info("getBasicAuthFromSecret")
+
 	if ref == nil || ref.Name == "" {
 		return
 	}
 	secret := &corev1.Secret{}
 	if err := r.Get(ctx, types.NamespacedName{Namespace: namespace, Name: ref.Name}, secret); err != nil {
-		// TODO: log
+		lg.Error(err, "unable to get Secret so skip basic auth", "namespace", namespace, "name", ref.Name)
 		return "", ""
 	}
 
@@ -136,7 +128,7 @@ func (r *NodeConfigReconciler) reconcileNodeConfig(ctx context.Context, objKey t
 
 		requestEditorFns := []util.RequestEditorFn{
 			util.WithBasicAuth(username, password),
-			util.WithCurlLogger(&curlLogWriter{Logger: lg, Msg: "fetch inletTemp"}),
+			util.WithCurlLogger(&util.CurlWriterLogr{Logger: lg, Msg: "fetch inletTemp"}),
 		}
 		c := inlettemp.NewRedfishClient(inletTempConfig.Endpoint, serverType, insecureSkipVerify, requestTimeout, requestEditorFns...)
 		r.MetricsCollector.Register(metrics.CollectorKey(objKey, metrics.ValueInletTemperature), c, r.MetricsStore, nc.Spec.NodeName, inletTempConfig.FetchInterval.Duration, fetchTimeout)
@@ -164,7 +156,7 @@ func (r *NodeConfigReconciler) reconcileNodeConfig(ctx context.Context, objKey t
 
 		requestEditorFns := []util.RequestEditorFn{
 			util.WithBasicAuth(username, password),
-			util.WithCurlLogger(&curlLogWriter{Logger: lg, Msg: "fetch deltaP"}),
+			util.WithCurlLogger(&util.CurlWriterLogr{Logger: lg, Msg: "fetch deltaP"}),
 		}
 		c := deltap.NewDifferentialPressureAPIClient(deltapConfig.Endpoint, "", nc.Spec.NodeName, "", insecureSkipVerify, requestTimeout, requestEditorFns...)
 		r.MetricsCollector.Register(metrics.CollectorKey(objKey, metrics.ValueDeltaPressure), c, r.MetricsStore, nc.Spec.NodeName, inletTempConfig.FetchInterval.Duration, fetchTimeout)

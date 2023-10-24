@@ -4,7 +4,6 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"io"
 	"log"
 	"strings"
 	"time"
@@ -12,14 +11,6 @@ import (
 	"github.com/waok8s/wao-core/pkg/metrics/deltap"
 	"github.com/waok8s/wao-core/pkg/util"
 )
-
-type curlWriter struct {
-	W io.Writer
-}
-
-func (w *curlWriter) Write(p []byte) (n int, err error) {
-	return fmt.Fprintf(w.W, "# %s\n", p)
-}
 
 func main() {
 	var address string
@@ -39,7 +30,7 @@ func main() {
 	if len(ss) == 2 {
 		requestEditorFns = append(requestEditorFns, util.WithBasicAuth(ss[0], ss[1]))
 	}
-	requestEditorFns = append(requestEditorFns, util.WithCurlLogger(&curlWriter{W: log.Writer()}))
+	requestEditorFns = append(requestEditorFns, util.WithCurlLogger(&util.CurlWriter{W: log.Writer()}))
 
 	c := deltap.NewDifferentialPressureAPIClient(address, sensorName, nodeName, nodeIP, true, 2*time.Second, requestEditorFns...)
 
