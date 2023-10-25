@@ -145,8 +145,7 @@ spec:
         - --v=5
         command:
         - adapter
-        image: gcr.io/bitmedia-275511/wao-metrics-adapter:v0.0.1-dev-19-gc48714a
-        imagePullPolicy: Always
+        image: ghcr.io/waok8s/wao-metrics-adapter:v0.27.0-alpha.0
         name: wao-metrics-adapter
         ports:
         - containerPort: 6443

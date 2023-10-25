@@ -103,6 +103,7 @@ subjects:
   name: wao-scheduler
   namespace: kube-system
 # ---
+# NOTE: same role in wao-metrics-adapter
 # apiVersion: rbac.authorization.k8s.io/v1
 # kind: Role
 # metadata:
