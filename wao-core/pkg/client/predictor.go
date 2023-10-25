@@ -33,7 +33,11 @@ func predictorCacheKey(valueType string,
 	predictorType predictor.PredictorType, // GetPredictorEndpoint
 	cpuUsage, inletTemp, deltaP float64, // PredictPowerConsumption
 ) string {
-	ep := fmt.Sprintf("%s|%s|%s", endpointTerm.Type, endpointTerm.Endpoint, endpointTerm.BasicAuthSecret.Name)
+	secretName := ""
+	if endpointTerm.BasicAuthSecret != nil {
+		secretName = endpointTerm.BasicAuthSecret.Name
+	}
+	ep := fmt.Sprintf("%s|%s|%s", endpointTerm.Type, endpointTerm.Endpoint, secretName)
 	return fmt.Sprintf("%s#%s#%s#%s#%f#%f#%f", valueType, namespace, ep, predictorType, cpuUsage, inletTemp, deltaP)
 }
 
