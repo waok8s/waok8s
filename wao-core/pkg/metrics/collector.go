@@ -45,7 +45,7 @@ func (r *agentRunner) Run() {
 			}
 
 			k := StoreKeyForNode(r.nodeName)
-			m := r.store.Get(k)
+			m := r.store.GetOrInit(k)
 			switch r.agent.ValueType() {
 			case ValueInletTemperature:
 				m.InletTemp = v

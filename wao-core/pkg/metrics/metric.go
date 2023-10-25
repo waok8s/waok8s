@@ -48,9 +48,20 @@ func StoreKeyForNode(name string) storeKey {
 
 type Store struct{ m sync.Map }
 
-// Get returns a MetricData for the given storeKey or inits it if not found.
+// Get returns a MetricData for the given storeKey.
 // Thread-safe.
-func (s *Store) Get(k storeKey) MetricData {
+func (s *Store) Get(k storeKey) (MetricData, bool) {
+	v, ok := s.m.Load(k)
+	if !ok {
+		return MetricData{}, false
+	}
+	vv, _ := v.(MetricData)
+	return vv, true
+}
+
+// GetOrInit returns a MetricData for the given storeKey or inits it if not found.
+// Thread-safe.
+func (s *Store) GetOrInit(k storeKey) MetricData {
 	if _, ok := s.m.Load(k); !ok {
 		s.Set(k, MetricData{})
 	}
