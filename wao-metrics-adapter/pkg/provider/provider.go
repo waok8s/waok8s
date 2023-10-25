@@ -38,8 +38,8 @@ var (
 
 func New(client dynamic.Interface, mapper apimeta.RESTMapper, metricStore *metrics.Store) *Provider {
 	return &Provider{
-		client:      client,
-		mapper:      mapper,
+		client:       client,
+		mapper:       mapper,
 		metricsStore: metricStore,
 	}
 }
@@ -114,7 +114,10 @@ func (p *Provider) metricFor(namespace, name string, info provider.CustomMetricI
 		return nil, err
 	}
 	k := metrics.StoreKey(namespace, name, info)
-	m := p.metricsStore.Get(k)
+	m, ok := p.metricsStore.Get(k)
+	if !ok {
+		return nil, fmt.Errorf("metric %s for %s not found", info.Metric, k)
+	}
 
 	// construct objref
 	objRef, err := helpers.ReferenceFor(p.mapper, types.NamespacedName{Namespace: namespace, Name: name}, info)
