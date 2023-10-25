@@ -221,6 +221,7 @@ func (pl *MinimizePower) Score(ctx context.Context, state *framework.CycleState,
 		klog.ErrorS(err, "MinimizePower.Score score=MaxInt64 as error occurred", "node", nodeName, "pod", pod.Name)
 		return math.MaxInt64, nil
 	}
+	klog.InfoS("MinimizePower.Score predicted", "node", nodeName, "pod", pod.Name, "beforeWatt", beforeWatt, "afterWatt", afterWatt)
 
 	podPowerConsumption := int64(afterWatt - beforeWatt)
 	if podPowerConsumption < 0 {
