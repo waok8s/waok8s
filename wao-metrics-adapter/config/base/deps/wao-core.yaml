@@ -563,6 +563,33 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   labels:
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: wao-core
+    app.kubernetes.io/instance: nodeconfig-viewer-role
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: clusterrole
+    app.kubernetes.io/part-of: wao-core
+  name: wao-nodeconfig-viewer-role
+rules:
+- apiGroups:
+  - wao.bitmedia.co.jp
+  resources:
+  - nodeconfigs
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - wao.bitmedia.co.jp
+  resources:
+  - nodeconfigs/status
+  verbs:
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
     app.kubernetes.io/component: kube-rbac-proxy
     app.kubernetes.io/created-by: wao-core
     app.kubernetes.io/instance: proxy-role
@@ -722,7 +749,7 @@ spec:
         - --leader-elect
         command:
         - /manager
-        image: ghcr.io/waok8s/wao-controller:v0.27.0-alpha.0
+        image: ghcr.io/waok8s/wao-controller:v0.27.0-alpha.3
         livenessProbe:
           httpGet:
             path: /healthz
