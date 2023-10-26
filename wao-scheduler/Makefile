@@ -6,7 +6,7 @@ IMAGE_NAME=wao-scheduler
 -include .env
 
 .PHONY: all
-all: test build-bin build-image
+all: test build image
 
 .PHONY: gen
 gen:

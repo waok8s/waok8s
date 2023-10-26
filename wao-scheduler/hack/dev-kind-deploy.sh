@@ -23,6 +23,6 @@ echo ''
 echo 'Completed!'
 echo ''
 echo 'Check logs:'
-echo "    kubectl logs $($KUBECTL get pods -l component=scheduler -o jsonpath="{.items[0].metadata.name}" --field-selector=status.phase=Running -n kube-system) -f -nkube-system"
+echo "    kubectl logs $($KUBECTL get pods -l app=wao-scheduler -o jsonpath="{.items[0].metadata.name}" --field-selector=status.phase=Running -n kube-system) -f -nkube-system"
 echo 'Run a Deployment:'
 echo '    kubectl delete -f config/samples/dep.yaml ; kubectl apply -f config/samples/dep.yaml && sleep 2 && kubectl get pod'

@@ -19,7 +19,7 @@ A kube-scheduler with MinimizePower plugin and PodSpread plugin to schedule pods
 
 ## Overview
 
-WAO Scheduler schedules pods with features focused on minimizing power consumption. This is done with the following scheduler plugins:
+WAO Scheduler schedules pods with features focused on minimizing power consumption. This is done by the following scheduler plugins:
 
 - `MinimizePower`: Score nodes based on expected power consumption.
 - `PodSpread`: Keep availability high by spreading pods across nodes, works together with MinimizePower.
@@ -45,7 +45,7 @@ kubectl wait pod $(kubectl get pods -n kube-system -l app=wao-scheduler -o jsonp
 
 ### Deploy Pods with MinimizePower
 
-This score plugin is enabled by default, so you only need to set `spec.schedulerName`.
+This plugin is enabled by default, so you only need to set `spec.schedulerName`.
 
 ```diff
   apiVersion: v1
@@ -61,7 +61,7 @@ This score plugin is enabled by default, so you only need to set `spec.scheduler
 
 ### Deploy Pods with PodSpread
 
-The filter plugin only effects pods controlled by Deployment (and ReplicaSet), and it needs to be enabled by setting `wao.bitmedia.co.jp/podspread-rate` annotation.
+This plugin only effects pods controlled by Deployment (and ReplicaSet), and it needs to be enabled by setting `wao.bitmedia.co.jp/podspread-rate` annotation.
 
 ```diff
   apiVersion: apps/v1
