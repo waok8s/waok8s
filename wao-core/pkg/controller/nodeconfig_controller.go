@@ -8,6 +8,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -104,11 +105,22 @@ func (r *NodeConfigReconciler) getBasicAuthFromSecret(ctx context.Context, names
 	return
 }
 
+const (
+	DefaultFetchInterval = 15 * time.Second
+)
+
+func defaultEndpointTerm(et *waov1beta1.EndpointTerm) {
+	if et.FetchInterval == nil {
+		et.FetchInterval = &metav1.Duration{Duration: DefaultFetchInterval}
+	}
+}
+
 func (r *NodeConfigReconciler) reconcileNodeConfig(ctx context.Context, objKey types.NamespacedName, nc *waov1beta1.NodeConfig) error {
 	lg := log.FromContext(ctx).WithValues("func", "reconcileNodeConfig")
 	lg.Info("called")
 
 	inletTempConfig := nc.Spec.MetricsCollector.InletTemp
+	defaultEndpointTerm(&inletTempConfig)
 	switch inletTempConfig.Type {
 	case waov1beta1.TypeFake:
 		fetchTimeout := time.Second
@@ -138,6 +150,7 @@ func (r *NodeConfigReconciler) reconcileNodeConfig(ctx context.Context, objKey t
 	}
 
 	deltapConfig := nc.Spec.MetricsCollector.DeltaP
+	defaultEndpointTerm(&deltapConfig)
 	switch deltapConfig.Type {
 	case waov1beta1.TypeFake:
 		fetchTimeout := time.Second
