@@ -17,5 +17,5 @@ resources:
 - auth_proxy_role_binding.yaml
 - auth_proxy_client_clusterrole.yaml
 
-# used by wao-scheduler
-- nodeconfig_viewer_role.yaml
+# Additional Roles used by wao-metrics-adapter, wao-scheduler
+- wao_nodeconfig_viewer_role.yaml
