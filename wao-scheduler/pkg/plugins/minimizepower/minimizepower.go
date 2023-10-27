@@ -43,11 +43,14 @@ type MinimizePower struct {
 	predictorclient *waoclient.CachedPredictorClient
 }
 
+var _ framework.PreFilterPlugin = (*MinimizePower)(nil)
 var _ framework.ScorePlugin = (*MinimizePower)(nil)
 var _ framework.ScoreExtensions = (*MinimizePower)(nil)
 
 var (
 	Name = "MinimizePower"
+
+	ReasonResourceRequest = "at least one container in the pod must have a requests.cpu or limits.cpu set"
 )
 
 var (
@@ -108,6 +111,20 @@ func New(_ runtime.Object, fh framework.Handle) (framework.Plugin, error) {
 
 // Name returns name of the plugin. It is used in logs, etc.
 func (*MinimizePower) Name() string { return Name }
+
+// PreFilterExtensions returns nil as this plugin does not have PreFilterExtensions.
+func (pl *MinimizePower) PreFilterExtensions() framework.PreFilterExtensions { return nil }
+
+// PreFilter rejects a pod if it does not have at least one container that has a CPU request or limit set.
+func (pl *MinimizePower) PreFilter(ctx context.Context, state *framework.CycleState, pod *corev1.Pod) (*framework.PreFilterResult, *framework.Status) {
+	klog.InfoS("MinimizePower.PreFilter", "pod", pod.Name)
+
+	if PodCPURequestOrLimit(pod) == 0 {
+		return nil, framework.NewStatus(framework.Unschedulable, ReasonResourceRequest)
+	}
+
+	return &framework.PreFilterResult{NodeNames: nil}, nil
+}
 
 // ScoreExtensions returns a ScoreExtensions interface.
 func (pl *MinimizePower) ScoreExtensions() framework.ScoreExtensions { return pl }
