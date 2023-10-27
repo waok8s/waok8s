@@ -5,7 +5,7 @@ CRDs, controllers and libraries for WAO.
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 
-- [Description](#description)
+- [Overview](#overview)
 - [Getting Started](#getting-started)
   - [Installation](#installation)
   - [Prerequisites for NodeConfig\[Template\]](#prerequisites-for-nodeconfigtemplate)
@@ -24,7 +24,7 @@ CRDs, controllers and libraries for WAO.
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
-## Description
+## Overview
 
 This repository contains CRDs, controllers and libraries for WAO. They are intended to be used with [wao-metrics-adapter](https://github.com/waok8s/wao-metrics-adapter), [wao-scheduler](https://github.com/waok8s/wao-scheduler), etc.
 
