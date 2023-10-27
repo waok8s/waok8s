@@ -31,7 +31,7 @@ const (
 	// MetricsCacheTTL is the expiration time of the metrics cache.
 	MetricsCacheTTL = 15 * time.Second
 	// PredictorCacheTTL is the expiration time of the predictor cache.
-	PredictorCacheTTL = 15 * time.Second
+	PredictorCacheTTL = 10 * time.Minute
 )
 
 type MinimizePower struct {
