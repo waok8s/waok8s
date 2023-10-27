@@ -16,7 +16,6 @@ import (
 	"k8s.io/client-go/restmapper"
 	"k8s.io/klog/v2"
 	framework "k8s.io/kubernetes/pkg/scheduler/framework"
-	metricsv1beta1 "k8s.io/metrics/pkg/apis/metrics/v1beta1"
 	metricsclientv1beta1 "k8s.io/metrics/pkg/client/clientset/versioned/typed/metrics/v1beta1"
 	custommetricsclient "k8s.io/metrics/pkg/client/custom_metrics"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
@@ -29,11 +28,6 @@ import (
 )
 
 const (
-	// AssumedCPUUsageRate sets Pod CPU usage to (limits.cpu * AssumedCPUUsageRate) if requests.cpu is empty.
-	AssumedCPUUsageRate = 0.85
-	// LowerLimitCPUUsageRate sets the lowest Pod CPU usage to (limits.cpu * LowerLimitCPUUsageRate) for the score calculation.
-	LowerLimitCPUUsageRate = 0.50
-
 	// MetricsCacheTTL is the expiration time of the metrics cache.
 	MetricsCacheTTL = 15 * time.Second
 	// PredictorCacheTTL is the expiration time of the predictor cache.
@@ -139,27 +133,16 @@ func (pl *MinimizePower) Score(ctx context.Context, state *framework.CycleState,
 		return math.MaxInt64, nil
 	}
 
-	// get pods and pods metrics, ignore pods that cannot get metrics
-	var nodePods []*corev1.Pod
-	var nodePodsMetricses []*metricsv1beta1.PodMetrics
-	for i, p := range nodeInfo.Pods {
-		podMetrics, err := pl.metricsclient.GetPodMetrics(ctx, p.Pod.Namespace, p.Pod.Name)
-		if err != nil {
-			klog.ErrorS(err, "MinimizePower.Score skip pod as error occurred", "node", nodeName, "pod", pod.Name, "nodeInfo.Pods[i]", i)
-			continue
-		}
-		nodePods = append(nodePods, p.Pod)
-		nodePodsMetricses = append(nodePodsMetricses, podMetrics)
-	}
-
-	beforeUsage, afterUsage := pl.AssumedCPUUsage(ctx, node, nodeMetrics, nodePods, nodePodsMetricses, pod, AssumedCPUUsageRate, LowerLimitCPUUsageRate)
-	if beforeUsage == afterUsage { // Both requests.cpu and limits.cpu are empty or zero. Normally, this should not happen.
+	// prepare beforeUsage and afterUsage
+	beforeUsage := nodeMetrics.Usage.Cpu().AsApproximateFloat64()
+	afterUsage := beforeUsage + PodCPURequestOrLimit(pod)
+	if beforeUsage == afterUsage { // The Pod has both requests.cpu and limits.cpu empty or zero. Normally, this should not happen.
 		klog.ErrorS(fmt.Errorf("beforeUsage == afterUsage v=%v", beforeUsage), "MinimizePower.Score score=MaxInt64 as error occurred", "node", nodeName, "pod", pod.Name)
 		return math.MaxInt64, nil
 	}
-	if afterUsage > 1 { // CPU overcommitment, make the node lowest priority.
-		klog.InfoS("MinimizePower.Score score=MaxInt64 as CPU overcommitment", "node", nodeName, "pod", pod.Name)
-		return math.MaxInt64, nil
+	if afterUsage > 1 { // CPU overcommitment, make the node nearly lowest priority.
+		klog.InfoS("MinimizePower.Score score=MaxInt64>>1 as CPU overcommitment", "node", nodeName, "pod", pod.Name)
+		return math.MaxInt64 >> 1, nil
 	}
 
 	// get custom metrics
@@ -264,78 +247,13 @@ func PowerConsumptions2Scores(scores framework.NodeScoreList) {
 	}
 }
 
-// AssumedCPUUsage assumes the CPU usage increment by allocating the given Pod.
-//
-//   - Node CPU usage may be greater than 1.0.
-//   - Containers are ignored when it has empty requests.cpu and empty limit.cpu.
-//   - assumedCPUUsageRate is used when a container has empty requests.cpu and non-empty limits.cpu.
-//   - lowerLimitCPUUsageRate is the lower limit CPU usage rate of a pod.
-func (pl *MinimizePower) AssumedCPUUsage(ctx context.Context,
-	node *corev1.Node, nodeMetrics *metricsv1beta1.NodeMetrics,
-	nodePods []*corev1.Pod, nodePodsMetricses []*metricsv1beta1.PodMetrics,
-	pod *corev1.Pod,
-	assumedCPUUsageRate float64, lowerLimitCPUUsageRate float64,
-) (before float64, after float64) {
-
-	nodeCPUUsage := nodeMetrics.Usage.Cpu().AsApproximateFloat64()
-	nodeCPUAllocatable := node.Status.Allocatable.Cpu().AsApproximateFloat64()
-
-	for i, p := range nodePods {
-		podMetrics := nodePodsMetricses[i]
-		assumedPodCPUUsage := AssumedPodCPUUsage(p, assumedCPUUsageRate)
-		realPodCPUUsage := PodCPUUsage(podMetrics)
-		if realPodCPUUsage < assumedPodCPUUsage*lowerLimitCPUUsageRate {
-			nodeCPUUsage += assumedPodCPUUsage - realPodCPUUsage
-		}
-	}
-
-	before = nodeCPUUsage / nodeCPUAllocatable
-
-	podCPURequest := PodCPURequest(pod)
-	podCPULimit := PodCPULimit(pod)
-
-	if podCPURequest != 0 {
-		after = (nodeCPUUsage + podCPURequest) / nodeCPUAllocatable
-	} else {
-		after = (nodeCPUUsage + podCPULimit*assumedCPUUsageRate) / nodeCPUAllocatable
-	}
-
-	return
-}
-
-// AssumedPodCPUUsage assumes the total CPU usage by the given Pod.
-//
-// ContainerCPUUsage = requests.cpu || limits.cpu * assumedCPUUsageRate
-// PodCPUUsage = [sum(ContainerCPUUsage(c)) for c in spec.containers]
-// Ignore Pods with no requests.cpu and limits.cpu
-func AssumedPodCPUUsage(pod *corev1.Pod, assumedCPUUsageRate float64) (v float64) {
+func PodCPURequestOrLimit(pod *corev1.Pod) (v float64) {
 	for _, c := range pod.Spec.Containers {
 		vv := c.Resources.Requests.Cpu().AsApproximateFloat64()
 		if vv == 0 {
-			vv = c.Resources.Limits.Cpu().AsApproximateFloat64() * assumedCPUUsageRate
+			vv = c.Resources.Limits.Cpu().AsApproximateFloat64()
 		}
 		v += vv
-	}
-	return
-}
-
-func PodCPUUsage(podMetrics *metricsv1beta1.PodMetrics) (v float64) {
-	for _, c := range podMetrics.Containers {
-		v += c.Usage.Cpu().AsApproximateFloat64()
-	}
-	return
-}
-
-func PodCPURequest(pod *corev1.Pod) (v float64) {
-	for _, c := range pod.Spec.Containers {
-		v += c.Resources.Requests.Cpu().AsApproximateFloat64()
-	}
-	return
-}
-
-func PodCPULimit(pod *corev1.Pod) (v float64) {
-	for _, c := range pod.Spec.Containers {
-		v += c.Resources.Limits.Cpu().AsApproximateFloat64()
 	}
 	return
 }
