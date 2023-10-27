@@ -15,7 +15,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog/v2"
 	framework "k8s.io/kubernetes/pkg/scheduler/framework"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 )
 
 // SpreadInfo holds area info.
@@ -87,7 +87,7 @@ var (
 	ReasonEmptyNodeName             = "node not found"
 	ReasonNotControlledByReplicaSet = "the pod is not controlled by any ReplicaSet"
 	ReasonK8sClient                 = "skip this plugin as k8s client got error"
-	ReasonSchedulingSession         = "skip this plugin as wrong SchedulingSession status"
+	ReasonSchedulingSession         = "skip this plugin as SchedulingSession update failed"
 )
 
 // Name returns name of the plugin. It is used in logs, etc.
@@ -110,20 +110,17 @@ func (pl *PodSpread) PreFilterExtensions() framework.PreFilterExtensions { retur
 
 // PreFilter invoked at the prefilter extension point.
 func (pl *PodSpread) PreFilter(ctx context.Context, cycleState *framework.CycleState, pod *corev1.Pod) (*framework.PreFilterResult, *framework.Status) {
-	// PreFilter()でerrorを返すとpodが配置不可となるので特定のケースでフィルタをパスする
-	result := &framework.PreFilterResult{
-		NodeNames: nil,
-	}
+	// pod will be rejected if error is returned, so skip this plugin for some cases
+	result := &framework.PreFilterResult{NodeNames: nil}
 
-	// PodのReplicaSetを取得
+	// get ReplicaSet that controls this Pod
 	replicaSetName := ""
 	for _, ref := range pod.OwnerReferences {
-		if pointer.BoolDeref(ref.Controller, false) && ref.Kind == "ReplicaSet" {
+		if ptr.Deref[bool](ref.Controller, false) && ref.Kind == "ReplicaSet" {
 			replicaSetName = ref.Name
 		}
 	}
 	if replicaSetName == "" {
-		// no controller found
 		klog.InfoS("PodSpread.PreFilter skipped", "reason", ReasonNotControlledByReplicaSet)
 		return result, nil
 	}
@@ -133,27 +130,23 @@ func (pl *PodSpread) PreFilter(ctx context.Context, cycleState *framework.CycleS
 		return result, nil
 	}
 
-	// PodListを取得
+	// get podList and nodeList, and then do updateSchedulingSession
 	podList, err := pl.clientset.CoreV1().Pods(rs.Namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		klog.ErrorS(err, "PodSpread.PreFilter skipped", "reason", ReasonK8sClient)
 		return result, nil
 	}
-
-	// NodeListを取得
 	nodeList, err := pl.clientset.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
 	if err != nil {
 		klog.ErrorS(err, "PodSpread.PreFilter skipped", "reason", ReasonK8sClient)
 		return result, nil
 	}
-
-	// schedulingSessionの更新
 	if err := pl.updateSchedulingSession(ctx, rs, podList, nodeList); err != nil {
 		klog.ErrorS(err, "PodSpread.PreFilter skipped", "reason", ReasonSchedulingSession)
 		return result, nil
 	}
 
-	// 配置できるノードをリストする
+	// list allocatable nodes
 	allocatableNodes := getAllocatableNodes(pl.schedulingSession[rs.Name], pod, nodeList)
 	klog.InfoS("list allocatable node", "allocatableNodes", allocatableNodes)
 
@@ -171,8 +164,12 @@ const (
 	labelControlPlane = "node-role.kubernetes.io/control-plane"
 )
 
+// getSpreadMode returns SpreadMode and SpreadInfo.
+//
+// NOTE: Control plane only areas should be excluded from scheduling, but not implemented yet.
+// Then the signature will be like: getSpreadMode(nodeList *corev1.NodeList, isControlPlaneSchedulable bool) (mode SpreadMode, regions, zones SpreadInfo)
 func getSpreadMode(nodeList *corev1.NodeList) (mode SpreadMode, regions, zones SpreadInfo) {
-	zones = SpreadInfo{} // key: [zone][node] value: isMasterNode?
+	zones = SpreadInfo{} // key: [zone][node], value: is master node?
 	for _, n := range nodeList.Items {
 		_, isCP := n.Labels[labelControlPlane]
 		zone, ok := n.Labels[labelZone]
@@ -185,7 +182,7 @@ func getSpreadMode(nodeList *corev1.NodeList) (mode SpreadMode, regions, zones S
 		zones[zone][n.Name] = isCP
 	}
 
-	regions = SpreadInfo{} // key: [region][node] value: isMasterNode?
+	regions = SpreadInfo{} // key: [region][node], value: is master node?
 	for _, n := range nodeList.Items {
 		_, isCP := n.Labels[labelControlPlane]
 		region, ok := n.Labels[labelRegion]
@@ -214,9 +211,9 @@ func (pl *PodSpread) updateSchedulingSession(ctx context.Context, rs *appsv1.Rep
 	pl.mu.Lock()
 	defer pl.mu.Unlock()
 
-	// スケジュール対象Podが所属するReplicaSetのschedulingSessionがなければ初期化
+	// init schedulingSession for this ReplicaSet if not exists
 	if _, ok := pl.schedulingSession[rs.Name]; !ok {
-		totalReplicas := int(pointer.Int32Deref(rs.Spec.Replicas, 0))
+		totalReplicas := int(ptr.Deref[int32](rs.Spec.Replicas, 0))
 		podspreadRate, ok := rs.Annotations[AnnotationPodSpreadRate]
 		if !ok {
 			return fmt.Errorf("ReplicaSet %s does not have annotation %s", rs.Name, AnnotationPodSpreadRate)
@@ -236,12 +233,11 @@ func (pl *PodSpread) updateSchedulingSession(ctx context.Context, rs *appsv1.Rep
 		}
 	}
 
-	// schedulingSessionを更新する
+	// get schedulingSession
 	ss := pl.schedulingSession[rs.Name]
-
 	klog.InfoS("get scheduling session", "ss", ss)
 
-	// DeployedInfoを更新する
+	// update DeployedNodes
 	ss.DeployedNodes = map[string]int{}
 	for _, n := range nodeList.Items {
 		if _, ok := ss.DeployedNodes[n.Name]; !ok {
@@ -250,7 +246,7 @@ func (pl *PodSpread) updateSchedulingSession(ctx context.Context, rs *appsv1.Rep
 	}
 	ss.setDeployNodes(rs, podList)
 
-	// SpreadModeを更新する
+	// update SpreadMode and SpreadInfo
 	mode, regions, zones := getSpreadMode(nodeList)
 	ss.SpreadMode = mode
 	switch mode {
@@ -268,8 +264,8 @@ func (pl *PodSpread) updateSchedulingSession(ctx context.Context, rs *appsv1.Rep
 func (ss *SchedulingSession) setDeployNodes(rs *appsv1.ReplicaSet, podList *corev1.PodList) {
 	ss.TotalDeployed = 0
 
-	// Pod Conditions に Type:PodScheduled,Status:True があれば、Podの配置先が確定している
-	// なぜPodScheduledなのか？ https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#pod-phase
+	// If there is Type:PodScheduled,Status:True in Pod Conditions, the node where the Pod is placed is determined.
+	// Why PodScheduled? https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#pod-phase
 	for _, pod := range podList.Items {
 		if !metav1.IsControlledBy(&pod, rs) {
 			continue
@@ -283,6 +279,9 @@ func (ss *SchedulingSession) setDeployNodes(rs *appsv1.ReplicaSet, podList *core
 	}
 }
 
+// getAllocatableNodes returns a list of nodes that can be scheduled.
+//
+// NOTE: Control plane only areas should be excluded from scheduling, but not tested yet.
 func getAllocatableNodes(ss *SchedulingSession, pod *corev1.Pod, nodeList *corev1.NodeList) []string {
 
 	isControlPlane := func(name string) bool {
@@ -299,30 +298,31 @@ func getAllocatableNodes(ss *SchedulingSession, pod *corev1.Pod, nodeList *corev
 
 	var allocatableNodes []string
 
-	// 十分に冗長配置されたので、どのノードにも配置できます
+	// pod can be deployed to any node as it is sufficiently redundant
 	if ss.TotalDeployed >= ss.Redunduncy {
-
-		klog.InfoS("Reduduncy is enough")
-
+		klog.InfoS("sufficiently redundant")
 		for _, node := range nodeList.Items {
 			allocatableNodes = append(allocatableNodes, node.Name)
 		}
-
 		return allocatableNodes
 	}
 
-	// Podをマスターノードに配置するための設定
+	// Check if the pod is a control plane pod.
 	// https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/
 	//
-	// マスターノード限定
+	// Only control plane nodes:
+	// ```
 	// nodeSelector:
-	// 	 node-role.kubernetes.io/control-plane: ""
+	//   node-role.kubernetes.io/control-plane: ""
+	// ```
 	//
-	// マスターノードもOK
+	// Control plane nodes are also OK:
+	// ```
 	// tolerations:
-	// 	 - key: "node-role.kubernetes.io/control-plane"
+	//   - key: "node-role.kubernetes.io/control-plane"
 	// 	   operator: "Exists"
 	// 	   effect: "NoSchedule"
+	// ```
 	isControlPlaneSchedulable := false
 	for _, t := range pod.Spec.Tolerations {
 		if t.Key == labelControlPlane && t.Operator == corev1.TolerationOpExists && t.Effect == corev1.TaintEffectNoSchedule {
@@ -331,124 +331,73 @@ func getAllocatableNodes(ss *SchedulingSession, pod *corev1.Pod, nodeList *corev
 	}
 
 	switch ss.SpreadMode {
-	case SpreadModeRegion:
-		regionDeployed := map[string]int{}
-		var minRegion []string
-		skip := false
+	case SpreadModeRegion, SpreadModeZone:
+		areaDeployed := map[string]int{}
+		var minAreas []string
+		cpOnlyAreas := map[string]struct{}{}
 
-		// 各regionの総配置数取得
-		// cp1つしかないregionは配置対象外
-		for region := range ss.SpreadInfo {
+		// Get the total number of pods controlled by the ReplicaSet in each area.
+		// Areas with only control plane nodes are excluded from scheduling.
+		for area, areaSpreadInfo := range ss.SpreadInfo {
 			deployed := 0
-			for node, cp := range ss.SpreadInfo[region] {
-				if cp && len(ss.SpreadInfo[region]) == 1 {
-					skip = true
+			hasNonCP := false
+			for node, cp := range areaSpreadInfo {
+				if !cp {
+					hasNonCP = true
 				}
 				deployed += ss.DeployedNodes[node]
 			}
-			regionDeployed[region] = deployed
+			if !hasNonCP {
+				cpOnlyAreas[area] = struct{}{}
+			}
+			areaDeployed[area] = deployed
 		}
 
-		// 全regionの最小配置数決定
+		// Get the minimum number of pods controlled by the ReplicaSet in all areas.
 		minNum := math.MaxInt
-		for _, num := range regionDeployed {
+		for _, num := range areaDeployed {
 			if num < minNum {
 				minNum = num
 			}
 		}
 
-		// 最小配置数のregion配列取得
-		for region, deployed := range regionDeployed {
-			if skip {
-				continue
+		// Get the list of areas with the minimum number of pods controlled by the ReplicaSet deployed.
+		for area, deployed := range areaDeployed {
+			if !isControlPlaneSchedulable {
+				if _, ok := cpOnlyAreas[area]; ok {
+					continue
+				}
 			}
 			if deployed == minNum {
-				minRegion = append(minRegion, region)
+				minAreas = append(minAreas, area)
 			}
 		}
 
-		allowNodes := map[string]struct{}{}
+		allowedNodes := map[string]struct{}{}
 
-		for _, region := range minRegion {
-			for node, cp := range ss.SpreadInfo[region] {
+		for _, area := range minAreas {
+			for node, cp := range ss.SpreadInfo[area] {
 				if cp && !isControlPlaneSchedulable {
 					continue
 				}
-				allowNodes[node] = struct{}{}
+				allowedNodes[node] = struct{}{}
 			}
 		}
 
-		for _, node := range nodeList.Items {
-			if _, ok := allowNodes[node.Name]; ok {
-				allocatableNodes = append(allocatableNodes, node.Name)
-			}
+		for nodeName := range allowedNodes {
+			allocatableNodes = append(allocatableNodes, nodeName)
 		}
-
-		return allocatableNodes
-
-	case SpreadModeZone:
-		zoneDeployed := map[string]int{}
-		var minZone []string
-		skip := false
-
-		// 各zoneの総配置数取得
-		for zone := range ss.SpreadInfo {
-			deployed := 0
-			for node, cp := range ss.SpreadInfo[zone] {
-				if cp && len(ss.SpreadInfo[zone]) == 1 {
-					skip = true
-				}
-				deployed += ss.DeployedNodes[node]
-			}
-			zoneDeployed[zone] = deployed
-		}
-
-		// 全zoneの最小配置数決定
-		minNum := math.MaxInt
-		for _, num := range zoneDeployed {
-			if num < minNum {
-				minNum = num
-			}
-		}
-
-		// 最小配置数のzone配列取得
-		for zone, deployed := range zoneDeployed {
-			if skip {
-				continue
-			}
-			if deployed == minNum {
-				minZone = append(minZone, zone)
-			}
-		}
-
-		allowNodes := map[string]struct{}{}
-
-		for _, zone := range minZone {
-			for node, cp := range ss.SpreadInfo[zone] {
-				if cp && !isControlPlaneSchedulable {
-					continue
-				}
-				allowNodes[node] = struct{}{}
-			}
-		}
-
-		for _, node := range nodeList.Items {
-			if _, ok := allowNodes[node.Name]; ok {
-				allocatableNodes = append(allocatableNodes, node.Name)
-			}
-		}
-
 		return allocatableNodes
 
 	default: // SpreadModeNode
-		allowNodes := map[string]struct{}{}
+		allowedNodes := map[string]struct{}{}
 		minDeployed := math.MaxInt
 
 		for node, deployed := range ss.DeployedNodes {
 			if isControlPlane(node) && !isControlPlaneSchedulable {
 				continue
 			}
-			// klog.InfoS("make node map", "node", node, "deployed", deployed)
+			klog.InfoS("make node map", "node", node, "deployed", deployed)
 			if deployed < minDeployed {
 				minDeployed = deployed
 			}
@@ -459,20 +408,13 @@ func getAllocatableNodes(ss *SchedulingSession, pod *corev1.Pod, nodeList *corev
 				continue
 			}
 			if deployed == minDeployed {
-				allowNodes[node] = struct{}{}
+				allowedNodes[node] = struct{}{}
 			}
 		}
 
-		// klog.InfoS("decide allowNodes", "allowNodes", allowNodes)
-
-		for _, node := range nodeList.Items {
-			if _, ok := allowNodes[node.Name]; ok {
-				allocatableNodes = append(allocatableNodes, node.Name)
-			}
+		for nodeName := range allowedNodes {
+			allocatableNodes = append(allocatableNodes, nodeName)
 		}
-
-		// klog.InfoS("decide denyNodes", "denyNodes", denyNodes)
-
 		return allocatableNodes
 	}
 }

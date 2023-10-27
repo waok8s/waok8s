@@ -7,7 +7,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 )
 
 var (
@@ -118,15 +118,15 @@ var (
 			Namespace: testNS,
 		},
 		Spec: appsv1.ReplicaSetSpec{
-			Replicas: pointer.Int32(10),
+			Replicas: ptr.To[int32](10),
 		},
 	}
 	ownedByRS1 = metav1.OwnerReference{
 		APIVersion:         testRS1.APIVersion,
 		Kind:               testRS1.Kind,
 		Name:               testRS1.Name,
-		Controller:         pointer.Bool(true),
-		BlockOwnerDeletion: pointer.Bool(true),
+		Controller:         ptr.To[bool](true),
+		BlockOwnerDeletion: ptr.To[bool](true),
 	}
 	testPod1 = &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
