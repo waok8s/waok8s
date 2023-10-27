@@ -1,6 +1,6 @@
 # WAO Core Components
 
-CRDs and libraries for WAO.
+CRDs, controllers and libraries for WAO.
 
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
@@ -26,7 +26,7 @@ CRDs and libraries for WAO.
 
 ## Description
 
-This repository contains CRDs and libraries for WAO. They are intended to be used with [wao-metrics-adapter](https://github.com/waok8s/wao-metrics-adapter), [wao-scheduler](https://github.com/waok8s/wao-scheduler), etc.
+This repository contains CRDs, controllers and libraries for WAO. They are intended to be used with [wao-metrics-adapter](https://github.com/waok8s/wao-metrics-adapter), [wao-scheduler](https://github.com/waok8s/wao-scheduler), etc.
 
 ## Getting Started
 
