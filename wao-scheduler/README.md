@@ -49,7 +49,8 @@ kubectl wait pod $(kubectl get pods -n kube-system -l app=wao-scheduler -o jsonp
 
 This plugin is enabled by default, so you only need to set `spec.schedulerName`.
 
-> [!WARNING] Note that this plugin requires that at least one container in the pod has `requests.cpu` or `limits.cpu` set, otherwise the pod will be rejected. To be exact, if `requests.cpu` is set, it will be used as the expected CPU usage of the pod, otherwise `limits.cpu` will be used, otherwise the pod will be rejected.
+> [!WARNING]
+> Note that this plugin requires that at least one container in the pod has `requests.cpu` or `limits.cpu` set, otherwise the pod will be rejected. To be exact, if `requests.cpu` is set, it will be used as the expected CPU usage of the pod, otherwise `limits.cpu` will be used, otherwise the pod will be rejected.
 
 ```diff
   apiVersion: v1
