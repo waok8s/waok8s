@@ -1,7 +1,8 @@
 VERSION?=$(shell git describe --tags --match "v*")
-GO_BUILD_ARGS=-trimpath -ldflags "-s -w -X main.version=$(VERSION)"
 IMAGE_REGISTRY=localhost
 IMAGE_NAME=wao-scheduler
+
+GO_BUILD_ARGS=-trimpath -ldflags "-s -w -X k8s.io/component-base/version.gitVersion=$(VERSION)"
 
 -include .env
 
