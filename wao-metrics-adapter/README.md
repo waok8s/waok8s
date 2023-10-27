@@ -12,6 +12,7 @@ A metrics adapter for Kubernetes Metrics APIs that exposes custom metrics for WA
 - [Development](#development)
   - [Components](#components)
 - [Changelog](#changelog)
+- [Acknowledgements](#acknowledgements)
 - [License](#license)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
@@ -79,6 +80,10 @@ Versioning: we use the same major.minor as Kubernetes, and the patch is our own.
 - 2023-xx-xx `v1.27.0`
   - First release.
   - `provider` Add the custom metrics provider.
+
+## Acknowledgements
+
+This work is based on results obtained from a project, JPNP21005, subsidized by the New Energy and Industrial Technology Development Organization (NEDO).
 
 ## License
 
