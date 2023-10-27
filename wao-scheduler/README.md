@@ -10,6 +10,7 @@ A kube-scheduler with MinimizePower plugin and PodSpread plugin to schedule pods
   - [Installation](#installation)
   - [Deploy Pods with MinimizePower](#deploy-pods-with-minimizepower)
   - [Deploy Pods with PodSpread](#deploy-pods-with-podspread)
+- [Configuration](#configuration)
 - [Development](#development)
   - [Components](#components)
 - [Changelog](#changelog)
@@ -48,6 +49,8 @@ kubectl wait pod $(kubectl get pods -n kube-system -l app=wao-scheduler -o jsonp
 
 This plugin is enabled by default, so you only need to set `spec.schedulerName`.
 
+> [!WARNING] Note that this plugin requires that at least one container in the pod has `requests.cpu` or `limits.cpu` set, otherwise the pod will be rejected. To be exact, if `requests.cpu` is set, it will be used as the expected CPU usage of the pod, otherwise `limits.cpu` will be used, otherwise the pod will be rejected.
+
 ```diff
   apiVersion: v1
   kind: Pod
@@ -58,6 +61,13 @@ This plugin is enabled by default, so you only need to set `spec.schedulerName`.
     containers:
     - name: nginx
       image: nginx:1.14.2
+      resources:
+        requests:
+          cpu: 100m
+          memory: 128Mi
+        limits:
+          cpu: 200m
+          memory: 256Mi
 ```
 
 ### Deploy Pods with PodSpread
@@ -89,7 +99,27 @@ This plugin only effects pods controlled by Deployment (and ReplicaSet), and it 
           image: nginx:1.14.2
 ```
 
-Then 60 percent of the pods will be spread across nodes, and the rest 40 percent will be scheduled based on MinimizePower.
+Then 60 percent of the pods will be spread across nodes, and the rest 40 percent will be scheduled normally (i.e. MinimizePower plugin will be used).
+
+## Configuration
+
+Just like `kube-scheduler`, WAO Scheduler reads configuration from a file specified by `--config` flag.
+
+Here is an example `KubeSchedulerConfiguration` with MinimizePower and PodSpread plugins enabled.
+
+```yaml
+apiVersion: kubescheduler.config.k8s.io/v1
+kind: KubeSchedulerConfiguration
+leaderElection:
+  leaderElect: false
+profiles:
+  - schedulerName: wao-scheduler
+    plugins:
+      multiPoint:
+        enabled:
+        - name: MinimizePower
+        - name: PodSpread
+```
 
 ## Development
 
