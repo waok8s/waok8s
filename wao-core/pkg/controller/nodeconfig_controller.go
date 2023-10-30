@@ -119,63 +119,64 @@ func (r *NodeConfigReconciler) reconcileNodeConfig(ctx context.Context, objKey t
 	lg := log.FromContext(ctx).WithValues("func", "reconcileNodeConfig")
 	lg.Info("called")
 
-	inletTempConfig := nc.Spec.MetricsCollector.InletTemp
-	defaultEndpointTerm(&inletTempConfig)
-	switch inletTempConfig.Type {
-	case waov1beta1.TypeFake:
-		fetchTimeout := time.Second
-		respondDelay := 100 * time.Millisecond
-		c := &metrics.FakeClient{
-			Type:  metrics.ValueInletTemperature,
-			Value: 15.5,
-			Error: nil,
-			Delay: respondDelay,
-		}
-		r.MetricsCollector.Register(metrics.CollectorKey(objKey, metrics.ValueInletTemperature), c, r.MetricsStore, nc.Spec.NodeName, inletTempConfig.FetchInterval.Duration, fetchTimeout)
-	case waov1beta1.TypeRedfish:
-		serverType := inlettemp.TypeAutoDetect
-		insecureSkipVerify := true
+	// setup inlet temp agent
+	{
+		var t metrics.ValueType = metrics.ValueInletTemperature
+		conf := nc.Spec.MetricsCollector.InletTemp
+		defaultEndpointTerm(&conf)
+		var agent metrics.Agent
+		username, password := r.getBasicAuthFromSecret(ctx, objKey.Namespace, conf.BasicAuthSecret)
 		fetchTimeout := 3 * time.Second
-		requestTimeout := fetchTimeout - 1*time.Second
-		username, password := r.getBasicAuthFromSecret(ctx, objKey.Namespace, inletTempConfig.BasicAuthSecret)
-
-		requestEditorFns := []util.RequestEditorFn{
-			util.WithBasicAuth(username, password),
-			util.WithCurlLogger(slog.With("func", "WithCurlLogger(RedfishClient.Fetch)", "node", nc.Spec.NodeName)),
+		switch conf.Type {
+		case waov1beta1.TypeFake:
+			agent = &metrics.FakeClient{
+				Type:  t,
+				Value: 15.5, // fake agent always returns this value
+				Error: nil,
+				Delay: 100 * time.Millisecond,
+			}
+		case waov1beta1.TypeRedfish:
+			insecureSkipVerify := true
+			requestTimeout := fetchTimeout - 1*time.Second
+			requestEditorFns := []util.RequestEditorFn{
+				util.WithBasicAuth(username, password),
+				util.WithCurlLogger(slog.With("func", "WithCurlLogger(RedfishClient.Fetch)", "node", nc.Spec.NodeName)),
+			}
+			agent = inlettemp.NewRedfishClient(conf.Endpoint, inlettemp.TypeAutoDetect, insecureSkipVerify, requestTimeout, requestEditorFns...)
+		default:
+			return fmt.Errorf("unsupported metricsCollector.inletTemp.type: %s", conf.Type)
 		}
-		c := inlettemp.NewRedfishClient(inletTempConfig.Endpoint, serverType, insecureSkipVerify, requestTimeout, requestEditorFns...)
-		r.MetricsCollector.Register(metrics.CollectorKey(objKey, metrics.ValueInletTemperature), c, r.MetricsStore, nc.Spec.NodeName, inletTempConfig.FetchInterval.Duration, fetchTimeout)
-	default:
-		return fmt.Errorf("unsupported metricsCollector.inletTemp.type: %s", inletTempConfig.Type)
+		r.MetricsCollector.Register(metrics.CollectorKey(objKey, t), agent, r.MetricsStore, nc.Spec.NodeName, conf.FetchInterval.Duration, fetchTimeout)
 	}
 
-	deltapConfig := nc.Spec.MetricsCollector.DeltaP
-	defaultEndpointTerm(&deltapConfig)
-	switch deltapConfig.Type {
-	case waov1beta1.TypeFake:
-		fetchTimeout := time.Second
-		respondDelay := 100 * time.Millisecond
-		c := &metrics.FakeClient{
-			Type:  metrics.ValueDeltaPressure,
-			Value: 7.5,
-			Error: nil,
-			Delay: respondDelay,
-		}
-		r.MetricsCollector.Register(metrics.CollectorKey(objKey, metrics.ValueDeltaPressure), c, r.MetricsStore, nc.Spec.NodeName, inletTempConfig.FetchInterval.Duration, fetchTimeout)
-	case waov1beta1.TypeDPAPI:
-		insecureSkipVerify := true
+	// setup delta pressure agent
+	{
+		var t metrics.ValueType = metrics.ValueDeltaPressure
+		conf := nc.Spec.MetricsCollector.DeltaP
+		defaultEndpointTerm(&conf)
+		var agent metrics.Agent
+		username, password := r.getBasicAuthFromSecret(ctx, objKey.Namespace, conf.BasicAuthSecret)
 		fetchTimeout := 3 * time.Second
-		requestTimeout := fetchTimeout - 1*time.Second
-		username, password := r.getBasicAuthFromSecret(ctx, objKey.Namespace, inletTempConfig.BasicAuthSecret)
-
-		requestEditorFns := []util.RequestEditorFn{
-			util.WithBasicAuth(username, password),
-			util.WithCurlLogger(slog.With("func", "WithCurlLogger(DifferentialPressureAPIClient.Fetch)", "node", nc.Spec.NodeName)),
+		switch conf.Type {
+		case waov1beta1.TypeFake:
+			agent = &metrics.FakeClient{
+				Type:  t,
+				Value: 7.5, // fake agent always returns this value
+				Error: nil,
+				Delay: 100 * time.Millisecond,
+			}
+		case waov1beta1.TypeDPAPI:
+			insecureSkipVerify := true
+			requestTimeout := fetchTimeout - 1*time.Second
+			requestEditorFns := []util.RequestEditorFn{
+				util.WithBasicAuth(username, password),
+				util.WithCurlLogger(slog.With("func", "WithCurlLogger(DifferentialPressureAPIClient.Fetch)", "node", nc.Spec.NodeName)),
+			}
+			agent = deltap.NewDifferentialPressureAPIClient(conf.Endpoint, "", nc.Spec.NodeName, "", insecureSkipVerify, requestTimeout, requestEditorFns...)
+		default:
+			return fmt.Errorf("unsupported metricsCollector.deltaP.type: %s", conf.Type)
 		}
-		c := deltap.NewDifferentialPressureAPIClient(deltapConfig.Endpoint, "", nc.Spec.NodeName, "", insecureSkipVerify, requestTimeout, requestEditorFns...)
-		r.MetricsCollector.Register(metrics.CollectorKey(objKey, metrics.ValueDeltaPressure), c, r.MetricsStore, nc.Spec.NodeName, inletTempConfig.FetchInterval.Duration, fetchTimeout)
-	default:
-		return fmt.Errorf("unsupported metricsCollector.deltaP.type: %s", deltapConfig.Type)
+		r.MetricsCollector.Register(metrics.CollectorKey(objKey, t), agent, r.MetricsStore, nc.Spec.NodeName, conf.FetchInterval.Duration, fetchTimeout)
 	}
 
 	return nil

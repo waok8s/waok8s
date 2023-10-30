@@ -19,9 +19,9 @@ type agentRunner struct {
 	stopCh chan struct{}
 }
 
-func newAgentRunner(collector Agent, metricStore *Store, nodeName string, interval time.Duration, timeout time.Duration) *agentRunner {
+func newAgentRunner(agent Agent, metricStore *Store, nodeName string, interval time.Duration, timeout time.Duration) *agentRunner {
 	return &agentRunner{
-		agent:    collector,
+		agent:    agent,
 		store:    metricStore,
 		nodeName: nodeName,
 		interval: interval,
@@ -69,27 +69,27 @@ type Collector struct{ m sync.Map }
 
 const MinInterval = 1 * time.Second
 
-func (r *Collector) Register(k collectorKey, c Agent, s *Store, nodeName string, interval time.Duration, timeout time.Duration) {
+func (c *Collector) Register(k collectorKey, a Agent, s *Store, nodeName string, interval time.Duration, timeout time.Duration) {
 	if interval < MinInterval {
 		interval = MinInterval
 	}
-	cr := newAgentRunner(c, s, nodeName, interval, timeout)
-	go cr.Run()
-	r.m.Store(k, cr)
+	ar := newAgentRunner(a, s, nodeName, interval, timeout)
+	go ar.Run()
+	c.m.Store(k, ar)
 }
 
-func (r *Collector) Unregister(k collectorKey) {
-	defer r.m.Delete(k)
+func (c *Collector) Unregister(k collectorKey) {
+	defer c.m.Delete(k)
 
-	v, ok := r.m.Load(k)
+	v, ok := c.m.Load(k)
 	if !ok {
 		return
 	}
 
-	cr, ok := v.(agentRunner)
+	ar, ok := v.(agentRunner)
 	if !ok {
 		return
 	}
 
-	cr.Stop()
+	ar.Stop()
 }
