@@ -10,23 +10,19 @@ import (
 	"strings"
 	"time"
 
-	"github.com/waok8s/wao-core/pkg/predictor/v2inferenceprotocol"
+	"github.com/waok8s/wao-core/pkg/metrics/dpapi"
 	"github.com/waok8s/wao-core/pkg/util"
 )
 
 func main() {
 	var address string
-	flag.StringVar(&address, "address", "http://localhost:5000", "Redfish server address")
-	var model string
-	flag.StringVar(&model, "model", "modelName", "Model name")
-	var modelVersion string
-	flag.StringVar(&modelVersion, "modelVersion", "v1.0.0", "Model version")
-	var cpuUsage float64
-	flag.Float64Var(&cpuUsage, "cpuUsage", 0.0, "CPU usage")
-	var inletTemp float64
-	flag.Float64Var(&inletTemp, "inletTemp", 0.0, "Inlet temperature")
-	var deltaP float64
-	flag.Float64Var(&deltaP, "deltaP", 0.0, "Delta P")
+	flag.StringVar(&address, "address", "http://localhost:5000", "DifferentialPressureAPI server address")
+	var sensorName string
+	flag.StringVar(&sensorName, "sensorName", "", "Sensor name")
+	var nodeName string
+	flag.StringVar(&nodeName, "nodeName", "", "Node name")
+	var nodeIP string
+	flag.StringVar(&nodeIP, "nodeIP", "", "Node IP address")
 	var basicAuth string
 	flag.StringVar(&basicAuth, "basicAuth", "", "Basic auth in username@password format")
 	var logLevel int
@@ -53,22 +49,22 @@ func main() {
 		AddSource: true,
 		Level:     slogLevel,
 	}))
-	slog.SetDefault(lg.With("component", "PowerConsumptionPredictor (V2InferenceProtocol)"))
+	slog.SetDefault(lg.With("component", "DeltaPClient (DPAPI)"))
 
 	requestEditorFns := []util.RequestEditorFn{}
 	ss := strings.Split(basicAuth, ":")
 	if len(ss) == 2 {
 		requestEditorFns = append(requestEditorFns, util.WithBasicAuth(ss[0], ss[1]))
 	}
-	requestEditorFns = append(requestEditorFns, util.WithCurlLogger(lg.With("func", "WithCurlLogger(v2inferenceprotocol.PowerConsumptionPredictor.Predict)")))
+	requestEditorFns = append(requestEditorFns, util.WithCurlLogger(lg.With("func", "WithCurlLogger(DifferentialPressureAPIClient.Fetch)")))
 
-	c := v2inferenceprotocol.NewPowerConsumptionClient(address, model, modelVersion, true, 2*time.Second, requestEditorFns...)
+	c := dpapi.NewDeltaPAgent(address, sensorName, nodeName, nodeIP, true, 2*time.Second, requestEditorFns...)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	v, err := c.Predict(ctx, cpuUsage, inletTemp, deltaP)
+	v, err := c.Fetch(ctx)
 	cancel()
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf("%+v\n", v)
+	fmt.Println(v)
 }

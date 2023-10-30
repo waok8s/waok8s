@@ -14,7 +14,7 @@ import (
 	"github.com/waok8s/wao-core/pkg/util"
 )
 
-type PowerConsumptionClient struct {
+type PowerConsumptionPredictor struct {
 	// address contains scheme, host and port.
 	// E.g., "http://10.0.0.1:8080"
 	address string
@@ -27,10 +27,10 @@ type PowerConsumptionClient struct {
 	editorFns []util.RequestEditorFn
 }
 
-var _ predictor.PowerConsumptionPredictor = (*PowerConsumptionClient)(nil)
+var _ predictor.PowerConsumptionPredictor = (*PowerConsumptionPredictor)(nil)
 
-func NewPowerConsumptionClient(address, modelName, modelVersion string, insecureSkipVerify bool, timeout time.Duration, editorFns ...util.RequestEditorFn) *PowerConsumptionClient {
-	return &PowerConsumptionClient{
+func NewPowerConsumptionPredictor(address, modelName, modelVersion string, insecureSkipVerify bool, timeout time.Duration, editorFns ...util.RequestEditorFn) *PowerConsumptionPredictor {
+	return &PowerConsumptionPredictor{
 		address:      address,
 		modelName:    modelName,
 		modelVersion: modelVersion,
@@ -47,16 +47,16 @@ func NewPowerConsumptionClient(address, modelName, modelVersion string, insecure
 // There is 2 types of URL.
 //   - With version http://hogefuga:12345/v2/models/piyo/versions/v0.1.0/infer
 //   - Without version http://hogefuga:12345/v2/models/piyo/infer
-func (c *PowerConsumptionClient) Endpoint() (string, error) {
-	if c.modelVersion == "" {
-		return url.JoinPath(c.address, "v2/models", c.modelName, "infer")
+func (p *PowerConsumptionPredictor) Endpoint() (string, error) {
+	if p.modelVersion == "" {
+		return url.JoinPath(p.address, "v2/models", p.modelName, "infer")
 	} else {
-		return url.JoinPath(c.address, "v2/models", c.modelName, "versions", c.modelVersion, "infer")
+		return url.JoinPath(p.address, "v2/models", p.modelName, "versions", p.modelVersion, "infer")
 	}
 }
 
-func (c *PowerConsumptionClient) Predict(ctx context.Context, cpuUsage, inletTemp, deltaP float64) (watt float64, err error) {
-	url, err := c.Endpoint()
+func (p *PowerConsumptionPredictor) Predict(ctx context.Context, cpuUsage, inletTemp, deltaP float64) (watt float64, err error) {
+	url, err := p.Endpoint()
 	if err != nil {
 		return 0.0, fmt.Errorf("unable to get endpoint URL: %w", err)
 	}
@@ -70,13 +70,13 @@ func (c *PowerConsumptionClient) Predict(ctx context.Context, cpuUsage, inletTem
 	if err != nil {
 		return 0.0, fmt.Errorf("unable to create HTTP request: %w", err)
 	}
-	for i, f := range c.editorFns {
+	for i, f := range p.editorFns {
 		if err := f(ctx, req); err != nil {
 			return 0.0, fmt.Errorf("editorFns[%d] got error: %w", i, err)
 		}
 	}
 
-	resp, err := c.client.Do(req)
+	resp, err := p.client.Do(req)
 	if err != nil {
 		return 0.0, fmt.Errorf("unable to send HTTP request: %w", err)
 	}

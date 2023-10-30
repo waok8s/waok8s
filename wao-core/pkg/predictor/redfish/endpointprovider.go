@@ -1,4 +1,4 @@
-package endpointprovider
+package redfish
 
 import (
 	"context"
@@ -12,11 +12,11 @@ import (
 
 	waov1beta1 "github.com/waok8s/wao-core/api/wao/v1beta1"
 	"github.com/waok8s/wao-core/pkg/predictor"
-	"github.com/waok8s/wao-core/pkg/predictor/endpointprovider/api"
+	"github.com/waok8s/wao-core/pkg/predictor/redfish/api"
 	"github.com/waok8s/wao-core/pkg/util"
 )
 
-type RedfishEndpointProvider struct {
+type EndpointProvider struct {
 	// address contains scheme, host and port.
 	// E.g., "http://10.0.0.1:8080"
 	address string
@@ -27,9 +27,9 @@ type RedfishEndpointProvider struct {
 	editorFns []util.RequestEditorFn
 }
 
-var _ predictor.EndpointProvider = (*RedfishEndpointProvider)(nil)
+var _ predictor.EndpointProvider = (*EndpointProvider)(nil)
 
-func NewRedfishEndpointProvider(address string, insecureSkipVerify bool, timeout time.Duration, editorFns ...util.RequestEditorFn) (*RedfishEndpointProvider, error) {
+func NewEndpointProvider(address string, insecureSkipVerify bool, timeout time.Duration, editorFns ...util.RequestEditorFn) (*EndpointProvider, error) {
 	c, err := api.NewClientWithResponses(
 		address,
 		api.WithHTTPClient(&http.Client{
@@ -41,7 +41,7 @@ func NewRedfishEndpointProvider(address string, insecureSkipVerify bool, timeout
 		return nil, err
 	}
 
-	return &RedfishEndpointProvider{
+	return &EndpointProvider{
 		address: address,
 		httpClient: &http.Client{
 			Transport: &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: insecureSkipVerify}},
@@ -52,7 +52,7 @@ func NewRedfishEndpointProvider(address string, insecureSkipVerify bool, timeout
 	}, nil
 }
 
-func (p *RedfishEndpointProvider) getSystemID(ctx context.Context) (string, error) {
+func (p *EndpointProvider) getSystemID(ctx context.Context) (string, error) {
 
 	type apiResp struct {
 		Members []struct {
@@ -95,7 +95,7 @@ func (p *RedfishEndpointProvider) getSystemID(ctx context.Context) (string, erro
 	}
 }
 
-func (p *RedfishEndpointProvider) GetModels(ctx context.Context) (*api.MachineLearningModel, error) {
+func (p *EndpointProvider) GetModels(ctx context.Context) (*api.MachineLearningModel, error) {
 
 	systemID, err := p.getSystemID(ctx)
 	if err != nil {
@@ -122,7 +122,7 @@ func (p *RedfishEndpointProvider) GetModels(ctx context.Context) (*api.MachineLe
 
 }
 
-func (p *RedfishEndpointProvider) Get(ctx context.Context, predictorType predictor.PredictorType) (*waov1beta1.EndpointTerm, error) {
+func (p *EndpointProvider) Get(ctx context.Context, predictorType predictor.PredictorType) (*waov1beta1.EndpointTerm, error) {
 
 	modelType := waov1beta1.TypeV2InferenceProtocol
 	modelAddress := ""
@@ -168,4 +168,4 @@ func (p *RedfishEndpointProvider) Get(ctx context.Context, predictorType predict
 	return et, nil
 }
 
-func (p *RedfishEndpointProvider) Endpoint() (string, error) { return p.address, nil }
+func (p *EndpointProvider) Endpoint() (string, error) { return p.address, nil }

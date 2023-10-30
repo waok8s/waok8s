@@ -19,8 +19,9 @@ import (
 
 	waov1beta1 "github.com/waok8s/wao-core/api/wao/v1beta1"
 	"github.com/waok8s/wao-core/pkg/metrics"
-	"github.com/waok8s/wao-core/pkg/metrics/deltap"
-	"github.com/waok8s/wao-core/pkg/metrics/inlettemp"
+	"github.com/waok8s/wao-core/pkg/metrics/dpapi"
+	"github.com/waok8s/wao-core/pkg/metrics/fake"
+	"github.com/waok8s/wao-core/pkg/metrics/redfish"
 	"github.com/waok8s/wao-core/pkg/util"
 )
 
@@ -121,7 +122,6 @@ func (r *NodeConfigReconciler) reconcileNodeConfig(ctx context.Context, objKey t
 
 	// setup inlet temp agent
 	{
-		var t metrics.ValueType = metrics.ValueInletTemperature
 		conf := nc.Spec.MetricsCollector.InletTemp
 		defaultEndpointTerm(&conf)
 		var agent metrics.Agent
@@ -129,12 +129,7 @@ func (r *NodeConfigReconciler) reconcileNodeConfig(ctx context.Context, objKey t
 		fetchTimeout := 3 * time.Second
 		switch conf.Type {
 		case waov1beta1.TypeFake:
-			agent = &metrics.FakeClient{
-				Type:  t,
-				Value: 15.5, // fake agent always returns this value
-				Error: nil,
-				Delay: 100 * time.Millisecond,
-			}
+			fake.NewInletTempAgent(15.5, nil, 100*time.Millisecond) // fake agent always returns this value
 		case waov1beta1.TypeRedfish:
 			insecureSkipVerify := true
 			requestTimeout := fetchTimeout - 1*time.Second
@@ -142,16 +137,15 @@ func (r *NodeConfigReconciler) reconcileNodeConfig(ctx context.Context, objKey t
 				util.WithBasicAuth(username, password),
 				util.WithCurlLogger(slog.With("func", "WithCurlLogger(RedfishClient.Fetch)", "node", nc.Spec.NodeName)),
 			}
-			agent = inlettemp.NewRedfishClient(conf.Endpoint, inlettemp.TypeAutoDetect, insecureSkipVerify, requestTimeout, requestEditorFns...)
+			agent = redfish.NewInletTempAgent(conf.Endpoint, redfish.TypeAutoDetect, insecureSkipVerify, requestTimeout, requestEditorFns...)
 		default:
 			return fmt.Errorf("unsupported metricsCollector.inletTemp.type: %s", conf.Type)
 		}
-		r.MetricsCollector.Register(metrics.CollectorKey(objKey, t), agent, r.MetricsStore, nc.Spec.NodeName, conf.FetchInterval.Duration, fetchTimeout)
+		r.MetricsCollector.Register(metrics.CollectorKey(objKey, metrics.ValueInletTemperature), agent, r.MetricsStore, nc.Spec.NodeName, conf.FetchInterval.Duration, fetchTimeout)
 	}
 
 	// setup delta pressure agent
 	{
-		var t metrics.ValueType = metrics.ValueDeltaPressure
 		conf := nc.Spec.MetricsCollector.DeltaP
 		defaultEndpointTerm(&conf)
 		var agent metrics.Agent
@@ -159,12 +153,7 @@ func (r *NodeConfigReconciler) reconcileNodeConfig(ctx context.Context, objKey t
 		fetchTimeout := 3 * time.Second
 		switch conf.Type {
 		case waov1beta1.TypeFake:
-			agent = &metrics.FakeClient{
-				Type:  t,
-				Value: 7.5, // fake agent always returns this value
-				Error: nil,
-				Delay: 100 * time.Millisecond,
-			}
+			agent = fake.NewDeltaPAgent(7.5, nil, 100*time.Millisecond) // fake agent always returns this value
 		case waov1beta1.TypeDPAPI:
 			insecureSkipVerify := true
 			requestTimeout := fetchTimeout - 1*time.Second
@@ -172,11 +161,11 @@ func (r *NodeConfigReconciler) reconcileNodeConfig(ctx context.Context, objKey t
 				util.WithBasicAuth(username, password),
 				util.WithCurlLogger(slog.With("func", "WithCurlLogger(DifferentialPressureAPIClient.Fetch)", "node", nc.Spec.NodeName)),
 			}
-			agent = deltap.NewDifferentialPressureAPIClient(conf.Endpoint, "", nc.Spec.NodeName, "", insecureSkipVerify, requestTimeout, requestEditorFns...)
+			agent = dpapi.NewDeltaPAgent(conf.Endpoint, "", nc.Spec.NodeName, "", insecureSkipVerify, requestTimeout, requestEditorFns...)
 		default:
 			return fmt.Errorf("unsupported metricsCollector.deltaP.type: %s", conf.Type)
 		}
-		r.MetricsCollector.Register(metrics.CollectorKey(objKey, t), agent, r.MetricsStore, nc.Spec.NodeName, conf.FetchInterval.Duration, fetchTimeout)
+		r.MetricsCollector.Register(metrics.CollectorKey(objKey, metrics.ValueDeltaPressure), agent, r.MetricsStore, nc.Spec.NodeName, conf.FetchInterval.Duration, fetchTimeout)
 	}
 
 	return nil

@@ -1,10 +1,11 @@
-package predictor
+package fake
 
 import (
 	"context"
 	"time"
 
 	waov1beta1 "github.com/waok8s/wao-core/api/wao/v1beta1"
+	"github.com/waok8s/wao-core/pkg/predictor"
 )
 
 type FakeEndpointProvider struct {
@@ -16,7 +17,17 @@ type FakeEndpointProvider struct {
 	GetDelay time.Duration
 }
 
-var _ EndpointProvider = (*FakeEndpointProvider)(nil)
+var _ predictor.EndpointProvider = (*FakeEndpointProvider)(nil)
+
+func NewEndpointProvider(endpointValue string, endpointError error, getValue *waov1beta1.EndpointTerm, getError error, getDelay time.Duration) *FakeEndpointProvider {
+	return &FakeEndpointProvider{
+		EndpointValue: endpointValue,
+		EndpointError: endpointError,
+		GetValue:      getValue,
+		GetError:      getError,
+		GetDelay:      getDelay,
+	}
+}
 
 func (p *FakeEndpointProvider) Endpoint() (string, error) {
 	if p.EndpointError != nil {
@@ -25,7 +36,7 @@ func (p *FakeEndpointProvider) Endpoint() (string, error) {
 	return p.EndpointValue, nil
 }
 
-func (p *FakeEndpointProvider) Get(ctx context.Context, predictorType PredictorType) (*waov1beta1.EndpointTerm, error) {
+func (p *FakeEndpointProvider) Get(ctx context.Context, predictorType predictor.PredictorType) (*waov1beta1.EndpointTerm, error) {
 	select {
 	case <-ctx.Done():
 		return nil, ctx.Err()
@@ -48,7 +59,17 @@ type FakePowerConsumptionPredictor struct {
 	PredictDelay time.Duration
 }
 
-var _ PowerConsumptionPredictor = (*FakePowerConsumptionPredictor)(nil)
+var _ predictor.PowerConsumptionPredictor = (*FakePowerConsumptionPredictor)(nil)
+
+func NewPowerConsumptionPredictor(endpointValue string, endpointError error, predictValue float64, predictError error, predictDelay time.Duration) *FakePowerConsumptionPredictor {
+	return &FakePowerConsumptionPredictor{
+		EndpointValue: endpointValue,
+		EndpointError: endpointError,
+		PredictValue:  predictValue,
+		PredictError:  predictError,
+		PredictDelay:  predictDelay,
+	}
+}
 
 func (p *FakePowerConsumptionPredictor) Endpoint() (string, error) {
 	if p.EndpointError != nil {

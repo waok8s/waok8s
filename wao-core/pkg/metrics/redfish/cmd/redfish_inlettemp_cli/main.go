@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/waok8s/wao-core/pkg/metrics/inlettemp"
+	"github.com/waok8s/wao-core/pkg/metrics/redfish"
 	"github.com/waok8s/wao-core/pkg/util"
 )
 
@@ -20,7 +20,7 @@ func main() {
 	var serverType string
 	var serverTypeUsage strings.Builder
 	serverTypeUsage.WriteString("Options:")
-	for k := range inlettemp.GetSensorValueFn {
+	for k := range redfish.GetInletTempFns {
 		serverTypeUsage.WriteString(" " + string(k))
 	}
 	flag.StringVar(&serverType, "serverType", "", serverTypeUsage.String())
@@ -59,7 +59,7 @@ func main() {
 	}
 	requestEditorFns = append(requestEditorFns, util.WithCurlLogger(lg.With("func", "WithCurlLogger(RedfishClient.Fetch)")))
 
-	c := inlettemp.NewRedfishClient(address, inlettemp.ServerType(serverType), true, 2*time.Second, requestEditorFns...)
+	c := redfish.NewInletTempAgent(address, redfish.ServerType(serverType), true, 2*time.Second, requestEditorFns...)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	v, err := c.Fetch(ctx)
