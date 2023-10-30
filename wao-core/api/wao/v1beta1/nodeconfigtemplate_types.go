@@ -65,6 +65,7 @@ var tmpl *template.Template
 func init() {
 	tmpl = template.New("TemplateParseWithSprigFuncs").Funcs(sprig.FuncMap())
 }
+
 func TemplateParseString(s string, data TemplateData) (string, error) {
 	t, err := tmpl.Parse(s)
 	if err != nil {
@@ -132,9 +133,14 @@ func TemplateParseNodeConfig(in *NodeConfig, data TemplateData) *NodeConfig {
 
 // NodeConfigTemplateSpec defines the desired state of NodeConfigTemplate
 type NodeConfigTemplateSpec struct {
-	NodeSelector     metav1.LabelSelector `json:"nodeSelector"`
-	MetricsCollector MetricsCollector     `json:"metricsCollector"`
-	Predictor        Predictor            `json:"predictor"`
+	// NodeSelector selects nodes to apply this template.
+	NodeSelector metav1.LabelSelector `json:"nodeSelector"`
+	// Template is a template of NodeConfig.
+	// You can use Go template syntax like `{{ .Hostname }}` `{{ .IPv4.Octet3 }}`
+	// in string fields, see docs for more details.
+	//
+	// NOTE: template.nodeName is ignored.
+	Template NodeConfigSpec `json:"template"`
 }
 
 // NodeConfigTemplateStatus defines the observed state of NodeConfigTemplate

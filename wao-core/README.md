@@ -195,23 +195,24 @@ spec:
   nodeSelector:
     matchLabels:
       node.kubernetes.io/instance-type: "redfish-enabled"
-  metricsCollector:
-    inletTemp:
-      type: Redfish
-      endpoint: "https://10.0.100.{{.IPv4.Octet4}}"
-      basicAuthSecret:
-        name: "redfish-basicauth-{{.Hostname}}"
-      fetchInterval: 10s
-    deltaP:
-      type: DifferentialPressureAPI
-      endpoint: "http://10.0.0.1:5000"
-      fetchInterval: 10s
-  predictor:
-    powerConsumptionEndpointProvider:
-      type: Redfish
-      endpoint: "https://10.0.100.{{.IPv4.Octet4}}"
-      basicAuthSecret:
-        name: "redfish-basicauth-{{.Hostname}}"
+  template:
+    metricsCollector:
+      inletTemp:
+        type: Redfish
+        endpoint: "https://10.0.100.{{.IPv4.Octet4}}"
+        basicAuthSecret:
+          name: "redfish-basicauth-{{.Hostname}}"
+        fetchInterval: 10s
+      deltaP:
+        type: DifferentialPressureAPI
+        endpoint: "http://10.0.0.1:5000"
+        fetchInterval: 10s
+    predictor:
+      powerConsumptionEndpointProvider:
+        type: Redfish
+        endpoint: "https://10.0.100.{{.IPv4.Octet4}}"
+        basicAuthSecret:
+          name: "redfish-basicauth-{{.Hostname}}"
 ```
 
 After applying the above NodeConfigTemplate, you can see NodeConfig for each node.

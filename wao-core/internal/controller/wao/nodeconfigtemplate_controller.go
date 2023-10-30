@@ -92,18 +92,21 @@ func (r *NodeConfigTemplateReconciler) reconcileNodeConfig(ctx context.Context, 
 	lg := log.FromContext(ctx).WithValues("func", "reconcileNodeConfig")
 	lg.Info("called")
 
-	ncName := fmt.Sprintf("%s-%s", nct.Name, node.Name)
-	ncNamespace := nct.Namespace
-	ncObj := types.NamespacedName{Namespace: ncNamespace, Name: ncName}
+	ncObj := types.NamespacedName{
+		Name:      fmt.Sprintf("%s-%s", nct.Name, node.Name),
+		Namespace: nct.Namespace,
+	}
 
-	nc := &waov1beta1.NodeConfig{}
-	nc.SetName(ncName)
-	nc.SetNamespace(ncNamespace)
+	nc := &waov1beta1.NodeConfig{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      ncObj.Name,
+			Namespace: ncObj.Namespace,
+		},
+	}
 
 	op, err := ctrl.CreateOrUpdate(ctx, r.Client, nc, func() error {
 		nc.Spec.NodeName = node.Name
-		nc.Spec.MetricsCollector = *nct.Spec.MetricsCollector.DeepCopy()
-		nc.Spec.Predictor = *nct.Spec.Predictor.DeepCopy()
+		nc.Spec = *nct.Spec.Template.DeepCopy()
 		waov1beta1.TemplateParseNodeConfig(nc, waov1beta1.NewTemplateDataFromNode(node))
 		return ctrl.SetControllerReference(nct, nc, r.Scheme)
 	})
