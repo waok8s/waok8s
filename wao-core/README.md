@@ -16,6 +16,7 @@ CRDs, controllers and libraries for WAO.
     - [Predictor: Power Consumption](#predictor-power-consumption)
     - [Predictor: Power Consumption Endpoint Provider](#predictor-power-consumption-endpoint-provider)
   - [NodeConfigTemplate CRD](#nodeconfigtemplate-crd)
+  - [Template Syntax](#template-syntax)
 - [Development](#development)
   - [Components](#components)
 - [Changelog](#changelog)
@@ -180,6 +181,7 @@ If your predictor requires authentication, you can set your Secret in `powerCons
 ### NodeConfigTemplate CRD
 
 NodeConfigTemplate CRD is used to configure a group of nodes by selecting nodes with labels. The controller will create NodeConfig for each node.
+Several fields can be templated and this is useful for configuring IP addresses, etc.
 
 Here is an example.
 
@@ -193,23 +195,24 @@ spec:
   nodeSelector:
     matchLabels:
       node.kubernetes.io/instance-type: "redfish-enabled"
-  metricsCollector:
-    inletTemp:
-      type: Redfish
-      endpoint: "https://10.0.0.100"
-      basicAuthSecret:
-        name: "worker-0-redfish-basicauth"
-      fetchInterval: 10s
-    deltaP:
-      type: DifferentialPressureAPI
-      endpoint: "http://10.0.0.1:5000"
-      fetchInterval: 10s
-  predictor:
-    powerConsumptionEndpointProvider:
-      type: Redfish
-      endpoint: "https://10.0.0.1"
-      basicAuthSecret:
-        name: "worker-0-redfish-basicauth"
+  template:
+    metricsCollector:
+      inletTemp:
+        type: Redfish
+        endpoint: "https://10.0.100.{{.IPv4.Octet4}}"
+        basicAuthSecret:
+          name: "redfish-basicauth-{{.Hostname}}"
+        fetchInterval: 10s
+      deltaP:
+        type: DifferentialPressureAPI
+        endpoint: "http://10.0.0.1:5000"
+        fetchInterval: 10s
+    predictor:
+      powerConsumptionEndpointProvider:
+        type: Redfish
+        endpoint: "https://10.0.100.{{.IPv4.Octet4}}"
+        basicAuthSecret:
+          name: "redfish-basicauth-{{.Hostname}}"
 ```
 
 After applying the above NodeConfigTemplate, you can see NodeConfig for each node.
@@ -222,6 +225,19 @@ redfish-enabled-nodes-worker-0    10s
 redfish-enabled-nodes-worker-1    10s
 redfish-enabled-nodes-worker-2    10s
 ```
+
+### Template Syntax
+
+You can use [`text/template`](https://pkg.go.dev/text/template) style syntax in `type` `endpoint` and `basicAuthSecret.name` fields, and the following variables are available.
+
+- `{{.Hostname}}`: `kubernetes.io/hostname` label value.
+- `{{.IPv4.Address}}`: Address value of the first `InternalIP` in Node's `status.addresses`.
+- `{{.IPv4.Octet1}}` `{{.IPv4.Octet2}}` `{{.IPv4.Octet3}}` `{{.IPv4.Octet4}}`: Octet value of the above address.
+
+You can also use [`sprig`](http://masterminds.github.io/sprig/) functions to do some magic. Examples here.
+
+- `{{ trimPrefix .Hostname "worker-" }}`: Remove `worker-` prefix from the hostname.
+- `{{ add .IPv4.Octet3 10 }}`: Add `10` to the 3rd octet.
 
 ## Development
 
