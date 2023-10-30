@@ -105,8 +105,8 @@ func (r *NodeConfigTemplateReconciler) reconcileNodeConfig(ctx context.Context, 
 	}
 
 	op, err := ctrl.CreateOrUpdate(ctx, r.Client, nc, func() error {
-		nc.Spec.NodeName = node.Name
 		nc.Spec = *nct.Spec.Template.DeepCopy()
+		nc.Spec.NodeName = node.Name
 		waov1beta1.TemplateParseNodeConfig(nc, waov1beta1.NewTemplateDataFromNode(node))
 		return ctrl.SetControllerReference(nct, nc, r.Scheme)
 	})

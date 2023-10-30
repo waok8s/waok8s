@@ -119,16 +119,12 @@ func TemplateParseEndpointTerm(in *EndpointTerm, data TemplateData) *EndpointTer
 	return out
 }
 
-func TemplateParseNodeConfig(in *NodeConfig, data TemplateData) *NodeConfig {
-	out := in.DeepCopy()
+func TemplateParseNodeConfig(nc *NodeConfig, data TemplateData) {
+	nc.Spec.MetricsCollector.InletTemp = *TemplateParseEndpointTerm(&nc.Spec.MetricsCollector.InletTemp, data)
+	nc.Spec.MetricsCollector.DeltaP = *TemplateParseEndpointTerm(&nc.Spec.MetricsCollector.DeltaP, data)
 
-	out.Spec.MetricsCollector.InletTemp = *TemplateParseEndpointTerm(&out.Spec.MetricsCollector.InletTemp, data)
-	out.Spec.MetricsCollector.DeltaP = *TemplateParseEndpointTerm(&out.Spec.MetricsCollector.DeltaP, data)
-
-	out.Spec.Predictor.PowerConsumption = TemplateParseEndpointTerm(out.Spec.Predictor.PowerConsumption, data)
-	out.Spec.Predictor.PowerConsumptionEndpointProvider = TemplateParseEndpointTerm(out.Spec.Predictor.PowerConsumptionEndpointProvider, data)
-
-	return out
+	nc.Spec.Predictor.PowerConsumption = TemplateParseEndpointTerm(nc.Spec.Predictor.PowerConsumption, data)
+	nc.Spec.Predictor.PowerConsumptionEndpointProvider = TemplateParseEndpointTerm(nc.Spec.Predictor.PowerConsumptionEndpointProvider, data)
 }
 
 // NodeConfigTemplateSpec defines the desired state of NodeConfigTemplate

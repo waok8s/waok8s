@@ -79,3 +79,58 @@ func TestTemplateParseEndpointTerm(t *testing.T) {
 		})
 	}
 }
+
+var (
+	labelHostname  = "kubernetes.io/hostname"
+	testNode0Name  = "node-0"
+	testNode1Name  = "node-1"
+	testNode0Addr  = "10.0.0.100"
+	testNode1Addr  = "10.0.0.101"
+	testLabel      = "test-label"
+	testLabelValue = "test-label-value"
+	testNode0      = corev1.Node{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   testNode0Name,
+			Labels: map[string]string{labelHostname: testNode0Name, testLabel: testLabelValue}},
+		Status: corev1.NodeStatus{
+			Addresses: []corev1.NodeAddress{{Type: corev1.NodeInternalIP, Address: testNode0Addr}},
+		},
+	}
+	testNode1 = corev1.Node{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   testNode1Name,
+			Labels: map[string]string{labelHostname: testNode1Name, testLabel: testLabelValue}},
+		Status: corev1.NodeStatus{
+			Addresses: []corev1.NodeAddress{{Type: corev1.NodeInternalIP, Address: testNode1Addr}},
+		},
+	}
+	testTemplateData0 = TemplateData{
+		Hostname: testNode0Name,
+		IPv4:     TemplateDataIPv4{Address: testNode0Addr, Octet1: "10", Octet2: "0", Octet3: "0", Octet4: "100"},
+	}
+	testTemplateData1 = TemplateData{
+		Hostname: testNode1Name,
+		IPv4:     TemplateDataIPv4{Address: testNode1Addr, Octet1: "10", Octet2: "0", Octet3: "0", Octet4: "101"},
+	}
+)
+
+func TestNewTemplateDataFromNode(t *testing.T) {
+	type args struct {
+		node corev1.Node
+	}
+	tests := []struct {
+		name string
+		args args
+		want TemplateData
+	}{
+		{"ok0", args{node: testNode0}, testTemplateData0},
+		{"ok1", args{node: testNode1}, testTemplateData1},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := NewTemplateDataFromNode(tt.args.node); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("NewTemplateDataFromNode() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
