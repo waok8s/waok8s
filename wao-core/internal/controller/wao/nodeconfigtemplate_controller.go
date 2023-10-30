@@ -104,6 +104,7 @@ func (r *NodeConfigTemplateReconciler) reconcileNodeConfig(ctx context.Context, 
 		nc.Spec.NodeName = node.Name
 		nc.Spec.MetricsCollector = *nct.Spec.MetricsCollector.DeepCopy()
 		nc.Spec.Predictor = *nct.Spec.Predictor.DeepCopy()
+		waov1beta1.TemplateParseNodeConfig(nc, waov1beta1.NewTemplateDataFromNode(node))
 		return ctrl.SetControllerReference(nct, nc, r.Scheme)
 	})
 	if err != nil {

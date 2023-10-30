@@ -1,8 +1,128 @@
 package v1beta1
 
 import (
+	"bytes"
+	"strings"
+	"text/template"
+
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+
+// TemplateData is a data structure for template rendering.
+// This is not a part of CRD.
+type TemplateData struct {
+	// Hostname contains `kubernetes.io/hostname` label value.
+	Hostname string
+	// IPv4 contains address value of the first `InternalIP` in `status.addresses`.
+	IPv4 TemplateDataIPv4
+}
+
+func NewTemplateDataFromNode(node corev1.Node) TemplateData {
+
+	hostname := "undefined.example.com"
+	if v, ok := node.Labels["kubernetes.io/hostname"]; ok {
+		hostname = v
+	}
+
+	ipv4Address := "x.x.x.x"
+	for _, addr := range node.Status.Addresses {
+		if addr.Type == corev1.NodeInternalIP {
+			ipv4Address = addr.Address
+			break
+		}
+	}
+
+	octets := []string{"x", "x", "x", "x"}
+	if ss := strings.Split(ipv4Address, "."); len(ss) == 4 {
+		octets = ss
+	}
+
+	return TemplateData{
+		Hostname: hostname,
+		IPv4: TemplateDataIPv4{
+			Address: ipv4Address,
+			Octet1:  octets[0],
+			Octet2:  octets[1],
+			Octet3:  octets[2],
+			Octet4:  octets[3],
+		},
+	}
+}
+
+// TemplateDataIPv4 is a part of TemplateData.
+type TemplateDataIPv4 struct {
+	Address string
+	Octet1  string
+	Octet2  string
+	Octet3  string
+	Octet4  string
+}
+
+func TemplateParseString(s string, data TemplateData) (string, error) {
+	t, err := template.New("TemplateParse").Parse(s)
+	if err != nil {
+		return "", err
+	}
+	var buf bytes.Buffer
+	if err := t.Execute(&buf, data); err != nil {
+		return "", err
+	}
+	return buf.String(), nil
+}
+
+func TemplateParseEndpointTerm(in *EndpointTerm, data TemplateData) *EndpointTerm {
+	out := in.DeepCopy()
+
+	if out == nil {
+		return nil
+	}
+
+	// Type
+	{
+		v, err := TemplateParseString(in.Type, data)
+		if err == nil {
+			out.Type = v
+		}
+	}
+
+	// Endpoint
+	{
+		v, err := TemplateParseString(in.Endpoint, data)
+		if err == nil {
+			out.Endpoint = v
+		}
+	}
+
+	// BasicAuthSecret
+	{
+		if in.BasicAuthSecret != nil {
+			v, err := TemplateParseString(in.BasicAuthSecret.Name, data)
+			if err == nil {
+				out.BasicAuthSecret.Name = v
+			}
+		}
+	}
+
+	// FetchInterval
+	{
+		// Templating is not supported as FetchInterval is a Duration type.
+	}
+
+	return out
+}
+
+func TemplateParseNodeConfig(in *NodeConfig, data TemplateData) *NodeConfig {
+	out := in.DeepCopy()
+
+	out.Spec.MetricsCollector.InletTemp = *TemplateParseEndpointTerm(&out.Spec.MetricsCollector.InletTemp, data)
+	out.Spec.MetricsCollector.DeltaP = *TemplateParseEndpointTerm(&out.Spec.MetricsCollector.DeltaP, data)
+
+	out.Spec.Predictor.PowerConsumption = TemplateParseEndpointTerm(out.Spec.Predictor.PowerConsumption, data)
+	out.Spec.Predictor.PowerConsumptionEndpointProvider = TemplateParseEndpointTerm(out.Spec.Predictor.PowerConsumptionEndpointProvider, data)
+
+	return out
+}
 
 // NodeConfigTemplateSpec defines the desired state of NodeConfigTemplate
 type NodeConfigTemplateSpec struct {
