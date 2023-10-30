@@ -227,77 +227,8 @@ spec:
           spec:
             description: NodeConfigTemplateSpec defines the desired state of NodeConfigTemplate
             properties:
-              metricsCollector:
-                properties:
-                  deltaP:
-                    properties:
-                      basicAuthSecret:
-                        description: BasicAuthSecret specifies the name of the Secret
-                          in the same namespace used for basic auth. Some Types require
-                          this value.
-                        properties:
-                          name:
-                            description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                              TODO: Add other useful fields. apiVersion, kind, uid?'
-                            type: string
-                        type: object
-                        x-kubernetes-map-type: atomic
-                      endpoint:
-                        description: Endpoint specifies the endpoint URL. Behavior
-                          depends on the client specified by Type.
-                        type: string
-                      fetchInterval:
-                        description: FetchInterval specifies the data retrieval interval.
-                          Some Types require this value, and behavior depends on the
-                          client.
-                        type: string
-                      type:
-                        description: Type specifies the type of endpoint. This value
-                          means which client is used.
-                        type: string
-                    required:
-                    - endpoint
-                    - type
-                    type: object
-                  inletTemp:
-                    properties:
-                      basicAuthSecret:
-                        description: BasicAuthSecret specifies the name of the Secret
-                          in the same namespace used for basic auth. Some Types require
-                          this value.
-                        properties:
-                          name:
-                            description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                              TODO: Add other useful fields. apiVersion, kind, uid?'
-                            type: string
-                        type: object
-                        x-kubernetes-map-type: atomic
-                      endpoint:
-                        description: Endpoint specifies the endpoint URL. Behavior
-                          depends on the client specified by Type.
-                        type: string
-                      fetchInterval:
-                        description: FetchInterval specifies the data retrieval interval.
-                          Some Types require this value, and behavior depends on the
-                          client.
-                        type: string
-                      type:
-                        description: Type specifies the type of endpoint. This value
-                          means which client is used.
-                        type: string
-                    required:
-                    - endpoint
-                    - type
-                    type: object
-                required:
-                - deltaP
-                - inletTemp
-                type: object
               nodeSelector:
-                description: A label selector is a label query over a set of resources.
-                  The result of matchLabels and matchExpressions are ANDed. An empty
-                  label selector matches all objects. A null label selector matches
-                  no objects.
+                description: NodeSelector selects nodes to apply this template.
                 properties:
                   matchExpressions:
                     description: matchExpressions is a list of label selector requirements.
@@ -341,73 +272,155 @@ spec:
                     type: object
                 type: object
                 x-kubernetes-map-type: atomic
-              predictor:
+              template:
+                description: "Template is a template of NodeConfig. You can use Go
+                  template syntax like `{{ .Hostname }}` `{{ .IPv4.Octet3 }}` in string
+                  fields, see docs for more details. \n NOTE: template.nodeName is
+                  ignored."
                 properties:
-                  powerConsumption:
+                  metricsCollector:
                     properties:
-                      basicAuthSecret:
-                        description: BasicAuthSecret specifies the name of the Secret
-                          in the same namespace used for basic auth. Some Types require
-                          this value.
+                      deltaP:
                         properties:
-                          name:
-                            description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                              TODO: Add other useful fields. apiVersion, kind, uid?'
+                          basicAuthSecret:
+                            description: BasicAuthSecret specifies the name of the
+                              Secret in the same namespace used for basic auth. Some
+                              Types require this value.
+                            properties:
+                              name:
+                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                  TODO: Add other useful fields. apiVersion, kind,
+                                  uid?'
+                                type: string
+                            type: object
+                            x-kubernetes-map-type: atomic
+                          endpoint:
+                            description: Endpoint specifies the endpoint URL. Behavior
+                              depends on the client specified by Type.
                             type: string
+                          fetchInterval:
+                            description: FetchInterval specifies the data retrieval
+                              interval. Some Types require this value, and behavior
+                              depends on the client.
+                            type: string
+                          type:
+                            description: Type specifies the type of endpoint. This
+                              value means which client is used.
+                            type: string
+                        required:
+                        - endpoint
+                        - type
                         type: object
-                        x-kubernetes-map-type: atomic
-                      endpoint:
-                        description: Endpoint specifies the endpoint URL. Behavior
-                          depends on the client specified by Type.
-                        type: string
-                      fetchInterval:
-                        description: FetchInterval specifies the data retrieval interval.
-                          Some Types require this value, and behavior depends on the
-                          client.
-                        type: string
-                      type:
-                        description: Type specifies the type of endpoint. This value
-                          means which client is used.
-                        type: string
+                      inletTemp:
+                        properties:
+                          basicAuthSecret:
+                            description: BasicAuthSecret specifies the name of the
+                              Secret in the same namespace used for basic auth. Some
+                              Types require this value.
+                            properties:
+                              name:
+                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                  TODO: Add other useful fields. apiVersion, kind,
+                                  uid?'
+                                type: string
+                            type: object
+                            x-kubernetes-map-type: atomic
+                          endpoint:
+                            description: Endpoint specifies the endpoint URL. Behavior
+                              depends on the client specified by Type.
+                            type: string
+                          fetchInterval:
+                            description: FetchInterval specifies the data retrieval
+                              interval. Some Types require this value, and behavior
+                              depends on the client.
+                            type: string
+                          type:
+                            description: Type specifies the type of endpoint. This
+                              value means which client is used.
+                            type: string
+                        required:
+                        - endpoint
+                        - type
+                        type: object
                     required:
-                    - endpoint
-                    - type
+                    - deltaP
+                    - inletTemp
                     type: object
-                  powerConsumptionEndpointProvider:
+                  nodeName:
+                    type: string
+                  predictor:
                     properties:
-                      basicAuthSecret:
-                        description: BasicAuthSecret specifies the name of the Secret
-                          in the same namespace used for basic auth. Some Types require
-                          this value.
+                      powerConsumption:
                         properties:
-                          name:
-                            description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                              TODO: Add other useful fields. apiVersion, kind, uid?'
+                          basicAuthSecret:
+                            description: BasicAuthSecret specifies the name of the
+                              Secret in the same namespace used for basic auth. Some
+                              Types require this value.
+                            properties:
+                              name:
+                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                  TODO: Add other useful fields. apiVersion, kind,
+                                  uid?'
+                                type: string
+                            type: object
+                            x-kubernetes-map-type: atomic
+                          endpoint:
+                            description: Endpoint specifies the endpoint URL. Behavior
+                              depends on the client specified by Type.
                             type: string
+                          fetchInterval:
+                            description: FetchInterval specifies the data retrieval
+                              interval. Some Types require this value, and behavior
+                              depends on the client.
+                            type: string
+                          type:
+                            description: Type specifies the type of endpoint. This
+                              value means which client is used.
+                            type: string
+                        required:
+                        - endpoint
+                        - type
                         type: object
-                        x-kubernetes-map-type: atomic
-                      endpoint:
-                        description: Endpoint specifies the endpoint URL. Behavior
-                          depends on the client specified by Type.
-                        type: string
-                      fetchInterval:
-                        description: FetchInterval specifies the data retrieval interval.
-                          Some Types require this value, and behavior depends on the
-                          client.
-                        type: string
-                      type:
-                        description: Type specifies the type of endpoint. This value
-                          means which client is used.
-                        type: string
-                    required:
-                    - endpoint
-                    - type
+                      powerConsumptionEndpointProvider:
+                        properties:
+                          basicAuthSecret:
+                            description: BasicAuthSecret specifies the name of the
+                              Secret in the same namespace used for basic auth. Some
+                              Types require this value.
+                            properties:
+                              name:
+                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                  TODO: Add other useful fields. apiVersion, kind,
+                                  uid?'
+                                type: string
+                            type: object
+                            x-kubernetes-map-type: atomic
+                          endpoint:
+                            description: Endpoint specifies the endpoint URL. Behavior
+                              depends on the client specified by Type.
+                            type: string
+                          fetchInterval:
+                            description: FetchInterval specifies the data retrieval
+                              interval. Some Types require this value, and behavior
+                              depends on the client.
+                            type: string
+                          type:
+                            description: Type specifies the type of endpoint. This
+                              value means which client is used.
+                            type: string
+                        required:
+                        - endpoint
+                        - type
+                        type: object
                     type: object
+                required:
+                - metricsCollector
+                - nodeName
+                - predictor
                 type: object
             required:
-            - metricsCollector
             - nodeSelector
-            - predictor
+            - template
             type: object
           status:
             description: NodeConfigTemplateStatus defines the observed state of NodeConfigTemplate
@@ -749,7 +762,7 @@ spec:
         - --leader-elect
         command:
         - /manager
-        image: ghcr.io/waok8s/wao-controller:v1.27.0-alpha.0
+        image: ghcr.io/waok8s/wao-controller:v1.27.0-alpha.1
         livenessProbe:
           httpGet:
             path: /healthz

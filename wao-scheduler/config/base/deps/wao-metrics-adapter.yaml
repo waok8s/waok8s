@@ -68,11 +68,11 @@ subjects:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: custom-metrics-as-nodeconfig-editor-role
+  name: custom-metrics-as-wao-nodeconfig-viewer-role
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: nodeconfig-editor-role
+  name: wao-nodeconfig-viewer-role
 subjects:
 - kind: ServiceAccount
   name: wao-metrics-adapter
@@ -145,7 +145,7 @@ spec:
         - --v=5
         command:
         - adapter
-        image: ghcr.io/waok8s/wao-metrics-adapter:v1.27.0-alpha.0
+        image: ghcr.io/waok8s/wao-metrics-adapter:v1.27.0-alpha.1
         name: wao-metrics-adapter
         ports:
         - containerPort: 6443
