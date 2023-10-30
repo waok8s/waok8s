@@ -5,6 +5,7 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/Masterminds/sprig/v3"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -59,8 +60,13 @@ type TemplateDataIPv4 struct {
 	Octet4  string
 }
 
+var tmpl *template.Template
+
+func init() {
+	tmpl = template.New("TemplateParseWithSprigFuncs").Funcs(sprig.FuncMap())
+}
 func TemplateParseString(s string, data TemplateData) (string, error) {
-	t, err := template.New("TemplateParse").Parse(s)
+	t, err := tmpl.Parse(s)
 	if err != nil {
 		return "", err
 	}

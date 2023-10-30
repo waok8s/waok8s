@@ -40,6 +40,20 @@ var (
 		BasicAuthSecret: &corev1.LocalObjectReference{Name: "redfish-basicauth-{{.Unknown}}"},
 		FetchInterval:   &metav1.Duration{Duration: 10 * time.Second},
 	}
+
+	iet2 = EndpointTerm{
+		Type:            "Redfish",
+		Endpoint:        "https://10.0.{{ add .IPv4.Octet3 10 }}.{{.IPv4.Octet4}}",
+		BasicAuthSecret: &corev1.LocalObjectReference{Name: "redfish-basicauth-worker-0"},
+		FetchInterval:   &metav1.Duration{Duration: 10 * time.Second},
+	}
+	td2  = td0
+	wet2 = EndpointTerm{
+		Type:            "Redfish",
+		Endpoint:        "https://10.0.10.1",
+		BasicAuthSecret: &corev1.LocalObjectReference{Name: "redfish-basicauth-worker-0"},
+		FetchInterval:   &metav1.Duration{Duration: 10 * time.Second},
+	}
 )
 
 func TestTemplateParseEndpointTerm(t *testing.T) {
@@ -55,6 +69,7 @@ func TestTemplateParseEndpointTerm(t *testing.T) {
 		{"nil", args{in: nil, data: td0}, nil},
 		{"ok", args{in: &iet0, data: td0}, &wet0},
 		{"partially_fail", args{in: &iet1, data: td1}, &wet1},
+		{"add", args{in: &iet2, data: td2}, &wet2},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

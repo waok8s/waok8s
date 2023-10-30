@@ -233,6 +233,11 @@ You can use [`text/template`](https://pkg.go.dev/text/template) style syntax in 
 - `{{.IPv4.Address}}`: Address value of the first `InternalIP` in Node's `status.addresses`.
 - `{{.IPv4.Octet1}}` `{{.IPv4.Octet2}}` `{{.IPv4.Octet3}}` `{{.IPv4.Octet4}}`: Octet value of the above address.
 
+You can also use [`sprig`](http://masterminds.github.io/sprig/) functions to do some magic. Examples here.
+
+- `{{ trimPrefix .Hostname "worker-" }}`: Remove `worker-` prefix from the hostname.
+- `{{ add .IPv4.Octet3 10 }}`: Add `10` to the 3rd octet.
+
 ## Development
 
 This project uses [Kubebuilder](https://github.com/kubernetes-sigs/kubebuilder) (v3.11) to generate the CRDs and controllers. However, codes under `pkg` (contain libraries) do not follow Kubebuilder conventions.
