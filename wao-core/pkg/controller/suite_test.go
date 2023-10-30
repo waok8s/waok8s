@@ -11,6 +11,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -222,6 +223,7 @@ var _ = Describe("NodeConfig Controller", func() {
 		reconciler = waocontroller.NodeConfigReconciler{
 			Client:           k8sClient,
 			Scheme:           scheme.Scheme,
+			SecretClient:     kubernetes.NewForConfigOrDie(cfg),
 			MetricsCollector: &waometrics.Collector{},
 			MetricsStore:     &waometrics.Store{},
 		}

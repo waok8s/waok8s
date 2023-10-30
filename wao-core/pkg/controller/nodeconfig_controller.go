@@ -12,6 +12,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/client-go/kubernetes"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -44,6 +45,10 @@ func init() {
 type NodeConfigReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
+
+	// SecretClient is used to get namespace scoped Secrets.
+	// See: NodeConfigReconciler.getBasicAuthFromSecret()
+	SecretClient kubernetes.Interface
 
 	MetricsCollector *metrics.Collector
 	MetricsStore     *metrics.Store
@@ -94,11 +99,20 @@ func (r *NodeConfigReconciler) getBasicAuthFromSecret(ctx context.Context, names
 	if ref == nil || ref.Name == "" {
 		return
 	}
-	secret := &corev1.Secret{}
-	if err := r.Get(ctx, types.NamespacedName{Namespace: namespace, Name: ref.Name}, secret); err != nil {
+
+	// NOTE: This is a workaround. How to use controller-runtime client to get namespace scoped Secrets?
+	secret, err := r.SecretClient.CoreV1().Secrets(namespace).Get(ctx, ref.Name, metav1.GetOptions{})
+	if err != nil {
 		lg.Error(err, "unable to get Secret so skip basic auth", "namespace", namespace, "name", ref.Name)
 		return "", ""
 	}
+
+	// NOTE: RBAC error and crash. Why?
+	// secret := &corev1.Secret{}
+	// if err := r.Get(ctx, types.NamespacedName{Namespace: namespace, Name: ref.Name}, secret); err != nil {
+	// 	lg.Error(err, "unable to get Secret so skip basic auth", "namespace", namespace, "name", ref.Name)
+	// 	return "", ""
+	// }
 
 	username = string(secret.Data["username"])
 	password = string(secret.Data["password"])
