@@ -49,10 +49,26 @@ kubectl wait pod $(kubectl get pods -n wao-system -l control-plane=controller-ma
 
 Before using NodeConfig[Template], you need to do the following.
 
-- Make sure that your nodes have Redfish API enabled and inlet temperature sensors are available. The client implementation can be found in `pkg/metrics/inlettemp/redfish.go`.
-- Make sure that you have a differential pressure API server running. The client implementation can be found in `pkg/metrics/deltap/dpapi.go`.
-- Make sure that you have a power consumption predictor running. The client implementation can be found in `pkg/predictor/v2inferenceprotocol/powerconsumption.go`.
-- (Optional) Make sure that your nodes have `/redfish/v1/Systems/{systemId}/MachineLearningModel` Redfish property. This property is currently not supported in most Redfish implementations, but you can use [MLMM]() to provide it. The client implementation can be found in `pkg/predictor/endpointprovider/redfish.go`.
+- Make sure that your nodes have Redfish API enabled and inlet temperature sensors are available.
+- Make sure that you have a differential pressure API server running.
+- Make sure that you have a power consumption predictor running.
+- (Optional) Make sure that your nodes have `/redfish/v1/Systems/{systemId}/MachineLearningModel` Redfish property. This property is currently not supported in most Redfish implementations, but you can use [MLMM]() to provide it.
+
+We provide tools to test these requirements are met. Try the following.
+
+```sh
+# CLI to get inlet_temp from Redfish server.
+go run github.com/waok8s/wao-core/pkg/metrics/redfish/cmd/redfish_inlettemp_cli@HEAD -h
+# CLI to get delta_p from DifferentialPressureAPI server.
+go run github.com/waok8s/wao-core/pkg/metrics/deltap/cmd/dpapi_deltap_cli@HEAD -h
+# CLI to get power consumption from V2InferenceProtocol server.
+go run github.com/waok8s/wao-core/pkg/predictor/v2inferenceprotocol/cmd/v2ip_pcp_cli@HEAD -h
+# CLI to get power consumption predictor endpoint from Redfish server.
+go run github.com/waok8s/wao-core/pkg/predictor/redfish/cmd/redfish_ep_cli@HEAD -h
+```
+
+> [!NOTE]
+> We also provide fake implementations for testing purposes. You can use them by setting `type` to `Fake` in NodeConfig[Template]. 
 
 Then, you can configure your nodes with NodeConfig[Template]. See [Configuration](#configuration) for details.
 
