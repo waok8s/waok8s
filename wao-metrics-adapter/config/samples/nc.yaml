@@ -31,13 +31,19 @@ spec:
     inletTemp:
       type: Fake
       endpoint: ""
+      basicAuthSecret:
+        name: "basic-auth-secret"
       fetchInterval: 10s
     deltaP:
       type: Fake
       endpoint: ""
+      basicAuthSecret:
+        name: "basic-auth-secret"
       fetchInterval: 10s
   predictor:
     powerConsumption:
       type: Fake
       endpoint: ""
+      basicAuthSecret:
+        name: "basic-auth-secret"
       fetchInterval: 10s

@@ -5,14 +5,15 @@ import (
 	"os"
 
 	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/component-base/logs"
 	"k8s.io/klog/v2"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	basecmd "sigs.k8s.io/custom-metrics-apiserver/pkg/cmd"
 
-	"github.com/waok8s/wao-core/pkg/controller"
-	"github.com/waok8s/wao-core/pkg/metrics"
+	waocontroller "github.com/waok8s/wao-core/pkg/controller"
+	waometrics "github.com/waok8s/wao-core/pkg/metrics"
 
 	waoprovider "github.com/waok8s/wao-metrics-adapter/pkg/provider"
 )
@@ -29,8 +30,8 @@ func main() {
 	defer logs.FlushLogs()
 
 	// init components
-	metricsCollector := &metrics.Collector{}
-	metricsStore := &metrics.Store{}
+	metricsCollector := &waometrics.Collector{}
+	metricsStore := &waometrics.Store{}
 
 	// init adapter
 	cmd := &Adapter{
@@ -67,7 +68,7 @@ func main() {
 	setupLog := ctrl.Log.WithName("setup")
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&zap.Options{Development: true})))
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
-		Scheme:                 controller.Scheme,
+		Scheme:                 waocontroller.Scheme,
 		MetricsBindAddress:     "0",
 		HealthProbeBindAddress: "",
 		LeaderElection:         false,
@@ -76,9 +77,10 @@ func main() {
 		setupLog.Error(err, "unable to start manager")
 		os.Exit(1)
 	}
-	if err := (&controller.NodeConfigReconciler{
+	if err := (&waocontroller.NodeConfigReconciler{
 		Client:           mgr.GetClient(),
 		Scheme:           mgr.GetScheme(),
+		SecretClient:     kubernetes.NewForConfigOrDie(mgr.GetConfig()),
 		MetricsCollector: metricsCollector,
 		MetricsStore:     metricsStore,
 	}).SetupWithManager(mgr); err != nil {

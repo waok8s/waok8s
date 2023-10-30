@@ -18,7 +18,7 @@ import (
 	"sigs.k8s.io/custom-metrics-apiserver/pkg/provider/defaults"
 	"sigs.k8s.io/custom-metrics-apiserver/pkg/provider/helpers"
 
-	"github.com/waok8s/wao-core/pkg/metrics"
+	waometrics "github.com/waok8s/wao-core/pkg/metrics"
 )
 
 type Provider struct {
@@ -28,7 +28,7 @@ type Provider struct {
 	client dynamic.Interface
 	mapper apimeta.RESTMapper
 
-	metricsStore *metrics.Store
+	metricsStore *waometrics.Store
 }
 
 var (
@@ -36,7 +36,7 @@ var (
 	// _ provider.ExternalMetricsProvider = (*Provider)(nil)
 )
 
-func New(client dynamic.Interface, mapper apimeta.RESTMapper, metricStore *metrics.Store) *Provider {
+func New(client dynamic.Interface, mapper apimeta.RESTMapper, metricStore *waometrics.Store) *Provider {
 	return &Provider{
 		client:       client,
 		mapper:       mapper,
@@ -113,7 +113,7 @@ func (p *Provider) metricFor(namespace, name string, info provider.CustomMetricI
 	if err != nil {
 		return nil, err
 	}
-	k := metrics.StoreKey(namespace, name, info)
+	k := waometrics.StoreKey(namespace, name, info)
 	m, ok := p.metricsStore.Get(k)
 	if !ok {
 		return nil, fmt.Errorf("metric %s for %s not found", info.Metric, k)
@@ -126,10 +126,10 @@ func (p *Provider) metricFor(namespace, name string, info provider.CustomMetricI
 	}
 
 	switch info.Metric {
-	case metrics.ValueInletTemperature:
+	case waometrics.ValueInletTemperature:
 		v, s := fixedScale(m.InletTemp, 6)
 		return metricValueScale(objRef, time.Now(), info.Metric, v, s), nil
-	case metrics.ValueDeltaPressure:
+	case waometrics.ValueDeltaPressure:
 		v, s := fixedScale(m.DeltaPressure, 6)
 		return metricValueScale(objRef, time.Now(), info.Metric, v, s), nil
 	default:
