@@ -3,6 +3,7 @@ package metrics
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"sync"
 	"time"
 
@@ -31,16 +32,19 @@ func newAgentRunner(agent Agent, metricStore *Store, nodeName string, interval t
 }
 
 func (r *agentRunner) Run() {
+	lg := slog.With("func", "agentRunner.Run", "nodeName", r.nodeName, "agent.ValueType", r.agent.ValueType())
+	lg.Info("start")
 	for {
 		select {
 		case <-r.stopCh:
+			lg.Info("stop")
 			return
 		case <-time.After(r.interval):
 			ctx, cancel := context.WithTimeout(context.Background(), r.timeout)
 			v, err := r.agent.Fetch(ctx)
 			cancel()
 			if err != nil {
-				// TODO: notify error?
+				lg.Error("failed to fetch", "error", err)
 				continue
 			}
 
@@ -70,6 +74,9 @@ type Collector struct{ m sync.Map }
 const MinInterval = 1 * time.Second
 
 func (c *Collector) Register(k collectorKey, a Agent, s *Store, nodeName string, interval time.Duration, timeout time.Duration) {
+	lg := slog.With("func", "Collector.Register", "key", k, "nodeName", nodeName)
+	lg.Info("register")
+
 	if interval < MinInterval {
 		interval = MinInterval
 	}
@@ -79,6 +86,9 @@ func (c *Collector) Register(k collectorKey, a Agent, s *Store, nodeName string,
 }
 
 func (c *Collector) Unregister(k collectorKey) {
+	lg := slog.With("func", "Collector.Unregister", "key", k)
+	lg.Info("unregister")
+
 	defer c.m.Delete(k)
 
 	v, ok := c.m.Load(k)

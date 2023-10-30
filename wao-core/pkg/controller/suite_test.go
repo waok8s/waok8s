@@ -1,9 +1,7 @@
-package wao_test
+package controller_test
 
 import (
 	"context"
-	"errors"
-	"fmt"
 	"path/filepath"
 	"testing"
 	"time"
@@ -11,7 +9,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/google/go-cmp/cmp"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -22,7 +19,10 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	"github.com/waok8s/wao-core/internal/controller/wao"
+	waoclient "github.com/waok8s/wao-core/pkg/client"
+	waocontroller "github.com/waok8s/wao-core/pkg/controller"
+	waometrics "github.com/waok8s/wao-core/pkg/metrics"
+	waopredictor "github.com/waok8s/wao-core/pkg/predictor"
 
 	"github.com/waok8s/wao-core/api/wao/v1beta1"
 	//+kubebuilder:scaffold:imports
@@ -35,6 +35,8 @@ var cfg *rest.Config
 var k8sClient client.Client
 var testEnv *envtest.Environment
 
+var cachedPredictorClient *waoclient.CachedPredictorClient
+
 func TestControllers(t *testing.T) {
 	RegisterFailHandler(Fail)
 
@@ -46,7 +48,7 @@ var _ = BeforeSuite(func() {
 
 	By("bootstrapping test environment")
 	testEnv = &envtest.Environment{
-		CRDDirectoryPaths:     []string{filepath.Join("..", "..", "..", "config", "crd", "bases")},
+		CRDDirectoryPaths:     []string{filepath.Join("..", "..", "config", "crd", "bases")},
 		ErrorIfCRDPathMissing: true,
 	}
 
@@ -65,6 +67,8 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 	Expect(k8sClient).NotTo(BeNil())
 
+	// init clients
+	cachedPredictorClient = waoclient.NewCachedPredictorClient(k8sClient, 10*time.Second)
 })
 
 var _ = AfterSuite(func() {
@@ -100,78 +104,71 @@ var (
 			Addresses: []corev1.NodeAddress{{Type: corev1.NodeInternalIP, Address: testNode1Addr}},
 		},
 	}
-	testNCT0Name = "nct0"
-	testNCT0EP   = "http://{{ .IPv4.Octet1 }}.{{ .IPv4.Octet2 }}.{{ .IPv4.Octet3 }}.{{ .IPv4.Octet4 }}/{{ .IPv4.Address }}-{{ .Hostname }}"
-	testNCT0     = v1beta1.NodeConfigTemplate{
+	testSecretName = "test-secret"
+	testSecret     = corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      testNCT0Name,
+			Name:      testSecretName,
 			Namespace: testNS,
 		},
-		Spec: v1beta1.NodeConfigTemplateSpec{
-			NodeSelector: metav1.LabelSelector{MatchLabels: map[string]string{testLabel: testLabelValue}},
-			Template: v1beta1.NodeConfigSpec{
-				NodeName: "",
-				MetricsCollector: v1beta1.MetricsCollector{
-					InletTemp: v1beta1.EndpointTerm{
-						Type:     v1beta1.TypeFake,
-						Endpoint: testNCT0EP,
-					},
-					DeltaP: v1beta1.EndpointTerm{
-						Type:     v1beta1.TypeFake,
-						Endpoint: testNCT0EP,
-					},
-				},
-				Predictor: v1beta1.Predictor{
-					PowerConsumptionEndpointProvider: &v1beta1.EndpointTerm{
-						Type:     v1beta1.TypeFake,
-						Endpoint: testNCT0EP,
-					},
-				},
-			},
+		Type: corev1.SecretTypeBasicAuth,
+		Data: map[string][]byte{
+			// invalid base64 values, but it's ok for this test
+			"username": []byte("test-user"),
+			"password": []byte("test-password"),
 		},
 	}
-	testNC0EP = "http://10.0.0.100/10.0.0.100-node-0"
-	testNC1EP = "http://10.0.0.101/10.0.0.101-node-1"
-	testNC0   = v1beta1.NodeConfig{
+	testNC0EP         = "http://10.0.0.100/10.0.0.100-node-0"
+	testNC1EP         = "http://10.0.0.101/10.0.0.101-node-1"
+	testFetchInterval = metav1.Duration{Duration: 1 * time.Second}
+	testNC0           = v1beta1.NodeConfig{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      testNCT0Name + "-" + testNode0Name,
+			Name:      testNode0Name,
 			Namespace: testNS,
 		},
 		Spec: v1beta1.NodeConfigSpec{
 			NodeName: testNode0Name,
 			MetricsCollector: v1beta1.MetricsCollector{
 				InletTemp: v1beta1.EndpointTerm{
-					Type:     v1beta1.TypeFake,
-					Endpoint: testNC0EP,
+					Type:            v1beta1.TypeFake,
+					Endpoint:        testNC0EP,
+					BasicAuthSecret: &corev1.LocalObjectReference{Name: testSecretName},
+					FetchInterval:   &testFetchInterval,
 				},
 				DeltaP: v1beta1.EndpointTerm{
-					Type:     v1beta1.TypeFake,
-					Endpoint: testNC0EP,
+					Type:          v1beta1.TypeFake,
+					Endpoint:      testNC0EP,
+					FetchInterval: &testFetchInterval,
 				},
 			},
 			Predictor: v1beta1.Predictor{
-				PowerConsumptionEndpointProvider: &v1beta1.EndpointTerm{
+				PowerConsumption: &v1beta1.EndpointTerm{
 					Type:     v1beta1.TypeFake,
 					Endpoint: testNC0EP,
+					BasicAuthSecret: &corev1.LocalObjectReference{
+						Name: testSecretName,
+					},
 				},
 			},
 		},
 	}
 	testNC1 = v1beta1.NodeConfig{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      testNCT0Name + "-" + testNode1Name,
+			Name:      testNode1Name,
 			Namespace: testNS,
 		},
 		Spec: v1beta1.NodeConfigSpec{
 			NodeName: testNode1Name,
 			MetricsCollector: v1beta1.MetricsCollector{
 				InletTemp: v1beta1.EndpointTerm{
-					Type:     v1beta1.TypeFake,
-					Endpoint: testNC1EP,
+					Type:          v1beta1.TypeFake,
+					Endpoint:      testNC1EP,
+					FetchInterval: &testFetchInterval,
 				},
 				DeltaP: v1beta1.EndpointTerm{
-					Type:     v1beta1.TypeFake,
-					Endpoint: testNC1EP,
+					Type:            v1beta1.TypeFake,
+					Endpoint:        testNC1EP,
+					BasicAuthSecret: &corev1.LocalObjectReference{Name: testSecretName},
+					FetchInterval:   &testFetchInterval,
 				},
 			},
 			Predictor: v1beta1.Predictor{
@@ -184,8 +181,9 @@ var (
 	}
 )
 
-var _ = Describe("NodeConfigTemplate Controller", func() {
+var _ = Describe("NodeConfig Controller", func() {
 	var cncl context.CancelFunc
+	var reconciler waocontroller.NodeConfigReconciler
 
 	BeforeEach(func() {
 		ctx, cancel := context.WithCancel(context.Background())
@@ -197,18 +195,10 @@ var _ = Describe("NodeConfigTemplate Controller", func() {
 		k8sClient.Create(ctx, &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: testNS}})
 
 		// Reset resources
-		err = k8sClient.DeleteAllOf(ctx, &v1beta1.NodeConfigTemplate{}, client.InNamespace(testNS))
-		Expect(err).NotTo(HaveOccurred())
 		err = k8sClient.DeleteAllOf(ctx, &v1beta1.NodeConfig{}, client.InNamespace(testNS))
 		Expect(err).NotTo(HaveOccurred())
-		err = k8sClient.DeleteAllOf(ctx, &corev1.Node{})
+		err = k8sClient.DeleteAllOf(ctx, &corev1.Secret{}, client.InNamespace(testNS))
 		Expect(err).NotTo(HaveOccurred())
-		Eventually(func() int {
-			var objs v1beta1.NodeConfigTemplateList
-			err = k8sClient.List(ctx, &objs, client.InNamespace(testNS))
-			Expect(err).NotTo(HaveOccurred())
-			return len(objs.Items)
-		}).Should(Equal(0))
 		Eventually(func() int {
 			var objs v1beta1.NodeConfigList
 			err = k8sClient.List(ctx, &objs, client.InNamespace(testNS))
@@ -216,21 +206,24 @@ var _ = Describe("NodeConfigTemplate Controller", func() {
 			return len(objs.Items)
 		}).Should(Equal(0))
 		Eventually(func() int {
-			var objs corev1.NodeList
-			err = k8sClient.List(ctx, &objs)
+			var objs corev1.SecretList
+			err = k8sClient.List(ctx, &objs, client.InNamespace(testNS))
 			Expect(err).NotTo(HaveOccurred())
 			return len(objs.Items)
 		}).Should(Equal(0))
 
+		// Setup manager
 		mgr, err := ctrl.NewManager(cfg, ctrl.Options{
 			Scheme:             scheme.Scheme,
 			MetricsBindAddress: "0", // disable metrics server to avoid port conflict
 		})
 		Expect(err).NotTo(HaveOccurred())
 
-		reconciler := wao.NodeConfigTemplateReconciler{
-			Client: k8sClient,
-			Scheme: scheme.Scheme,
+		reconciler = waocontroller.NodeConfigReconciler{
+			Client:           k8sClient,
+			Scheme:           scheme.Scheme,
+			MetricsCollector: &waometrics.Collector{},
+			MetricsStore:     &waometrics.Store{},
 		}
 		err = reconciler.SetupWithManager(mgr)
 		Expect(err).NotTo(HaveOccurred())
@@ -249,45 +242,64 @@ var _ = Describe("NodeConfigTemplate Controller", func() {
 		wait()
 	})
 
-	It("should create a NodeConfigTemplate and NodeConfigs", func() {
+	It("should start agentRunners", func() {
 		ctx := context.Background()
 
 		var err error
 
-		err = k8sClient.Create(ctx, testNode0.DeepCopy())
-		Expect(err).NotTo(HaveOccurred())
-		err = k8sClient.Create(ctx, testNode1.DeepCopy())
-		Expect(err).NotTo(HaveOccurred())
-
-		// Create NodeConfigTemplate
-		err = k8sClient.Create(ctx, testNCT0.DeepCopy())
+		// Create Secret
+		err = k8sClient.Create(ctx, testSecret.DeepCopy())
 		Expect(err).NotTo(HaveOccurred())
 
-		// Check NodeConfigs are created
-		for _, nc := range []*v1beta1.NodeConfig{testNC0.DeepCopy(), testNC1.DeepCopy()} {
-			Eventually(func() error {
-				var obj v1beta1.NodeConfig
-				err = k8sClient.Get(ctx, client.ObjectKey{Name: nc.Name, Namespace: testNS}, &obj)
-				if err != nil {
-					return err
-				}
-				return compareNodeConfig(obj, *nc)
-			}).ShouldNot(HaveOccurred())
+		// Create NodeConfig
+		err = k8sClient.Create(ctx, testNC0.DeepCopy())
+		Expect(err).NotTo(HaveOccurred())
+		err = k8sClient.Create(ctx, testNC1.DeepCopy())
+		Expect(err).NotTo(HaveOccurred())
+
+		// Wait for agentRunners to start
+		<-time.After(testFetchInterval.Duration * 2)
+
+		// Check stored metrics
+		for _, nodeName := range []string{testNode0Name, testNode1Name} {
+			md, ok := reconciler.MetricsStore.Get(waometrics.StoreKeyForNode(nodeName))
+			Expect(ok).To(BeTrue())
+			Expect(md).To(Equal(waometrics.MetricData{
+				// fake values
+				InletTemp:     15.5,
+				DeltaPressure: 7.5,
+			}))
 		}
 	})
 
-})
+	It("should parse predictors", func() {
+		ctx := context.Background()
 
-func compareNodeConfig(got, want v1beta1.NodeConfig) error {
-	var err error
-	if got.Spec.NodeName != want.Spec.NodeName {
-		err = errors.Join(err, fmt.Errorf("NodeName: got %s, want %s", got.Spec.NodeName, want.Spec.NodeName))
-	}
-	if diff := cmp.Diff(got.Spec.MetricsCollector, want.Spec.MetricsCollector); diff != "" {
-		err = errors.Join(err, fmt.Errorf("MetricsCollector: %s", diff))
-	}
-	if diff := cmp.Diff(got.Spec.Predictor, want.Spec.Predictor); diff != "" {
-		err = errors.Join(err, fmt.Errorf("Predictor: %s", diff))
-	}
-	return err
-}
+		var err error
+
+		// Create Secret
+		err = k8sClient.Create(ctx, testSecret.DeepCopy())
+		Expect(err).NotTo(HaveOccurred())
+
+		// Create NodeConfig
+		err = k8sClient.Create(ctx, testNC0.DeepCopy())
+		Expect(err).NotTo(HaveOccurred())
+		err = k8sClient.Create(ctx, testNC1.DeepCopy())
+		Expect(err).NotTo(HaveOccurred())
+
+		// node-0: direct endpoint
+		v, err := cachedPredictorClient.PredictPowerConsumption(ctx, testNS, testNC0.Spec.Predictor.PowerConsumption, 20.0, 15.5, 7.5)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(v).To(Equal(3.14)) // fake value
+
+		// node-1: endpoint provider
+		ep, err := cachedPredictorClient.GetPredictorEndpoint(ctx, testNS, testNC1.Spec.Predictor.PowerConsumptionEndpointProvider, waopredictor.TypePowerConsumption)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(ep).To(Equal(&v1beta1.EndpointTerm{
+			// fake endpoint provider returns this value
+			Type:     v1beta1.TypeFake,
+			Endpoint: "https://fake-endpoint",
+		}))
+	})
+
+})

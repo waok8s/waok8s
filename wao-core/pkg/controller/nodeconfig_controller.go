@@ -129,7 +129,7 @@ func (r *NodeConfigReconciler) reconcileNodeConfig(ctx context.Context, objKey t
 		fetchTimeout := 3 * time.Second
 		switch conf.Type {
 		case waov1beta1.TypeFake:
-			fake.NewInletTempAgent(15.5, nil, 100*time.Millisecond) // fake agent always returns this value
+			agent = fake.NewInletTempAgent(15.5, nil, 100*time.Millisecond) // fake agent always returns this value
 		case waov1beta1.TypeRedfish:
 			insecureSkipVerify := true
 			requestTimeout := fetchTimeout - 1*time.Second
