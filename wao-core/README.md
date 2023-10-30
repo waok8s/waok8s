@@ -212,6 +212,7 @@ spec:
     matchLabels:
       node.kubernetes.io/instance-type: "redfish-enabled"
   template:
+    nodeName: "" # This will be set by the controller.
     metricsCollector:
       inletTemp:
         type: Redfish
