@@ -1,4 +1,4 @@
-package deltap
+package dpapi
 
 import (
 	"context"
@@ -13,7 +13,7 @@ import (
 	"github.com/waok8s/wao-core/pkg/util"
 )
 
-type DifferentialPressureAPIClient struct {
+type DeltaPAgent struct {
 	// address contains scheme, host and port.
 	// E.g., "http://10.0.0.1:8080"
 	address string
@@ -31,12 +31,12 @@ type DifferentialPressureAPIClient struct {
 	editorFns []util.RequestEditorFn
 }
 
-var _ metrics.Agent = (*DifferentialPressureAPIClient)(nil)
+var _ metrics.Agent = (*DeltaPAgent)(nil)
 
-// NewDifferentialPressureAPIClient inits the client.
+// NewDeltaPAgent inits the client.
 // At least one of sensorName, nodeName or nodeIP must be specified.
-func NewDifferentialPressureAPIClient(address string, sensorName, nodeName, nodeIP string, insecureSkipVerify bool, timeout time.Duration, editorFns ...util.RequestEditorFn) *DifferentialPressureAPIClient {
-	return &DifferentialPressureAPIClient{
+func NewDeltaPAgent(address string, sensorName, nodeName, nodeIP string, insecureSkipVerify bool, timeout time.Duration, editorFns ...util.RequestEditorFn) *DeltaPAgent {
+	return &DeltaPAgent{
 		address:    address,
 		sensorName: sensorName,
 		nodeName:   nodeName,
@@ -55,16 +55,16 @@ func NewDifferentialPressureAPIClient(address string, sensorName, nodeName, node
 //   - Get value by sensor name http://hogefuga:12345/api/sensor/2027B30
 //   - Get value by node name http://hogefuga:12345/api/sensor/by_nodename/node-0
 //   - Get value by node IP http://hogefuga:12345/api/sensor/by_nodeaddress/10.10.0.1
-func (c *DifferentialPressureAPIClient) Endpoint() (string, error) {
+func (a *DeltaPAgent) Endpoint() (string, error) {
 	switch {
-	case c.sensorName != "":
-		return url.JoinPath(c.address, "api", "sensor", c.sensorName)
-	case c.nodeName != "":
-		return url.JoinPath(c.address, "api", "sensor", "by_nodename", c.nodeName)
-	case c.nodeIP != "":
-		return url.JoinPath(c.address, "api", "sensor", "by_nodeaddress", c.nodeIP)
+	case a.sensorName != "":
+		return url.JoinPath(a.address, "api", "sensor", a.sensorName)
+	case a.nodeName != "":
+		return url.JoinPath(a.address, "api", "sensor", "by_nodename", a.nodeName)
+	case a.nodeIP != "":
+		return url.JoinPath(a.address, "api", "sensor", "by_nodeaddress", a.nodeIP)
 	default:
-		return "", fmt.Errorf("could not construct endpoint from %+v", c)
+		return "", fmt.Errorf("could not construct endpoint from %+v", a)
 	}
 }
 
@@ -93,10 +93,10 @@ type sensorValue struct {
 	Temperature float64 `json:"temperature"`
 }
 
-func (c *DifferentialPressureAPIClient) GetSensorValue(ctx context.Context) (sensorValue, error) {
+func (a *DeltaPAgent) GetSensorValue(ctx context.Context) (sensorValue, error) {
 	var v sensorValue
 
-	url, err := c.Endpoint()
+	url, err := a.Endpoint()
 	if err != nil {
 		return v, fmt.Errorf("unable to get endpoint URL: %w", err)
 	}
@@ -104,13 +104,13 @@ func (c *DifferentialPressureAPIClient) GetSensorValue(ctx context.Context) (sen
 	if err != nil {
 		return v, fmt.Errorf("unable to create HTTP request: %w", err)
 	}
-	for i, f := range c.editorFns {
+	for i, f := range a.editorFns {
 		if err := f(ctx, req); err != nil {
 			return v, fmt.Errorf("editorFns[%d] got error: %w", i, err)
 		}
 	}
 
-	resp, err := c.client.Do(req)
+	resp, err := a.client.Do(req)
 	if err != nil {
 		return v, fmt.Errorf("unable to send HTTP request: %w", err)
 	}
@@ -129,14 +129,12 @@ func (c *DifferentialPressureAPIClient) GetSensorValue(ctx context.Context) (sen
 	}
 }
 
-func (c *DifferentialPressureAPIClient) Fetch(ctx context.Context) (float64, error) {
-	v, err := c.GetSensorValue(ctx)
+func (a *DeltaPAgent) Fetch(ctx context.Context) (float64, error) {
+	v, err := a.GetSensorValue(ctx)
 	if err != nil {
 		return 0.0, err
 	}
 	return v.Pressure, nil
 }
 
-func (c *DifferentialPressureAPIClient) ValueType() metrics.ValueType {
-	return metrics.ValueDeltaPressure
-}
+func (a *DeltaPAgent) ValueType() metrics.ValueType { return metrics.ValueDeltaPressure }

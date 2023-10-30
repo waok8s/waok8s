@@ -10,19 +10,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/waok8s/wao-core/pkg/metrics/deltap"
+	"github.com/waok8s/wao-core/pkg/predictor/redfish"
 	"github.com/waok8s/wao-core/pkg/util"
 )
 
 func main() {
 	var address string
-	flag.StringVar(&address, "address", "http://localhost:5000", "DifferentialPressureAPI server address")
-	var sensorName string
-	flag.StringVar(&sensorName, "sensorName", "", "Sensor name")
-	var nodeName string
-	flag.StringVar(&nodeName, "nodeName", "", "Node name")
-	var nodeIP string
-	flag.StringVar(&nodeIP, "nodeIP", "", "Node IP address")
+	flag.StringVar(&address, "address", "http://localhost:5000", "Redfish server address")
 	var basicAuth string
 	flag.StringVar(&basicAuth, "basicAuth", "", "Basic auth in username@password format")
 	var logLevel int
@@ -49,22 +43,25 @@ func main() {
 		AddSource: true,
 		Level:     slogLevel,
 	}))
-	slog.SetDefault(lg.With("component", "DeltaPClient (DPAPI)"))
+	slog.SetDefault(lg.With("component", "EndpointProviderClient (Redfish)"))
 
 	requestEditorFns := []util.RequestEditorFn{}
 	ss := strings.Split(basicAuth, ":")
 	if len(ss) == 2 {
 		requestEditorFns = append(requestEditorFns, util.WithBasicAuth(ss[0], ss[1]))
 	}
-	requestEditorFns = append(requestEditorFns, util.WithCurlLogger(lg.With("func", "WithCurlLogger(DifferentialPressureAPIClient.Fetch)")))
+	requestEditorFns = append(requestEditorFns, util.WithCurlLogger(lg.With("func", "WithCurlLogger(RedfishEndpointProvider.GetModels)")))
 
-	c := deltap.NewDifferentialPressureAPIClient(address, sensorName, nodeName, nodeIP, true, 2*time.Second, requestEditorFns...)
+	c, err := redfish.NewEndpointProvider(address, true, 2*time.Second, requestEditorFns...)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	v, err := c.Fetch(ctx)
+	models, err := c.GetModels(ctx)
 	cancel()
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(v)
+	fmt.Printf("%+v\n", models)
 }

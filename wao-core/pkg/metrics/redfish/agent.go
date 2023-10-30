@@ -1,4 +1,4 @@
-package inlettemp
+package redfish
 
 import (
 	"context"
@@ -26,21 +26,21 @@ const (
 	TypeSupermicroSSM  ServerType = "SSM"
 )
 
-type GetSensorValueFunc func(ctx context.Context, server string, client *http.Client, editorFns ...util.RequestEditorFn) (float64, error)
+type GetInletTempFunc func(ctx context.Context, server string, client *http.Client, editorFns ...util.RequestEditorFn) (float64, error)
 
 var (
-	GetSensorValueFn = map[ServerType]GetSensorValueFunc{
-		TypeDelliDRAC:      GetSensorValueForTypeDelliDRAC,
-		TypeLenovoXClarity: GetSensorValueForTypeLenovoXClarity,
-		TypeSupermicroSSM:  GetSensorValueForTypeSupermicroSSM,
+	GetInletTempFns = map[ServerType]GetInletTempFunc{
+		TypeDelliDRAC:      GetInletTempForTypeDelliDRAC,
+		TypeLenovoXClarity: GetInletTempForTypeLenovoXClarity,
+		TypeSupermicroSSM:  GetInletTempForTypeSupermicroSSM,
 	}
 )
 
-// GetSensorValueForTypeDelliDRAC returns inlet temp.
+// GetInletTempForTypeDelliDRAC returns inlet temp.
 //
 //   - URL: https://{SERVER}/redfish/v1/Chassis/System.Embedded.1/Sensors/SystemBoardInletTemp
 //   - Key: ["Reading"]
-func GetSensorValueForTypeDelliDRAC(ctx context.Context, server string, client *http.Client, editorFns ...util.RequestEditorFn) (float64, error) {
+func GetInletTempForTypeDelliDRAC(ctx context.Context, server string, client *http.Client, editorFns ...util.RequestEditorFn) (float64, error) {
 
 	type apiResponse struct {
 		Reading float64 `json:"Reading"`
@@ -76,7 +76,7 @@ func GetSensorValueForTypeDelliDRAC(ctx context.Context, server string, client *
 	}
 }
 
-// GetSensorValueForTypeLenovoXClarity returns inlet temp.
+// GetInletTempForTypeLenovoXClarity returns inlet temp.
 //
 //   - URL: https://{SERVER}/redfish/v1/Chassis/1/Sensors/{SENSOR_ID}
 //   - Key: ["Reading"]
@@ -86,7 +86,7 @@ func GetSensorValueForTypeDelliDRAC(ctx context.Context, server string, client *
 // For more flexibility, search for a sensor with `Name: "Ambient Temp"` and cache its ID
 // (servers typically have dozens of sensors, so caching is necessary for performance).
 // This may require an additional variable (e.g., a sync.Map) in RedfishClient for data sharing.
-func GetSensorValueForTypeLenovoXClarity(ctx context.Context, server string, client *http.Client, editorFns ...util.RequestEditorFn) (float64, error) {
+func GetInletTempForTypeLenovoXClarity(ctx context.Context, server string, client *http.Client, editorFns ...util.RequestEditorFn) (float64, error) {
 
 	const targetSensorName = "Ambient Temp"
 	type apiResponse struct {
@@ -129,11 +129,11 @@ func GetSensorValueForTypeLenovoXClarity(ctx context.Context, server string, cli
 	}
 }
 
-// GetSensorValueForTypeSupermicroSSM returns inlet temp.
+// GetInletTempForTypeSupermicroSSM returns inlet temp.
 //
 //   - URL: https://{SERVER}/redfish/v1/Chassis/1/Thermal
 //   - Key: ["Name"] == "System Temp" in range ["Temperatures"] | ["ReadingCelsius"]
-func GetSensorValueForTypeSupermicroSSM(ctx context.Context, server string, client *http.Client, editorFns ...util.RequestEditorFn) (float64, error) {
+func GetInletTempForTypeSupermicroSSM(ctx context.Context, server string, client *http.Client, editorFns ...util.RequestEditorFn) (float64, error) {
 
 	const targetSensorName = "System Temp"
 	type apiResponse struct {
@@ -178,7 +178,7 @@ func GetSensorValueForTypeSupermicroSSM(ctx context.Context, server string, clie
 	}
 }
 
-type RedfishClient struct {
+type InletTempAgent struct {
 	// address contains scheme, host and port.
 	// E.g., "http://10.0.0.1:8080"
 	address string
@@ -189,12 +189,12 @@ type RedfishClient struct {
 	editorFns []util.RequestEditorFn
 }
 
-var _ metrics.Agent = (*RedfishClient)(nil)
+var _ metrics.Agent = (*InletTempAgent)(nil)
 
-// NewRedfishClient inits the client.
+// NewInletTempAgent inits the client.
 // If serverType is not specified, the client will try all known endpoints.
-func NewRedfishClient(address string, serverType ServerType, insecureSkipVerify bool, timeout time.Duration, editorFns ...util.RequestEditorFn) *RedfishClient {
-	return &RedfishClient{
+func NewInletTempAgent(address string, serverType ServerType, insecureSkipVerify bool, timeout time.Duration, editorFns ...util.RequestEditorFn) *InletTempAgent {
+	return &InletTempAgent{
 		address:    address,
 		serverType: serverType,
 		client: &http.Client{
@@ -205,24 +205,24 @@ func NewRedfishClient(address string, serverType ServerType, insecureSkipVerify 
 	}
 }
 
-func (c *RedfishClient) Fetch(ctx context.Context) (float64, error) {
-	fn, ok := GetSensorValueFn[c.serverType]
+func (a *InletTempAgent) Fetch(ctx context.Context) (float64, error) {
+	fn, ok := GetInletTempFns[a.serverType]
 	if !ok {
 		type result struct {
 			ServerType  ServerType
 			MetricValue float64
 		}
-		resultCh := make(chan result, len(GetSensorValueFn))
-		errCh := make(chan error, len(GetSensorValueFn))
+		resultCh := make(chan result, len(GetInletTempFns))
+		errCh := make(chan error, len(GetInletTempFns))
 		wg := &sync.WaitGroup{}
-		for st, fn := range GetSensorValueFn {
+		for st, fn := range GetInletTempFns {
 			st := st
 			fn := fn
 			wg.Add(1)
 			go func() {
 				time.Sleep(time.Duration(rand.Intn(500)) * time.Millisecond)
 
-				v, err := fn(ctx, c.address, c.client, c.editorFns...)
+				v, err := fn(ctx, a.address, a.client, a.editorFns...)
 				if err != nil {
 					errCh <- err
 				} else {
@@ -238,7 +238,7 @@ func (c *RedfishClient) Fetch(ctx context.Context) (float64, error) {
 
 		if len(resultCh) > 0 {
 			r := <-resultCh
-			c.serverType = r.ServerType
+			a.serverType = r.ServerType
 			return r.MetricValue, nil
 		} else {
 			err := errors.New("all GetSensorValueFuncs got error")
@@ -248,10 +248,8 @@ func (c *RedfishClient) Fetch(ctx context.Context) (float64, error) {
 			return 0.0, err
 		}
 	} else {
-		return fn(ctx, c.address, c.client, c.editorFns...)
+		return fn(ctx, a.address, a.client, a.editorFns...)
 	}
 }
 
-func (c *RedfishClient) ValueType() metrics.ValueType {
-	return metrics.ValueInletTemperature
-}
+func (a *InletTempAgent) ValueType() metrics.ValueType { return metrics.ValueInletTemperature }

@@ -14,7 +14,8 @@ import (
 
 	waov1beta1 "github.com/waok8s/wao-core/api/wao/v1beta1"
 	"github.com/waok8s/wao-core/pkg/predictor"
-	"github.com/waok8s/wao-core/pkg/predictor/endpointprovider"
+	"github.com/waok8s/wao-core/pkg/predictor/fake"
+	"github.com/waok8s/wao-core/pkg/predictor/redfish"
 	"github.com/waok8s/wao-core/pkg/predictor/v2inferenceprotocol"
 	"github.com/waok8s/wao-core/pkg/util"
 )
@@ -51,37 +52,26 @@ func newEndpointProvider(
 	insecureSkipVerify bool, requestTimeout time.Duration,
 ) (predictor.EndpointProvider, error) {
 
+	var prov predictor.EndpointProvider
+
 	switch endpointType {
 	case waov1beta1.TypeFake:
-
-		var prov predictor.EndpointProvider
-		prov = &predictor.FakeEndpointProvider{
-			EndpointValue: endpoint,
-			EndpointError: nil,
-			GetValue: &waov1beta1.EndpointTerm{
-				Type:     waov1beta1.TypeFake,
-				Endpoint: "https://fake-endpoint",
-			},
-			GetError: nil,
-			GetDelay: 50 * time.Millisecond,
-		}
-
-		return prov, nil
+		prov = fake.NewEndpointProvider(endpoint, nil, &waov1beta1.EndpointTerm{Type: waov1beta1.TypeFake, Endpoint: "https://fake-endpoint"}, nil, 50*time.Millisecond)
 	case waov1beta1.TypeRedfish:
-
 		requestEditorFns := []util.RequestEditorFn{
 			util.WithBasicAuth(basicAuthUsername, basicAuthPassword),
 			util.WithCurlLogger(slog.With("func", "WithCurlLogger(RedfishEndpointProvider.Get)")),
 		}
-
-		prov, err := endpointprovider.NewRedfishEndpointProvider(endpoint, insecureSkipVerify, requestTimeout, requestEditorFns...)
+		p, err := redfish.NewEndpointProvider(endpoint, insecureSkipVerify, requestTimeout, requestEditorFns...)
 		if err != nil {
 			return nil, err
 		}
-		return prov, nil
+		prov = p
+	default:
+		return nil, fmt.Errorf("unknown endpoint type: %s", endpointType)
 	}
 
-	return nil, fmt.Errorf("unknown endpoint type: %s", endpointType)
+	return prov, nil
 }
 
 func NewPowerConsumptionPredictor(client client.Client, namespace string, endpointTerm *waov1beta1.EndpointTerm) (predictor.PowerConsumptionPredictor, error) {
@@ -98,19 +88,11 @@ func newPowerConsumptionPredictor(
 	insecureSkipVerify bool, requestTimeout time.Duration,
 ) (predictor.PowerConsumptionPredictor, error) {
 
+	var pred predictor.PowerConsumptionPredictor
+
 	switch endpointType {
 	case waov1beta1.TypeFake:
-
-		var client predictor.PowerConsumptionPredictor
-		client = &predictor.FakePowerConsumptionPredictor{
-			EndpointValue: endpoint,
-			EndpointError: nil,
-			PredictValue:  3.14,
-			PredictError:  nil,
-			PredictDelay:  50 * time.Millisecond,
-		}
-
-		return client, nil
+		pred = fake.NewPowerConsumptionPredictor(endpoint, nil, 3.14, nil, 50*time.Millisecond)
 	case waov1beta1.TypeV2InferenceProtocol:
 		u, err := url.Parse(endpoint)
 		if err != nil {
@@ -138,11 +120,10 @@ func newPowerConsumptionPredictor(
 			util.WithCurlLogger(slog.With("func", "WithCurlLogger(v2inferenceprotocol.PowerConsumptionClient.Predict)")),
 		}
 
-		var client predictor.PowerConsumptionPredictor
-		client = v2inferenceprotocol.NewPowerConsumptionClient(address, modelName, modelVersion, insecureSkipVerify, requestTimeout, requestEditorFns...)
-
-		return client, nil
+		pred = v2inferenceprotocol.NewPowerConsumptionPredictor(address, modelName, modelVersion, insecureSkipVerify, requestTimeout, requestEditorFns...)
+	default:
+		return nil, fmt.Errorf("unknown endpoint type: %s", endpointType)
 	}
 
-	return nil, fmt.Errorf("unknown endpoint type: %s", endpointType)
+	return pred, nil
 }

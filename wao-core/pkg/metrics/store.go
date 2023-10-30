@@ -7,23 +7,6 @@ import (
 	"sigs.k8s.io/custom-metrics-apiserver/pkg/provider"
 )
 
-type ValueType string
-
-const (
-	ValueInletTemperature = "inlet_temp"
-	ValueDeltaPressure    = "delta_p"
-)
-
-var ValueTypes = []ValueType{
-	ValueInletTemperature,
-	ValueDeltaPressure,
-}
-
-type MetricData struct {
-	InletTemp     float64
-	DeltaPressure float64
-}
-
 type storeKey string
 
 // StoreKey constructs a storeKey.
