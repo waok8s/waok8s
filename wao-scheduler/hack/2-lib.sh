@@ -131,6 +131,7 @@ function lib::run-tests {
         echo "# step 1/4: load kube-scheduler"
         echo "# "
         lib::deploy-scheduler "$d/config" "$sched_image" "$kind_cluster_name"
+        sleep 5 # wait for components to be ready & agent running
 
         echo
         echo "################################"
@@ -147,7 +148,7 @@ function lib::run-tests {
         for f in "$d"/test/*.in ; do
             f2="${f%.in}.out"
             printf "[TEST] in=%s out=%s\n" "$f" "$f2"
-            lib::retry 10 lib::run-test "$f" "$f2" # total wait time = sum(1..10) = 55s 
+            lib::retry 10 lib::run-test "$f" "$f2" # max wait time = sum(1..10) = 55s 
         done
 
         echo
