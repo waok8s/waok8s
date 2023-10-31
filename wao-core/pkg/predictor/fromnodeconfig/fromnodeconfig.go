@@ -8,9 +8,7 @@ import (
 	"strings"
 	"time"
 
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	"k8s.io/client-go/kubernetes"
 
 	waov1beta1 "github.com/waok8s/wao-core/api/wao/v1beta1"
 	"github.com/waok8s/wao-core/pkg/predictor"
@@ -20,28 +18,10 @@ import (
 	"github.com/waok8s/wao-core/pkg/util"
 )
 
-func getBasicAuthFromSecret(ctx context.Context, client client.Client, namespace string, ref *corev1.LocalObjectReference) (username, password string) {
-	lg := slog.With("func", "getBasicAuthFromSecret")
-
-	if ref == nil || ref.Name == "" {
-		return
-	}
-
-	secret := &corev1.Secret{}
-	if err := client.Get(ctx, types.NamespacedName{Namespace: namespace, Name: ref.Name}, secret); err != nil {
-		lg.Error("unable to get Secret so skip basic auth", "err", err, "obj", types.NamespacedName{Namespace: namespace, Name: ref.Name})
-		return "", ""
-	}
-	username = string(secret.Data["username"])
-	password = string(secret.Data["password"])
-
-	return
-}
-
-func NewEndpointProvider(client client.Client, namespace string, endpointTerm *waov1beta1.EndpointTerm) (predictor.EndpointProvider, error) {
+func NewEndpointProvider(client kubernetes.Interface, namespace string, endpointTerm *waov1beta1.EndpointTerm) (predictor.EndpointProvider, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
-	username, password := getBasicAuthFromSecret(ctx, client, namespace, endpointTerm.BasicAuthSecret)
+	username, password := util.GetBasicAuthFromNamespaceScopedSecret(ctx, client, namespace, endpointTerm.BasicAuthSecret)
 
 	return newEndpointProvider(endpointTerm.Type, endpointTerm.Endpoint, username, password, true, 3*time.Second)
 }
@@ -74,10 +54,10 @@ func newEndpointProvider(
 	return prov, nil
 }
 
-func NewPowerConsumptionPredictor(client client.Client, namespace string, endpointTerm *waov1beta1.EndpointTerm) (predictor.PowerConsumptionPredictor, error) {
+func NewPowerConsumptionPredictor(client kubernetes.Interface, namespace string, endpointTerm *waov1beta1.EndpointTerm) (predictor.PowerConsumptionPredictor, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
-	username, password := getBasicAuthFromSecret(ctx, client, namespace, endpointTerm.BasicAuthSecret)
+	username, password := util.GetBasicAuthFromNamespaceScopedSecret(ctx, client, namespace, endpointTerm.BasicAuthSecret)
 
 	return newPowerConsumptionPredictor(endpointTerm.Type, endpointTerm.Endpoint, username, password, true, 3*time.Second)
 }

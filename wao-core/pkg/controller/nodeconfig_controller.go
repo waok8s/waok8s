@@ -6,7 +6,6 @@ import (
 	"log/slog"
 	"time"
 
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -92,34 +91,6 @@ func (r *NodeConfigReconciler) reconcileNodeConfigDeletion(ctx context.Context, 
 	}
 }
 
-func (r *NodeConfigReconciler) getBasicAuthFromSecret(ctx context.Context, namespace string, ref *corev1.LocalObjectReference) (username, password string) {
-	lg := log.FromContext(ctx).WithValues("func", "getBasicAuthFromSecret")
-	lg.Info("called")
-
-	if ref == nil || ref.Name == "" {
-		return
-	}
-
-	// NOTE: This is a workaround. How to use controller-runtime client to get namespace scoped Secrets?
-	secret, err := r.SecretClient.CoreV1().Secrets(namespace).Get(ctx, ref.Name, metav1.GetOptions{})
-	if err != nil {
-		lg.Error(err, "unable to get Secret so skip basic auth", "namespace", namespace, "name", ref.Name)
-		return "", ""
-	}
-
-	// NOTE: RBAC error and crash. Why?
-	// secret := &corev1.Secret{}
-	// if err := r.Get(ctx, types.NamespacedName{Namespace: namespace, Name: ref.Name}, secret); err != nil {
-	// 	lg.Error(err, "unable to get Secret so skip basic auth", "namespace", namespace, "name", ref.Name)
-	// 	return "", ""
-	// }
-
-	username = string(secret.Data["username"])
-	password = string(secret.Data["password"])
-
-	return
-}
-
 const (
 	DefaultFetchInterval = 15 * time.Second
 )
@@ -139,7 +110,7 @@ func (r *NodeConfigReconciler) reconcileNodeConfig(ctx context.Context, objKey t
 		conf := nc.Spec.MetricsCollector.InletTemp
 		defaultEndpointTerm(&conf)
 		var agent metrics.Agent
-		username, password := r.getBasicAuthFromSecret(ctx, objKey.Namespace, conf.BasicAuthSecret)
+		username, password := util.GetBasicAuthFromNamespaceScopedSecret(ctx, r.SecretClient, objKey.Namespace, conf.BasicAuthSecret)
 		fetchTimeout := 3 * time.Second
 		switch conf.Type {
 		case waov1beta1.TypeFake:
@@ -163,7 +134,7 @@ func (r *NodeConfigReconciler) reconcileNodeConfig(ctx context.Context, objKey t
 		conf := nc.Spec.MetricsCollector.DeltaP
 		defaultEndpointTerm(&conf)
 		var agent metrics.Agent
-		username, password := r.getBasicAuthFromSecret(ctx, objKey.Namespace, conf.BasicAuthSecret)
+		username, password := util.GetBasicAuthFromNamespaceScopedSecret(ctx, r.SecretClient, objKey.Namespace, conf.BasicAuthSecret)
 		fetchTimeout := 3 * time.Second
 		switch conf.Type {
 		case waov1beta1.TypeFake:

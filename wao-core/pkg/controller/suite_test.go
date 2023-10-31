@@ -36,6 +36,7 @@ var cfg *rest.Config
 var k8sClient client.Client
 var testEnv *envtest.Environment
 
+var secretClient *kubernetes.Clientset
 var cachedPredictorClient *waoclient.CachedPredictorClient
 
 func TestControllers(t *testing.T) {
@@ -69,7 +70,8 @@ var _ = BeforeSuite(func() {
 	Expect(k8sClient).NotTo(BeNil())
 
 	// init clients
-	cachedPredictorClient = waoclient.NewCachedPredictorClient(k8sClient, 10*time.Second)
+	secretClient = kubernetes.NewForConfigOrDie(cfg)
+	cachedPredictorClient = waoclient.NewCachedPredictorClient(secretClient, 10*time.Second)
 })
 
 var _ = AfterSuite(func() {

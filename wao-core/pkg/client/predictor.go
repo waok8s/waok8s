@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	"k8s.io/client-go/kubernetes"
 
 	waov1beta1 "github.com/waok8s/wao-core/api/wao/v1beta1"
 	"github.com/waok8s/wao-core/pkg/predictor"
@@ -15,13 +15,13 @@ import (
 )
 
 type CachedPredictorClient struct {
-	client client.Client
+	client kubernetes.Interface
 
 	ttl   time.Duration
 	cache sync.Map
 }
 
-func NewCachedPredictorClient(client client.Client, ttl time.Duration) *CachedPredictorClient {
+func NewCachedPredictorClient(client kubernetes.Interface, ttl time.Duration) *CachedPredictorClient {
 	return &CachedPredictorClient{
 		client: client,
 		ttl:    ttl,
