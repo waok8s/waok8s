@@ -14,80 +14,130 @@ import (
 
 func Test_PowerConsumptions2Scores(t *testing.T) {
 	tests := []struct {
-		name string
-		arg  framework.NodeScoreList
-		want framework.NodeScoreList
+		name       string
+		input      framework.NodeScoreList
+		baseScore  int64
+		replaceMap map[int64]int64
+		want       framework.NodeScoreList
 	}{
 		{
 			name: "1",
-			arg: framework.NodeScoreList{
+			input: framework.NodeScoreList{
 				{Name: "n0", Score: 0}, // lowest power increase, highest score
 				{Name: "n1", Score: 50},
 				{Name: "n2", Score: 100}, // worst power increase, lowest score
 			},
+			baseScore:  ScoreBase,
+			replaceMap: ScoreReplaceMap,
 			want: framework.NodeScoreList{
 				{Name: "n0", Score: 100},
-				{Name: "n1", Score: 50},
-				{Name: "n2", Score: 0},
+				{Name: "n1", Score: 60},
+				{Name: "n2", Score: 20},
 			},
 		},
 		{
 			name: "2",
-			arg: framework.NodeScoreList{
+			input: framework.NodeScoreList{
 				{Name: "n0", Score: 20},
 				{Name: "n1", Score: 30},
 				{Name: "n2", Score: 40},
 			},
+			baseScore:  ScoreBase,
+			replaceMap: ScoreReplaceMap,
 			want: framework.NodeScoreList{
 				{Name: "n0", Score: 100},
-				{Name: "n1", Score: 50},
-				{Name: "n2", Score: 0},
+				{Name: "n1", Score: 60},
+				{Name: "n2", Score: 20},
 			},
 		},
 		{
 			name: "3",
-			arg: framework.NodeScoreList{
+			input: framework.NodeScoreList{
 				{Name: "n0", Score: 2000},
 				{Name: "n1", Score: 3000},
 				{Name: "n2", Score: 4000},
 			},
+			baseScore:  ScoreBase,
+			replaceMap: ScoreReplaceMap,
 			want: framework.NodeScoreList{
 				{Name: "n0", Score: 100},
-				{Name: "n1", Score: 50},
-				{Name: "n2", Score: 0},
+				{Name: "n1", Score: 60},
+				{Name: "n2", Score: 20},
 			},
 		},
 		{
 			name: "same",
-			arg: framework.NodeScoreList{
-				{Name: "n0", Score: 10},
-				{Name: "n1", Score: 10},
-				{Name: "n2", Score: 10},
+			input: framework.NodeScoreList{
+				{Name: "n0", Score: 33},
+				{Name: "n1", Score: 33},
+				{Name: "n2", Score: 33},
 			},
+			baseScore:  ScoreBase,
+			replaceMap: ScoreReplaceMap,
 			want: framework.NodeScoreList{
-				{Name: "n0", Score: 0},
-				{Name: "n1", Score: 0},
-				{Name: "n2", Score: 0},
+				{Name: "n0", Score: 20},
+				{Name: "n1", Score: 20},
+				{Name: "n2", Score: 20},
 			},
 		},
 		{
 			name: "score_error",
-			arg: framework.NodeScoreList{
-				{Name: "n0", Score: math.MaxInt64},
-				{Name: "n1", Score: math.MaxInt64},
-				{Name: "n2", Score: math.MaxInt64},
+			input: framework.NodeScoreList{
+				{Name: "n0", Score: ScoreError},
+				{Name: "n1", Score: ScoreError},
+				{Name: "n2", Score: ScoreMax},
 			},
+			baseScore:  ScoreBase,
+			replaceMap: ScoreReplaceMap,
 			want: framework.NodeScoreList{
 				{Name: "n0", Score: 0},
 				{Name: "n1", Score: 0},
-				{Name: "n2", Score: 0},
+				{Name: "n2", Score: 1},
+			},
+		},
+		{
+			name: "with_special_scores",
+			input: framework.NodeScoreList{
+				{Name: "n0", Score: ScoreError},
+				{Name: "n1", Score: ScoreMax},
+				{Name: "n2", Score: 10},
+				{Name: "n3", Score: 20},
+				{Name: "n4", Score: 30},
+			},
+			baseScore:  ScoreBase,
+			replaceMap: ScoreReplaceMap,
+			want: framework.NodeScoreList{
+				{Name: "n0", Score: 0},
+				{Name: "n1", Score: 1},
+				{Name: "n2", Score: 100},
+				{Name: "n3", Score: 60},
+				{Name: "n4", Score: 20},
+			},
+		},
+		{
+			name: "score_base_50",
+			input: framework.NodeScoreList{
+				{Name: "n0", Score: ScoreError},
+				{Name: "n1", Score: ScoreMax},
+				{Name: "n2", Score: 10},
+				{Name: "n3", Score: 20},
+				{Name: "n4", Score: 30},
+			},
+			baseScore:  50,
+			replaceMap: ScoreReplaceMap,
+			want: framework.NodeScoreList{
+				{Name: "n0", Score: 0},
+				{Name: "n1", Score: 1},
+				{Name: "n2", Score: 100},
+				{Name: "n3", Score: 75},
+				{Name: "n4", Score: 50},
 			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			PowerConsumptions2Scores(tt.arg)
-			if got := tt.arg; !reflect.DeepEqual(got, tt.want) {
+			PowerConsumptions2Scores(tt.input, tt.baseScore, tt.replaceMap)
+			if got := tt.input; !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("PowerConsumptions2Scores() = %v, want %v", got, tt.want)
 			} else {
 				t.Logf("PowerConsumptions2Scores() = %v, want %v", got, tt.want)
