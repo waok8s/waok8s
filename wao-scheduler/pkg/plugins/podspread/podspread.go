@@ -84,6 +84,7 @@ var _ framework.PreFilterPlugin = (*PodSpread)(nil)
 var (
 	Name = "PodSpread"
 
+	ReasonInvalidAnnotation         = "invalid annotation"
 	ReasonEmptyNodeName             = "node not found"
 	ReasonNotControlledByReplicaSet = "the pod is not controlled by any ReplicaSet"
 	ReasonK8sClient                 = "skip this plugin as k8s client got error"
@@ -112,6 +113,12 @@ func (pl *PodSpread) PreFilterExtensions() framework.PreFilterExtensions { retur
 func (pl *PodSpread) PreFilter(ctx context.Context, cycleState *framework.CycleState, pod *corev1.Pod) (*framework.PreFilterResult, *framework.Status) {
 	// pod will be rejected if error is returned, so skip this plugin for some cases
 	result := &framework.PreFilterResult{NodeNames: nil}
+
+	_, err := parseAnnotationPodSpreadRate(pod.Annotations)
+	if err != nil {
+		klog.InfoS("PodSpread.PreFilter skipped", "reason", ReasonInvalidAnnotation)
+		return result, nil
+	}
 
 	// get ReplicaSet that controls this Pod
 	replicaSetName := ""
@@ -206,6 +213,21 @@ func getSpreadMode(nodeList *corev1.NodeList) (mode SpreadMode, regions, zones S
 	return
 }
 
+func parseAnnotationPodSpreadRate(annotations map[string]string) (float64, error) {
+	podspreadRate, ok := annotations[AnnotationPodSpreadRate]
+	if !ok {
+		return 0, fmt.Errorf("annotation %s not found", AnnotationPodSpreadRate)
+	}
+	v, err := strconv.ParseFloat(podspreadRate, 64)
+	if err != nil {
+		return 0, fmt.Errorf("parse annotation %s got error: %w", AnnotationPodSpreadRate, err)
+	}
+	if v < 0 || v > 1 {
+		return 0, fmt.Errorf("annotation %s should be 0 <= v <= 1 but got %v", AnnotationPodSpreadRate, v)
+	}
+	return v, nil
+}
+
 func (pl *PodSpread) updateSchedulingSession(ctx context.Context, rs *appsv1.ReplicaSet, podList *corev1.PodList, nodeList *corev1.NodeList) error {
 
 	pl.mu.Lock()
@@ -214,16 +236,11 @@ func (pl *PodSpread) updateSchedulingSession(ctx context.Context, rs *appsv1.Rep
 	// init schedulingSession for this ReplicaSet if not exists
 	if _, ok := pl.schedulingSession[rs.Name]; !ok {
 		totalReplicas := int(ptr.Deref[int32](rs.Spec.Replicas, 0))
-		podspreadRate, ok := rs.Annotations[AnnotationPodSpreadRate]
-		if !ok {
-			return fmt.Errorf("ReplicaSet %s does not have annotation %s", rs.Name, AnnotationPodSpreadRate)
-		}
-		rate, err := strconv.ParseFloat(podspreadRate, 64)
+
+		// TODO: check Pod annotation first?
+		rate, err := parseAnnotationPodSpreadRate(rs.Annotations)
 		if err != nil {
-			return fmt.Errorf("parse annotation %s got error: %w", AnnotationPodSpreadRate, err)
-		}
-		if !(0 <= rate && rate <= 1) {
-			return fmt.Errorf("annotation %s has inavalid value", AnnotationPodSpreadRate)
+			return err
 		}
 		redunduncy := int(float64(totalReplicas) * rate)
 
