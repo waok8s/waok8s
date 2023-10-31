@@ -147,7 +147,7 @@ function lib::run-tests {
         for f in "$d"/test/*.in ; do
             f2="${f%.in}.out"
             printf "[TEST] in=%s out=%s\n" "$f" "$f2"
-            lib::retry 8 lib::run-test "$f" "$f2" # total wait time = sum(1..8) = 36s 
+            lib::retry 10 lib::run-test "$f" "$f2" # total wait time = sum(1..10) = 55s 
         done
 
         echo

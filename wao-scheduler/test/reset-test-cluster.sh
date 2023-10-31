@@ -14,3 +14,6 @@ cluster=$PROJECT_NAME-test
 lib::start-docker
 
 lib::create-cluster "$cluster" "$KIND_IMAGE"
+
+"$KUBECTL" label node "$cluster"-worker   --overwrite "hoge"="fuga"
+"$KUBECTL" label node "$cluster"-worker2  --overwrite "foo"="bar"

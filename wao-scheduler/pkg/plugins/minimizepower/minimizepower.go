@@ -138,7 +138,7 @@ func (pl *MinimizePower) Score(ctx context.Context, state *framework.CycleState,
 
 	nodeInfo, err := pl.snapshotSharedLister.NodeInfos().Get(nodeName)
 	if err != nil {
-		klog.ErrorS(err, "MinimizePower.Score score=MaxInt64 as error occurred", "node", nodeName, "pod", pod.Name)
+		klog.ErrorS(err, "MinimizePower.Score score=MaxInt64 as error occurred", "pod", pod.Name, "node", nodeName)
 		return math.MaxInt64, nil
 	}
 
@@ -146,7 +146,7 @@ func (pl *MinimizePower) Score(ctx context.Context, state *framework.CycleState,
 	node := nodeInfo.Node()
 	nodeMetrics, err := pl.metricsclient.GetNodeMetrics(ctx, node.Name)
 	if err != nil {
-		klog.ErrorS(err, "MinimizePower.Score score=MaxInt64 as error occurred", "node", nodeName, "pod", pod.Name)
+		klog.ErrorS(err, "MinimizePower.Score score=MaxInt64 as error occurred", "pod", pod.Name, "node", nodeName)
 		return math.MaxInt64, nil
 	}
 
@@ -154,41 +154,44 @@ func (pl *MinimizePower) Score(ctx context.Context, state *framework.CycleState,
 	beforeUsage := nodeMetrics.Usage.Cpu().AsApproximateFloat64()
 	afterUsage := beforeUsage + PodCPURequestOrLimit(pod)
 	if beforeUsage == afterUsage { // The Pod has both requests.cpu and limits.cpu empty or zero. Normally, this should not happen.
-		klog.ErrorS(fmt.Errorf("beforeUsage == afterUsage v=%v", beforeUsage), "MinimizePower.Score score=MaxInt64 as error occurred", "node", nodeName, "pod", pod.Name)
+		klog.ErrorS(fmt.Errorf("beforeUsage == afterUsage v=%v", beforeUsage), "MinimizePower.Score score=MaxInt64 as error occurred", "pod", pod.Name, "node", nodeName)
 		return math.MaxInt64, nil
 	}
 	if afterUsage > 1 { // CPU overcommitment, make the node nearly lowest priority.
-		klog.InfoS("MinimizePower.Score score=MaxInt64>>1 as CPU overcommitment", "node", nodeName, "pod", pod.Name)
+		klog.InfoS("MinimizePower.Score score=MaxInt64>>1 as CPU overcommitment", "pod", pod.Name, "node", nodeName)
 		return math.MaxInt64 >> 1, nil
 	}
 
 	// get custom metrics
 	inletTemp, err := pl.metricsclient.GetCustomMetricForNode(ctx, nodeName, waometrics.ValueInletTemperature)
 	if err != nil {
-		klog.ErrorS(err, "MinimizePower.Score score=MaxInt64 as error occurred", "node", nodeName, "pod", pod.Name)
+		klog.ErrorS(err, "MinimizePower.Score score=MaxInt64 as error occurred", "pod", pod.Name, "node", nodeName)
 		return math.MaxInt64, nil
 	}
 	deltaP, err := pl.metricsclient.GetCustomMetricForNode(ctx, nodeName, waometrics.ValueDeltaPressure)
 	if err != nil {
-		klog.ErrorS(err, "MinimizePower.Score score=MaxInt64 as error occurred", "node", nodeName, "pod", pod.Name)
+		klog.ErrorS(err, "MinimizePower.Score score=MaxInt64 as error occurred", "pod", pod.Name, "node", nodeName)
 		return math.MaxInt64, nil
 	}
+
+	klog.InfoS("MinimizePower.PreFilter metrics", "pod", pod.Name, "node", nodeName, "inletTemp", inletTemp, "deltaP", deltaP)
 
 	// get NodeConfig
 	var nc *waov1beta1.NodeConfig
 	var ncs waov1beta1.NodeConfigList
 	if err := pl.ctrlclient.List(ctx, &ncs); err != nil {
-		klog.ErrorS(err, "MinimizePower.Score score=MaxInt64 as error occurred", "node", nodeName, "pod", pod.Name)
+		klog.ErrorS(err, "MinimizePower.Score score=MaxInt64 as error occurred", "pod", pod.Name, "node", nodeName)
 		return math.MaxInt64, nil
 	}
 	for _, e := range ncs.Items {
+		// TODO: handle node with multiple NodeConfig
 		if e.Spec.NodeName == nodeName {
 			nc = &e
 			break
 		}
 	}
 	if nc == nil {
-		klog.ErrorS(fmt.Errorf("nodeconfig == nil"), "MinimizePower.Score score=MaxInt64 as error occurred", "node", nodeName, "pod", pod.Name)
+		klog.ErrorS(fmt.Errorf("nodeconfig == nil"), "MinimizePower.Score score=MaxInt64 as error occurred", "pod", pod.Name, "node", nodeName)
 		return math.MaxInt64, nil
 	}
 
@@ -203,7 +206,7 @@ func (pl *MinimizePower) Score(ctx context.Context, state *framework.CycleState,
 	if nc.Spec.Predictor.PowerConsumptionEndpointProvider != nil {
 		ep2, err := pl.predictorclient.GetPredictorEndpoint(ctx, nc.Namespace, nc.Spec.Predictor.PowerConsumptionEndpointProvider, predictor.TypePowerConsumption)
 		if err != nil {
-			klog.ErrorS(err, "MinimizePower.Score score=MaxInt64 as error occurred", "node", nodeName, "pod", pod.Name)
+			klog.ErrorS(err, "MinimizePower.Score score=MaxInt64 as error occurred", "pod", pod.Name, "node", nodeName)
 			return math.MaxInt64, nil
 		}
 		ep.Type = ep2.Type
@@ -213,19 +216,19 @@ func (pl *MinimizePower) Score(ctx context.Context, state *framework.CycleState,
 	// do predict
 	beforeWatt, err := pl.predictorclient.PredictPowerConsumption(ctx, nc.Namespace, ep, beforeUsage, inletTemp.Value.AsApproximateFloat64(), deltaP.Value.AsApproximateFloat64())
 	if err != nil {
-		klog.ErrorS(err, "MinimizePower.Score score=MaxInt64 as error occurred", "node", nodeName, "pod", pod.Name)
+		klog.ErrorS(err, "MinimizePower.Score score=MaxInt64 as error occurred", "pod", pod.Name, "node", nodeName)
 		return math.MaxInt64, nil
 	}
 	afterWatt, err := pl.predictorclient.PredictPowerConsumption(ctx, nc.Namespace, ep, afterUsage, inletTemp.Value.AsApproximateFloat64(), deltaP.Value.AsApproximateFloat64())
 	if err != nil {
-		klog.ErrorS(err, "MinimizePower.Score score=MaxInt64 as error occurred", "node", nodeName, "pod", pod.Name)
+		klog.ErrorS(err, "MinimizePower.Score score=MaxInt64 as error occurred", "pod", pod.Name, "node", nodeName)
 		return math.MaxInt64, nil
 	}
-	klog.InfoS("MinimizePower.Score predicted", "node", nodeName, "pod", pod.Name, "beforeWatt", beforeWatt, "afterWatt", afterWatt)
+	klog.InfoS("MinimizePower.Score predicted", "pod", pod.Name, "node", nodeName, "beforeWatt", beforeWatt, "afterWatt", afterWatt)
 
 	podPowerConsumption := int64(afterWatt - beforeWatt)
 	if podPowerConsumption < 0 {
-		klog.InfoS("MinimizePower.Score round podPowerConsumption to 0", "node", nodeName, "pod", pod.Name, "podPowerConsumption", podPowerConsumption)
+		klog.InfoS("MinimizePower.Score round podPowerConsumption to 0", "pod", pod.Name, "node", nodeName, "podPowerConsumption", podPowerConsumption)
 		podPowerConsumption = 0
 	}
 
