@@ -131,14 +131,16 @@ function lib::run-tests {
         echo "# step 1/5: load kube-scheduler"
         echo "# "
         lib::deploy-scheduler "$d/config" "$sched_image" "$kind_cluster_name"
-        sleep 5 # wait for components to be ready
+        # wait for components to be ready
+        # TODO: hook some script? before and after? for each phase?
+        sleep 10
 
         echo
         echo "################################"
         echo "# case" "$d"
         echo "# step 2/5: apply preapply manifests"
         echo "# "
-        if [ -d "$d/preapply" ]; then ("$KUBECTL" apply -f "$d/preapply"; sleep 5); fi
+        if [ -d "$d/preapply" ]; then ("$KUBECTL" apply -f "$d/preapply"; sleep 10); fi
 
         echo
         echo "################################"
