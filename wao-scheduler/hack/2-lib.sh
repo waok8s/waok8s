@@ -128,22 +128,29 @@ function lib::run-tests {
         echo
         echo "################################"
         echo "# case" "$d"
-        echo "# step 1/4: load kube-scheduler"
+        echo "# step 1/5: load kube-scheduler"
         echo "# "
         lib::deploy-scheduler "$d/config" "$sched_image" "$kind_cluster_name"
-        sleep 5 # wait for components to be ready & agent running
+        sleep 5 # wait for components to be ready
 
         echo
         echo "################################"
         echo "# case" "$d"
-        echo "# step 2/4: apply manifests"
+        echo "# step 2/5: apply preapply manifests"
+        echo "# "
+        if [ -d "$d/preapply" ]; then ("$KUBECTL" apply -f "$d/preapply"; sleep 5); fi
+
+        echo
+        echo "################################"
+        echo "# case" "$d"
+        echo "# step 3/5: apply manifests"
         echo "# "
         "$KUBECTL" apply -f "$d/apply"
 
         echo
         echo "################################"
         echo "# case" "$d"
-        echo "# step 3/4: do tests"
+        echo "# step 4/5: do tests"
         echo "# "
         for f in "$d"/test/*.in ; do
             f2="${f%.in}.out"
@@ -154,8 +161,9 @@ function lib::run-tests {
         echo
         echo "################################"
         echo "# case" "$d"
-        echo "# step 4/4: cleanup"
+        echo "# step 5/5: cleanup"
         echo "# "
+        if [ -d "$d/preapply" ]; then ("$KUBECTL" delete -f "$d/preapply"; sleep 5); fi
         "$KUBECTL" delete -f "$d/apply"
 
     done

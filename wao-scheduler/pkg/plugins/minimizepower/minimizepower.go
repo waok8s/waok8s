@@ -11,7 +11,6 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/discovery"
 	cacheddiscovery "k8s.io/client-go/discovery/cached"
-	"k8s.io/client-go/kubernetes"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/restmapper"
 	"k8s.io/klog/v2"
@@ -36,7 +35,6 @@ const (
 
 type MinimizePower struct {
 	snapshotSharedLister framework.SharedLister
-	clientset            kubernetes.Interface
 	ctrlclient           client.Client
 
 	metricsclient   *waoclient.CachedMetricsClient
@@ -102,10 +100,9 @@ func New(_ runtime.Object, fh framework.Handle) (framework.Plugin, error) {
 
 	return &MinimizePower{
 		snapshotSharedLister: fh.SnapshotSharedLister(),
-		clientset:            fh.ClientSet(),
 		ctrlclient:           c,
 		metricsclient:        waoclient.NewCachedMetricsClient(mc, cmc, MetricsCacheTTL),
-		predictorclient:      waoclient.NewCachedPredictorClient(c, PredictorCacheTTL),
+		predictorclient:      waoclient.NewCachedPredictorClient(fh.ClientSet(), PredictorCacheTTL),
 	}, nil
 }
 
@@ -134,7 +131,7 @@ func (pl *MinimizePower) ScoreExtensions() framework.ScoreExtensions { return pl
 // This function never returns an error (as errors cause the pod to be rejected).
 // If an error occurs, it is logged and the score is set to math.MaxInt64.
 func (pl *MinimizePower) Score(ctx context.Context, state *framework.CycleState, pod *corev1.Pod, nodeName string) (int64, *framework.Status) {
-	klog.InfoS("MinimizePower.Score", "node", nodeName, "pod", pod.Name)
+	klog.InfoS("MinimizePower.Score", "pod", pod.Name, "node", nodeName)
 
 	nodeInfo, err := pl.snapshotSharedLister.NodeInfos().Get(nodeName)
 	if err != nil {
@@ -174,7 +171,7 @@ func (pl *MinimizePower) Score(ctx context.Context, state *framework.CycleState,
 		return math.MaxInt64, nil
 	}
 
-	klog.InfoS("MinimizePower.PreFilter metrics", "pod", pod.Name, "node", nodeName, "inletTemp", inletTemp, "deltaP", deltaP)
+	klog.InfoS("MinimizePower.Score metrics", "pod", pod.Name, "node", nodeName, "inlet_temp", inletTemp.Value.AsApproximateFloat64(), "delta_p", deltaP.Value.AsApproximateFloat64())
 
 	// get NodeConfig
 	var nc *waov1beta1.NodeConfig
@@ -224,7 +221,7 @@ func (pl *MinimizePower) Score(ctx context.Context, state *framework.CycleState,
 		klog.ErrorS(err, "MinimizePower.Score score=MaxInt64 as error occurred", "pod", pod.Name, "node", nodeName)
 		return math.MaxInt64, nil
 	}
-	klog.InfoS("MinimizePower.Score predicted", "pod", pod.Name, "node", nodeName, "beforeWatt", beforeWatt, "afterWatt", afterWatt)
+	klog.InfoS("MinimizePower.Score predicted", "pod", pod.Name, "node", nodeName, "watt_before", beforeWatt, "watt_after", afterWatt)
 
 	podPowerConsumption := int64(afterWatt - beforeWatt)
 	if podPowerConsumption < 0 {
