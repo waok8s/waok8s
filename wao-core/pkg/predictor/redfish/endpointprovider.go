@@ -114,12 +114,21 @@ func (p *EndpointProvider) GetModels(ctx context.Context) (*api.MachineLearningM
 	switch resp.StatusCode() {
 	case http.StatusOK:
 		return resp.JSON200, nil
+	case http.StatusUnauthorized:
+		return nil, fmt.Errorf("code=%d err=%+v", resp.StatusCode(), resp.JSON401)
+	case http.StatusForbidden:
+		return nil, fmt.Errorf("code=%d err=%+v", resp.StatusCode(), resp.JSON403)
+	case http.StatusNotFound:
+		return nil, fmt.Errorf("code=%d err=%+v", resp.StatusCode(), resp.JSON404)
+	case http.StatusMethodNotAllowed:
+		return nil, fmt.Errorf("code=%d err=%+v", resp.StatusCode(), resp.JSON405)
+	case http.StatusNotAcceptable:
+		return nil, fmt.Errorf("code=%d err=%+v", resp.StatusCode(), resp.JSON406)
 	case http.StatusInternalServerError:
-		return nil, fmt.Errorf("%+v", resp.JSON500)
+		return nil, fmt.Errorf("code=%d err=%+v", resp.StatusCode(), resp.JSON500)
 	default:
-		return nil, fmt.Errorf("code=%d", resp.StatusCode())
+		return nil, fmt.Errorf("code=%d (unexpected)", resp.StatusCode())
 	}
-
 }
 
 func (p *EndpointProvider) Get(ctx context.Context, predictorType predictor.PredictorType) (*waov1beta1.EndpointTerm, error) {
