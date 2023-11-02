@@ -174,10 +174,12 @@ func (pl *MinimizePower) Score(ctx context.Context, state *framework.CycleState,
 		klog.ErrorS(fmt.Errorf("beforeUsage == afterUsage v=%v", beforeUsage), "MinimizePower.Score score=ScoreError as error occurred", "pod", pod.Name, "node", nodeName)
 		return ScoreError, nil
 	}
-	if afterUsage > node.Status.Allocatable.Cpu().AsApproximateFloat64() { // CPU overcommitment, make the node nearly lowest priority.
-		klog.InfoS("MinimizePower.Score score=ScoreMax as CPU overcommitment", "pod", pod.Name, "node", nodeName)
+	cpuCapacity := node.Status.Allocatable.Cpu().AsApproximateFloat64()
+	if afterUsage > cpuCapacity { // CPU overcommitment, make the node nearly lowest priority.
+		klog.InfoS("MinimizePower.Score score=ScoreMax as CPU overcommitment", "pod", pod.Name, "node", nodeName, "usage_after", afterUsage, "status.allocatable.cpu", cpuCapacity)
 		return ScoreMax, nil
 	}
+	klog.InfoS("MinimizePower.Score usage", "pod", pod.Name, "node", nodeName, "usage_before", beforeUsage, "usage_after", afterUsage)
 
 	// get custom metrics
 	inletTemp, err := pl.metricsclient.GetCustomMetricForNode(ctx, nodeName, waometrics.ValueInletTemperature)
@@ -190,7 +192,6 @@ func (pl *MinimizePower) Score(ctx context.Context, state *framework.CycleState,
 		klog.ErrorS(err, "MinimizePower.Score score=ScoreError as error occurred", "pod", pod.Name, "node", nodeName)
 		return ScoreError, nil
 	}
-
 	klog.InfoS("MinimizePower.Score metrics", "pod", pod.Name, "node", nodeName, "inlet_temp", inletTemp.Value.AsApproximateFloat64(), "delta_p", deltaP.Value.AsApproximateFloat64())
 
 	// get NodeConfig
@@ -241,7 +242,7 @@ func (pl *MinimizePower) Score(ctx context.Context, state *framework.CycleState,
 		klog.ErrorS(err, "MinimizePower.Score score=ScoreError as error occurred", "pod", pod.Name, "node", nodeName)
 		return ScoreError, nil
 	}
-	klog.InfoS("MinimizePower.Score predicted", "pod", pod.Name, "node", nodeName, "watt_before", beforeWatt, "watt_after", afterWatt)
+	klog.InfoS("MinimizePower.Score prediction", "pod", pod.Name, "node", nodeName, "watt_before", beforeWatt, "watt_after", afterWatt)
 
 	podPowerConsumption := int64(afterWatt - beforeWatt)
 	if podPowerConsumption < 0 {
