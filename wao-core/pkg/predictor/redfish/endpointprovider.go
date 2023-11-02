@@ -124,10 +124,10 @@ func (p *EndpointProvider) GetModels(ctx context.Context) (*api.MachineLearningM
 
 func (p *EndpointProvider) Get(ctx context.Context, predictorType predictor.PredictorType) (*waov1beta1.EndpointTerm, error) {
 
-	modelType := waov1beta1.TypeV2InferenceProtocol
-	modelAddress := ""
-	modelName := ""
-	modelVersion := "v0.1.0"
+	var modelType string
+	var modelAddress string
+	var modelName string
+	var modelVersion string
 
 	models, err := p.GetModels(ctx)
 	if err != nil {
@@ -137,18 +137,24 @@ func (p *EndpointProvider) Get(ctx context.Context, predictorType predictor.Pred
 	switch predictorType {
 	case predictor.TypePowerConsumption:
 		if models.PowerConsumptionModel == nil ||
-			models.PowerConsumptionModel.Name == nil || models.PowerConsumptionModel.Url == nil {
+			models.PowerConsumptionModel.Type == nil || models.PowerConsumptionModel.Url == nil ||
+			models.PowerConsumptionModel.Name == nil || models.PowerConsumptionModel.Version == nil {
 			return nil, fmt.Errorf("invalid model: %+v", models.PowerConsumptionModel)
 		}
+		modelType = *models.PowerConsumptionModel.Type
 		modelAddress = *models.PowerConsumptionModel.Url
 		modelName = *models.PowerConsumptionModel.Name
+		modelVersion = *models.PowerConsumptionModel.Version
 	case predictor.TypeResponseTime:
 		if models.ResponseTimeModel == nil ||
-			models.ResponseTimeModel.Name == nil || models.ResponseTimeModel.Url == nil {
+			models.ResponseTimeModel.Type == nil || models.ResponseTimeModel.Url == nil ||
+			models.ResponseTimeModel.Name == nil || models.ResponseTimeModel.Version == nil {
 			return nil, fmt.Errorf("invalid model: %+v", models.ResponseTimeModel)
 		}
+		modelType = *models.ResponseTimeModel.Type
 		modelAddress = *models.ResponseTimeModel.Url
 		modelName = *models.ResponseTimeModel.Name
+		modelVersion = *models.ResponseTimeModel.Version
 	default:
 		return nil, fmt.Errorf("unknown predictorType=%s", predictorType)
 	}
