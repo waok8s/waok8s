@@ -246,7 +246,7 @@ func (pl *MinimizePower) Score(ctx context.Context, state *framework.CycleState,
 
 	podPowerConsumption := int64(afterWatt - beforeWatt)
 	if podPowerConsumption < 0 {
-		klog.InfoS("MinimizePower.Score round podPowerConsumption to 0", "pod", pod.Name, "node", nodeName, "podPowerConsumption", podPowerConsumption)
+		klog.InfoS("MinimizePower.Score round negative scores to 0", "pod", pod.Name, "node", nodeName, "watt", afterWatt-beforeWatt)
 		podPowerConsumption = 0
 	}
 
