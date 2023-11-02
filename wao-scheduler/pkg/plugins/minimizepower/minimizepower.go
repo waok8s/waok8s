@@ -204,7 +204,7 @@ func (pl *MinimizePower) Score(ctx context.Context, state *framework.CycleState,
 	for _, e := range ncs.Items {
 		// TODO: handle node with multiple NodeConfig
 		if e.Spec.NodeName == nodeName {
-			nc = &e
+			nc = e.DeepCopy()
 			break
 		}
 	}
