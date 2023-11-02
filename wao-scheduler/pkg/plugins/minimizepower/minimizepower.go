@@ -174,9 +174,9 @@ func (pl *MinimizePower) Score(ctx context.Context, state *framework.CycleState,
 		klog.ErrorS(fmt.Errorf("beforeUsage == afterUsage v=%v", beforeUsage), "MinimizePower.Score score=ScoreError as error occurred", "pod", pod.Name, "node", nodeName)
 		return ScoreError, nil
 	}
-	if afterUsage > 1 { // CPU overcommitment, make the node nearly lowest priority.
+	if afterUsage > node.Status.Allocatable.Cpu().AsApproximateFloat64() { // CPU overcommitment, make the node nearly lowest priority.
 		klog.InfoS("MinimizePower.Score score=ScoreMax as CPU overcommitment", "pod", pod.Name, "node", nodeName)
-		return ScoreMax >> 1, nil
+		return ScoreMax, nil
 	}
 
 	// get custom metrics
