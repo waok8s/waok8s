@@ -122,6 +122,7 @@ func (r *NodeConfigTemplateReconciler) mapFuncNodeToNodeConfigTemplate(ctx conte
 	lg := log.FromContext(ctx).WithValues("func", "mapFuncNodeToNodeConfigTemplate")
 	lg.Info("called")
 
+	// NOTE: node deletion is not handled (you can just leave unused NodeConfigs or delete them manually)
 	var node corev1.Node
 	if err := r.Get(ctx, client.ObjectKeyFromObject(obj), &node); err != nil {
 		lg.Error(err, "unable to get Node", "obj", obj)
@@ -134,6 +135,7 @@ func (r *NodeConfigTemplateReconciler) mapFuncNodeToNodeConfigTemplate(ctx conte
 		return nil
 	}
 
+	// NOTE: only NodeConfig additon is handled (you can just leave unused NodeConfigs or delete them manually)
 	for _, nct := range ncts.Items {
 		s, err := metav1.LabelSelectorAsSelector(&nct.Spec.NodeSelector)
 		if err != nil {
