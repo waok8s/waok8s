@@ -53,8 +53,10 @@ func (r *agentRunner) Run() {
 			switch r.agent.ValueType() {
 			case ValueInletTemperature:
 				m.InletTemp = v
+				m.InletTempTimestamp = time.Now()
 			case ValueDeltaPressure:
 				m.DeltaPressure = v
+				m.DeltaPressureTimestamp = time.Now()
 			}
 			r.store.Set(k, m)
 		}

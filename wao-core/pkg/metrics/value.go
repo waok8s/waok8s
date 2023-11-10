@@ -1,5 +1,7 @@
 package metrics
 
+import "time"
+
 type ValueType string
 
 const (
@@ -13,6 +15,8 @@ var ValueTypes = []ValueType{
 }
 
 type MetricData struct {
-	InletTemp     float64
-	DeltaPressure float64
+	InletTemp              float64
+	InletTempTimestamp     time.Time
+	DeltaPressure          float64
+	DeltaPressureTimestamp time.Time
 }
