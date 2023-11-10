@@ -21,6 +21,10 @@ import (
 	waometrics "github.com/waok8s/wao-core/pkg/metrics"
 )
 
+var (
+	MetricTTL = 60 * time.Second
+)
+
 type Provider struct {
 	defaults.DefaultCustomMetricsProvider
 	// defaults.DefaultExternalMetricsProvider
@@ -119,12 +123,25 @@ func (p *Provider) metricFor(namespace, name string, info provider.CustomMetricI
 		return nil, fmt.Errorf("metric %s for %s not found", info.Metric, k)
 	}
 
-	// construct objref
+	// check timestamp
+	switch info.Metric {
+	case waometrics.ValueInletTemperature:
+		if m.InletTempTimestamp.Add(MetricTTL).Before(time.Now()) {
+			return nil, fmt.Errorf("metric %s for %s is expired", info.Metric, k)
+		}
+	case waometrics.ValueDeltaPressure:
+		if m.DeltaPressureTimestamp.Add(MetricTTL).Before(time.Now()) {
+			return nil, fmt.Errorf("metric %s for %s is expired", info.Metric, k)
+		}
+	default:
+		return nil, fmt.Errorf("metric not supported: name=%s", info.Metric)
+	}
+
+	// construct result
 	objRef, err := helpers.ReferenceFor(p.mapper, types.NamespacedName{Namespace: namespace, Name: name}, info)
 	if err != nil {
 		return nil, err
 	}
-
 	switch info.Metric {
 	case waometrics.ValueInletTemperature:
 		v, s := fixedScale(m.InletTemp, 6)
