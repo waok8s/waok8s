@@ -146,6 +146,10 @@ var (
 	}
 )
 
+const (
+	PodUsageAssumption float64 = 0.8
+)
+
 // Score returns how many watts will be increased by the given pod (lower is better).
 //
 // This function never returns an error (as errors cause the pod to be rejected).
@@ -167,8 +171,26 @@ func (pl *MinimizePower) Score(ctx context.Context, state *framework.CycleState,
 		return ScoreError, nil
 	}
 
+	// get additional usage (add assumed pod CPU usage for not running pods)
+	var assumedAdditionalUsage float64
+	for _, p := range nodeInfo.Pods {
+		pod = p.Pod
+		if pod.Spec.NodeName != node.Name {
+			continue
+		}
+		if pod.Status.Phase == corev1.PodRunning ||
+			pod.Status.Phase == corev1.PodSucceeded ||
+			pod.Status.Phase == corev1.PodFailed ||
+			pod.Status.Phase == corev1.PodUnknown {
+			continue // only pending pods are counted
+		}
+		// NOTE: No need to check pod.Status.Conditions as pods on this node with pending status are just what we want.
+		// However, pods that have just been started and are not yet using CPU are not counted. (this is a restriction for now)
+		assumedAdditionalUsage += PodCPURequestOrLimit(pod) * PodUsageAssumption
+	}
 	// prepare beforeUsage and afterUsage
 	beforeUsage := nodeMetrics.Usage.Cpu().AsApproximateFloat64()
+	beforeUsage += assumedAdditionalUsage
 	afterUsage := beforeUsage + PodCPURequestOrLimit(pod)
 	if beforeUsage == afterUsage { // The Pod has both requests.cpu and limits.cpu empty or zero. Normally, this should not happen.
 		klog.ErrorS(fmt.Errorf("beforeUsage == afterUsage v=%v", beforeUsage), "MinimizePower.Score score=ScoreError as error occurred", "pod", pod.Name, "node", nodeName)
@@ -179,7 +201,7 @@ func (pl *MinimizePower) Score(ctx context.Context, state *framework.CycleState,
 		klog.InfoS("MinimizePower.Score score=ScoreMax as CPU overcommitment", "pod", pod.Name, "node", nodeName, "usage_after", afterUsage, "status.allocatable.cpu", cpuCapacity)
 		return ScoreMax, nil
 	}
-	klog.InfoS("MinimizePower.Score usage", "pod", pod.Name, "node", nodeName, "usage_before", beforeUsage, "usage_after", afterUsage)
+	klog.InfoS("MinimizePower.Score usage", "pod", pod.Name, "node", nodeName, "usage_before", beforeUsage, "usage_after", afterUsage, "additional_usage_included", assumedAdditionalUsage)
 
 	// get custom metrics
 	inletTemp, err := pl.metricsclient.GetCustomMetricForNode(ctx, nodeName, waometrics.ValueInletTemperature)
