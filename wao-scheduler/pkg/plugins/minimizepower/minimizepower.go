@@ -174,19 +174,18 @@ func (pl *MinimizePower) Score(ctx context.Context, state *framework.CycleState,
 	// get additional usage (add assumed pod CPU usage for not running pods)
 	var assumedAdditionalUsage float64
 	for _, p := range nodeInfo.Pods {
-		pod = p.Pod
-		if pod.Spec.NodeName != node.Name {
+		if p.Pod.Spec.NodeName != node.Name {
 			continue
 		}
-		if pod.Status.Phase == corev1.PodRunning ||
-			pod.Status.Phase == corev1.PodSucceeded ||
-			pod.Status.Phase == corev1.PodFailed ||
-			pod.Status.Phase == corev1.PodUnknown {
+		if p.Pod.Status.Phase == corev1.PodRunning ||
+			p.Pod.Status.Phase == corev1.PodSucceeded ||
+			p.Pod.Status.Phase == corev1.PodFailed ||
+			p.Pod.Status.Phase == corev1.PodUnknown {
 			continue // only pending pods are counted
 		}
 		// NOTE: No need to check pod.Status.Conditions as pods on this node with pending status are just what we want.
 		// However, pods that have just been started and are not yet using CPU are not counted. (this is a restriction for now)
-		assumedAdditionalUsage += PodCPURequestOrLimit(pod) * PodUsageAssumption
+		assumedAdditionalUsage += PodCPURequestOrLimit(p.Pod) * PodUsageAssumption
 	}
 	// prepare beforeUsage and afterUsage
 	beforeUsage := nodeMetrics.Usage.Cpu().AsApproximateFloat64()
