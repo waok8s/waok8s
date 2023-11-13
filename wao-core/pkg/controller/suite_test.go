@@ -268,11 +268,9 @@ var _ = Describe("NodeConfig Controller", func() {
 		for _, nodeName := range []string{testNode0Name, testNode1Name} {
 			md, ok := reconciler.MetricsStore.Get(waometrics.StoreKeyForNode(nodeName))
 			Expect(ok).To(BeTrue())
-			Expect(md).To(Equal(waometrics.MetricData{
-				// fake values
-				InletTemp:     15.5,
-				DeltaPressure: 7.5,
-			}))
+			// no check timestamp because it's not deterministic
+			Expect(md.InletTemp).To(Equal(15.5))
+			Expect(md.DeltaPressure).To(Equal(7.5))
 		}
 	})
 
