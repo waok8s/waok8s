@@ -172,6 +172,8 @@ func (pl *MinimizePower) Score(ctx context.Context, state *framework.CycleState,
 	}
 
 	// get additional usage (add assumed pod CPU usage for not running pods)
+	// NOTE: We need to assume the CPU usage of pods that have scheduled to this node but are not yet running,
+	// as the next replica (if the pod belongs to a deployment, etc.) will be scheduled soon and we need to consider the CPU usage of these pods. 
 	var assumedAdditionalUsage float64
 	for _, p := range nodeInfo.Pods {
 		if p.Pod.Spec.NodeName != node.Name {
