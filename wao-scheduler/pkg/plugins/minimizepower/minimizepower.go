@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"math"
-	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -26,19 +25,14 @@ import (
 	"github.com/waok8s/wao-core/pkg/predictor"
 )
 
-const (
-	// MetricsCacheTTL is the expiration time of the metrics cache.
-	MetricsCacheTTL = 15 * time.Second
-	// PredictorCacheTTL is the expiration time of the predictor cache.
-	PredictorCacheTTL = 10 * time.Minute
-)
-
 type MinimizePower struct {
 	snapshotSharedLister framework.SharedLister
 	ctrlclient           client.Client
 
 	metricsclient   *waoclient.CachedMetricsClient
 	predictorclient *waoclient.CachedPredictorClient
+
+	args *MinimizePowerArgs
 }
 
 var _ framework.PreFilterPlugin = (*MinimizePower)(nil)
@@ -60,8 +54,27 @@ func init() {
 	utilruntime.Must(waov1beta1.AddToScheme(scheme))
 }
 
+func getArgs(obj runtime.Object) (MinimizePowerArgs, error) {
+	ptr, ok := obj.(*MinimizePowerArgs)
+	if !ok {
+		return MinimizePowerArgs{}, fmt.Errorf("want args to be of type MinimizePowerArgs, got %T", obj)
+	}
+	ptr.Default()
+	if err := ptr.Validate(); err != nil {
+		return MinimizePowerArgs{}, err
+	}
+	return *ptr, nil
+}
+
 // New initializes a new plugin and returns it.
-func New(_ runtime.Object, fh framework.Handle) (framework.Plugin, error) {
+func New(obj runtime.Object, fh framework.Handle) (framework.Plugin, error) {
+
+	// get plugin args
+	args, err := getArgs(obj)
+	if err != nil {
+		return nil, err
+	}
+	klog.InfoS("MinimizePower.New", "args", args)
 
 	cfg := fh.KubeConfig()
 
@@ -101,8 +114,9 @@ func New(_ runtime.Object, fh framework.Handle) (framework.Plugin, error) {
 	return &MinimizePower{
 		snapshotSharedLister: fh.SnapshotSharedLister(),
 		ctrlclient:           c,
-		metricsclient:        waoclient.NewCachedMetricsClient(mc, cmc, MetricsCacheTTL),
-		predictorclient:      waoclient.NewCachedPredictorClient(fh.ClientSet(), PredictorCacheTTL),
+		metricsclient:        waoclient.NewCachedMetricsClient(mc, cmc, args.MetricsCacheTTL.Duration),
+		predictorclient:      waoclient.NewCachedPredictorClient(fh.ClientSet(), args.PredictorCacheTTL.Duration),
+		args:                 &args,
 	}, nil
 }
 
@@ -146,10 +160,6 @@ var (
 	}
 )
 
-const (
-	PodUsageAssumption float64 = 0.8
-)
-
 // Score returns how many watts will be increased by the given pod (lower is better).
 //
 // This function never returns an error (as errors cause the pod to be rejected).
@@ -173,7 +183,7 @@ func (pl *MinimizePower) Score(ctx context.Context, state *framework.CycleState,
 
 	// get additional usage (add assumed pod CPU usage for not running pods)
 	// NOTE: We need to assume the CPU usage of pods that have scheduled to this node but are not yet running,
-	// as the next replica (if the pod belongs to a deployment, etc.) will be scheduled soon and we need to consider the CPU usage of these pods. 
+	// as the next replica (if the pod belongs to a deployment, etc.) will be scheduled soon and we need to consider the CPU usage of these pods.
 	var assumedAdditionalUsage float64
 	for _, p := range nodeInfo.Pods {
 		if p.Pod.Spec.NodeName != node.Name {
@@ -187,7 +197,7 @@ func (pl *MinimizePower) Score(ctx context.Context, state *framework.CycleState,
 		}
 		// NOTE: No need to check pod.Status.Conditions as pods on this node with pending status are just what we want.
 		// However, pods that have just been started and are not yet using CPU are not counted. (this is a restriction for now)
-		assumedAdditionalUsage += PodCPURequestOrLimit(p.Pod) * PodUsageAssumption
+		assumedAdditionalUsage += PodCPURequestOrLimit(p.Pod) * pl.args.PodUsageAssumption
 	}
 	// prepare beforeUsage and afterUsage
 	beforeUsage := nodeMetrics.Usage.Cpu().AsApproximateFloat64()
@@ -203,6 +213,18 @@ func (pl *MinimizePower) Score(ctx context.Context, state *framework.CycleState,
 		return ScoreMax, nil
 	}
 	klog.InfoS("MinimizePower.Score usage", "pod", pod.Name, "node", nodeName, "usage_before", beforeUsage, "usage_after", afterUsage, "additional_usage_included", assumedAdditionalUsage)
+
+	// format usage
+	switch pl.args.CPUUsageFormat {
+	case CPUUsageFormatRaw:
+		// do nothing
+	case CPUUsageFormatPercent:
+		beforeUsage = (beforeUsage / cpuCapacity) * 100
+		afterUsage = (afterUsage / cpuCapacity) * 100
+	default:
+		// this never happens as args.Validate() checks the value
+	}
+	klog.InfoS("MinimizePower.Score usage (formatted)", "pod", pod.Name, "node", nodeName, "format", pl.args.CPUUsageFormat, "usage_before", beforeUsage, "usage_after", afterUsage)
 
 	// get custom metrics
 	inletTemp, err := pl.metricsclient.GetCustomMetricForNode(ctx, nodeName, waometrics.ValueInletTemperature)

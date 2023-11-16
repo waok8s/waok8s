@@ -15,4 +15,12 @@ data:
           multiPoint:
             enabled:
             - name: MinimizePower
+              weight: 20
             - name: PodSpread
+        pluginConfig:
+          - name: MinimizePower
+            args:
+              metricsCacheTTL: 15s
+              predictorCacheTTL: 15m
+              podUsageAssumption: 0.8
+              cpuUsageFormat: Percent
