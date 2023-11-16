@@ -3,11 +3,13 @@ package main
 import (
 	"os"
 
-	"k8s.io/component-base/logs"
+	"k8s.io/component-base/cli"
 	"k8s.io/kubernetes/cmd/kube-scheduler/app"
 
 	"github.com/waok8s/wao-scheduler/pkg/plugins/minimizepower"
 	"github.com/waok8s/wao-scheduler/pkg/plugins/podspread"
+
+	_ "github.com/waok8s/wao-scheduler/pkg/scheme" // ensure scheme package is initialized
 )
 
 func main() {
@@ -16,10 +18,5 @@ func main() {
 		app.WithPlugin(podspread.Name, podspread.New),
 	)
 
-	logs.InitLogs()
-	defer logs.FlushLogs()
-
-	if err := command.Execute(); err != nil {
-		os.Exit(1)
-	}
+	os.Exit(cli.Run(command))
 }
