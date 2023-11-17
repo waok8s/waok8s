@@ -11,6 +11,7 @@ A kube-scheduler with MinimizePower plugin and PodSpread plugin to schedule pods
   - [Deploy Pods with MinimizePower](#deploy-pods-with-minimizepower)
   - [Deploy Pods with PodSpread](#deploy-pods-with-podspread)
 - [Configuration](#configuration)
+  - [MinimizePowerArgs](#minimizepowerargs)
 - [Development](#development)
   - [Components](#components)
 - [Changelog](#changelog)
@@ -106,6 +107,10 @@ Just like `kube-scheduler`, WAO Scheduler reads configuration from a file specif
 
 Here is an example `KubeSchedulerConfiguration` with MinimizePower and PodSpread plugins enabled.
 
+> [!NOTE]
+> It is recommended to use a higher weight for MinimizePower plugin,
+> as the normalized score might have small difference between nodes, particularly when the cluster has many nodes.
+
 ```yaml
 apiVersion: kubescheduler.config.k8s.io/v1
 kind: KubeSchedulerConfiguration
@@ -117,8 +122,32 @@ profiles:
       multiPoint:
         enabled:
         - name: MinimizePower
+          weight: 20
         - name: PodSpread
 ```
+
+### MinimizePowerArgs
+
+The following args can be set in `pluginConfig` to configure MinimizePower plugin.
+
+```yaml
+    pluginConfig:
+      - name: MinimizePower
+        args:
+          metricsCacheTTL: 15s
+          predictorCacheTTL: 15m
+          podUsageAssumption: 0.8
+          cpuUsageFormat: Percent
+```
+
+Preset values can be found in `config/base/cm.yaml`, and default values can be found in `pkg/plugins/minimizepower/types.go`. 
+
+- `metricsCacheTTL`: The TTL of metrics cache. Too short TTL will cause frequent requests to metrics server.
+- `predictorCacheTTL`: The TTL of predictor cache. Predictor always returns the same result for the same input, so it is safe to set a long TTL.
+- `podUsageAssumption`: The rate of expected CPU usage for a pod that is binded to a node but not yet started. This is used to count the expected CPU usage when scheduling a set of pods (e.g. a Deployment). The scheduler will assume that a pending pod (that is binded to a node) will use `requests.cpu * podUsageAssumption` CPU. 
+- `cpuUsageFormat`: The format of CPU usage send to predictor.
+  - `Raw`: [0.0, NumLogicalCores] (default)
+  - `Percent`: [0.0, 100.0]
 
 ## Development
 
