@@ -207,9 +207,10 @@ func (pl *MinimizePower) Score(ctx context.Context, state *framework.CycleState,
 		klog.ErrorS(fmt.Errorf("beforeUsage == afterUsage v=%v", beforeUsage), "MinimizePower.Score score=ScoreError as error occurred", "pod", pod.Name, "node", nodeName)
 		return ScoreError, nil
 	}
-	cpuCapacity := node.Status.Allocatable.Cpu().AsApproximateFloat64()
+	// NOTE: Normally, status.capacity.cpu and status.allocatable.cpu are the same.
+	cpuCapacity := node.Status.Capacity.Cpu().AsApproximateFloat64()
 	if afterUsage > cpuCapacity { // CPU overcommitment, make the node nearly lowest priority.
-		klog.InfoS("MinimizePower.Score score=ScoreMax as CPU overcommitment", "pod", pod.Name, "node", nodeName, "usage_after", afterUsage, "status.allocatable.cpu", cpuCapacity)
+		klog.InfoS("MinimizePower.Score score=ScoreMax as CPU overcommitment", "pod", pod.Name, "node", nodeName, "usage_after", afterUsage, "cpu_capacity", cpuCapacity)
 		return ScoreMax, nil
 	}
 	klog.InfoS("MinimizePower.Score usage", "pod", pod.Name, "node", nodeName, "usage_before", beforeUsage, "usage_after", afterUsage, "additional_usage_included", assumedAdditionalUsage)
@@ -224,7 +225,7 @@ func (pl *MinimizePower) Score(ctx context.Context, state *framework.CycleState,
 	default:
 		// this never happens as args.Validate() checks the value
 	}
-	klog.InfoS("MinimizePower.Score usage (formatted)", "pod", pod.Name, "node", nodeName, "format", pl.args.CPUUsageFormat, "usage_before", beforeUsage, "usage_after", afterUsage)
+	klog.InfoS("MinimizePower.Score usage (formatted)", "pod", pod.Name, "node", nodeName, "format", pl.args.CPUUsageFormat, "usage_before", beforeUsage, "usage_after", afterUsage, "cpu_capacity", cpuCapacity)
 
 	// get custom metrics
 	inletTemp, err := pl.metricsclient.GetCustomMetricForNode(ctx, nodeName, waometrics.ValueInletTemperature)
