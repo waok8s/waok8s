@@ -144,9 +144,9 @@ Preset values can be found in `config/base/cm.yaml`, and default values can be f
 
 - `metricsCacheTTL`: The TTL of metrics cache. Too short TTL will cause frequent requests to metrics server.
 - `predictorCacheTTL`: The TTL of predictor cache. Predictor always returns the same result for the same input, so it is safe to set a long TTL.
-- `podUsageAssumption`: The rate of expected CPU usage for a pod that is binded to a node but not yet started. This is used to count the expected CPU usage when scheduling a set of pods (e.g. a Deployment). The scheduler will assume that a pending pod (that is binded to a node) will use `requests.cpu * podUsageAssumption` CPU. 
+- `podUsageAssumption`: The rate of expected CPU usage for a pod that is binded to a node but not yet started. This is used to count the expected CPU usage when scheduling a set of pods (e.g. a Deployment). The scheduler will assume that a pending pod (that is binded to a node) will use `requests.cpu * podUsageAssumption` CPUs. 
 - `cpuUsageFormat`: The format of CPU usage send to predictor.
-  - `Raw`: [0.0, NumLogicalCores] (default)
+  - `Raw`: [0.0, NumLogicalCores]
   - `Percent`: [0.0, 100.0]
 
 ## Development
