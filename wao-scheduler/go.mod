@@ -9,6 +9,7 @@ require (
 	k8s.io/client-go v0.27.3
 	k8s.io/component-base v0.27.3
 	k8s.io/klog/v2 v2.100.1
+	k8s.io/kube-scheduler v0.27.3
 	k8s.io/kubernetes v1.27.3
 	k8s.io/metrics v0.27.3
 	k8s.io/utils v0.0.0-20230726121419-3b25d923346b
@@ -121,7 +122,6 @@ require (
 	k8s.io/dynamic-resource-allocation v0.27.3 // indirect
 	k8s.io/kms v0.27.3 // indirect
 	k8s.io/kube-openapi v0.0.0-20230501164219-8b0f38b5fd1f // indirect
-	k8s.io/kube-scheduler v0.27.3 // indirect
 	k8s.io/kubelet v0.27.3 // indirect
 	k8s.io/mount-utils v0.27.3 // indirect
 	moul.io/http2curl/v2 v2.3.0 // indirect
