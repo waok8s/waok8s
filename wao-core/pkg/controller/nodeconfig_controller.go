@@ -112,17 +112,17 @@ func (r *NodeConfigReconciler) reconcileNodeConfig(ctx context.Context, objKey t
 		var agent metrics.Agent
 		username, password := util.GetBasicAuthFromNamespaceScopedSecret(ctx, r.SecretClient, objKey.Namespace, conf.BasicAuthSecret)
 		fetchTimeout := conf.FetchInterval.Duration - 300*time.Millisecond
-		httpTimeout := conf.FetchInterval.Duration - 600*time.Millisecond
 		switch conf.Type {
 		case waov1beta1.TypeFake:
 			agent = fake.NewInletTempAgent(15.5, nil, 100*time.Millisecond) // fake agent always returns this value
 		case waov1beta1.TypeRedfish:
 			insecureSkipVerify := true
+			requestTimeout := fetchTimeout - 300*time.Millisecond
 			requestEditorFns := []util.RequestEditorFn{
 				util.WithBasicAuth(username, password),
 				util.WithCurlLogger(slog.With("func", "WithCurlLogger(RedfishClient.Fetch)", "node", nc.Spec.NodeName)),
 			}
-			agent = redfish.NewInletTempAgent(conf.Endpoint, redfish.TypeAutoDetect, insecureSkipVerify, httpTimeout, requestEditorFns...)
+			agent = redfish.NewInletTempAgent(conf.Endpoint, redfish.TypeAutoDetect, insecureSkipVerify, requestTimeout, requestEditorFns...)
 		default:
 			return fmt.Errorf("unsupported metricsCollector.inletTemp.type: %s", conf.Type)
 		}
@@ -136,17 +136,17 @@ func (r *NodeConfigReconciler) reconcileNodeConfig(ctx context.Context, objKey t
 		var agent metrics.Agent
 		username, password := util.GetBasicAuthFromNamespaceScopedSecret(ctx, r.SecretClient, objKey.Namespace, conf.BasicAuthSecret)
 		fetchTimeout := conf.FetchInterval.Duration - 300*time.Millisecond
-		httpTimeout := conf.FetchInterval.Duration - 600*time.Millisecond
 		switch conf.Type {
 		case waov1beta1.TypeFake:
 			agent = fake.NewDeltaPAgent(7.5, nil, 100*time.Millisecond) // fake agent always returns this value
 		case waov1beta1.TypeDPAPI:
 			insecureSkipVerify := true
+			requestTimeout := fetchTimeout - 300*time.Millisecond
 			requestEditorFns := []util.RequestEditorFn{
 				util.WithBasicAuth(username, password),
 				util.WithCurlLogger(slog.With("func", "WithCurlLogger(DifferentialPressureAPIClient.Fetch)", "node", nc.Spec.NodeName)),
 			}
-			agent = dpapi.NewDeltaPAgent(conf.Endpoint, "", nc.Spec.NodeName, "", insecureSkipVerify, httpTimeout, requestEditorFns...)
+			agent = dpapi.NewDeltaPAgent(conf.Endpoint, "", nc.Spec.NodeName, "", insecureSkipVerify, requestTimeout, requestEditorFns...)
 		default:
 			return fmt.Errorf("unsupported metricsCollector.deltaP.type: %s", conf.Type)
 		}
