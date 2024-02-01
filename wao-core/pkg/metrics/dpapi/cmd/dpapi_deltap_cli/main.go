@@ -25,6 +25,8 @@ func main() {
 	flag.StringVar(&nodeIP, "nodeIP", "", "Node IP address")
 	var basicAuth string
 	flag.StringVar(&basicAuth, "basicAuth", "", "Basic auth in username@password format")
+	var timeout time.Duration
+	flag.DurationVar(&timeout, "timeout", 5*time.Second, "Timeout for the request")
 	var logLevel int
 	flag.IntVar(&logLevel, "v", 3, "klog-style log level")
 	flag.Parse()
@@ -58,9 +60,9 @@ func main() {
 	}
 	requestEditorFns = append(requestEditorFns, util.WithCurlLogger(lg.With("func", "WithCurlLogger(DifferentialPressureAPIClient.Fetch)")))
 
-	c := dpapi.NewDeltaPAgent(address, sensorName, nodeName, nodeIP, true, 2*time.Second, requestEditorFns...)
+	c := dpapi.NewDeltaPAgent(address, sensorName, nodeName, nodeIP, true, timeout, requestEditorFns...)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	v, err := c.Fetch(ctx)
 	cancel()
 	if err != nil {

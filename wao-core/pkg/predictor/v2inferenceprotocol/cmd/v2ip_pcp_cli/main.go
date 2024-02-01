@@ -29,6 +29,8 @@ func main() {
 	flag.Float64Var(&deltaP, "deltaP", 0.0, "Delta P")
 	var basicAuth string
 	flag.StringVar(&basicAuth, "basicAuth", "", "Basic auth in username@password format")
+	var timeout time.Duration
+	flag.DurationVar(&timeout, "timeout", 5*time.Second, "Timeout for the request")
 	var logLevel int
 	flag.IntVar(&logLevel, "v", 3, "klog-style log level")
 	flag.Parse()
@@ -62,13 +64,13 @@ func main() {
 	}
 	requestEditorFns = append(requestEditorFns, util.WithCurlLogger(lg.With("func", "WithCurlLogger(v2inferenceprotocol.PowerConsumptionPredictor.Predict)")))
 
-	c := v2inferenceprotocol.NewPowerConsumptionPredictor(address, model, modelVersion, true, 2*time.Second, requestEditorFns...)
+	c := v2inferenceprotocol.NewPowerConsumptionPredictor(address, model, modelVersion, true, timeout, requestEditorFns...)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	v, err := c.Predict(ctx, cpuUsage, inletTemp, deltaP)
 	cancel()
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf("%+v\n", v)
+	fmt.Println(v)
 }

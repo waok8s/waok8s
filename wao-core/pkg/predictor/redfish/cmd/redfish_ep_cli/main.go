@@ -19,6 +19,8 @@ func main() {
 	flag.StringVar(&address, "address", "http://localhost:5000", "Redfish server address")
 	var basicAuth string
 	flag.StringVar(&basicAuth, "basicAuth", "", "Basic auth in username@password format")
+	var timeout time.Duration
+	flag.DurationVar(&timeout, "timeout", 5*time.Second, "Timeout for the request")
 	var logLevel int
 	flag.IntVar(&logLevel, "v", 3, "klog-style log level")
 	flag.Parse()
@@ -52,12 +54,12 @@ func main() {
 	}
 	requestEditorFns = append(requestEditorFns, util.WithCurlLogger(lg.With("func", "WithCurlLogger(RedfishEndpointProvider.GetModels)")))
 
-	c, err := redfish.NewEndpointProvider(address, true, 2*time.Second, requestEditorFns...)
+	c, err := redfish.NewEndpointProvider(address, true, timeout, requestEditorFns...)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	models, err := c.GetModels(ctx)
 	cancel()
 	if err != nil {
