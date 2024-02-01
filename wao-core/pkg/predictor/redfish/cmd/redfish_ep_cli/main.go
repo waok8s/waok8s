@@ -65,5 +65,21 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf("%+v\n", models)
+	fmt.Println("PowerConsumptionModel:")
+	fmt.Printf("  Name: %s\n", ptr2str(models.PowerConsumptionModel.Name))
+	fmt.Printf("  Type: %s\n", ptr2str(models.PowerConsumptionModel.Type))
+	fmt.Printf("  URL: %s\n", ptr2str(models.PowerConsumptionModel.Url))
+	fmt.Printf("  Version: %s\n", ptr2str(models.PowerConsumptionModel.Version))
+	fmt.Println("ResponseTimeModel:")
+	fmt.Printf("  Name: %s\n", ptr2str(models.ResponseTimeModel.Name))
+	fmt.Printf("  Type: %s\n", ptr2str(models.ResponseTimeModel.Type))
+	fmt.Printf("  URL: %s\n", ptr2str(models.ResponseTimeModel.Url))
+	fmt.Printf("  Version: %s\n", ptr2str(models.ResponseTimeModel.Version))
+}
+
+func ptr2str(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
 }
