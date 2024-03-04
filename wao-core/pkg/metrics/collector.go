@@ -87,10 +87,7 @@ func (c *Collector) Register(k collectorKey, a Agent, s *Store, nodeName string,
 	lg := slog.With("func", "Collector.Register", "key", k, "nodeName", nodeName)
 	lg.Info("register")
 
-	if interval < MinInterval {
-		interval = MinInterval
-	}
-	ar := newAgentRunner(a, s, nodeName, interval, timeout)
+	ar := newAgentRunner(a, s, nodeName, max(interval, MinInterval), timeout)
 	go ar.Run()
 	c.m.Store(k, ar)
 }
