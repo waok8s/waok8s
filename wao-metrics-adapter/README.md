@@ -77,7 +77,7 @@ Versioning: we use the same major.minor as Kubernetes, and the patch is our own.
 
 - What comes next:
   - TBD
-- 2023-xx-xx `v1.27.0`
+- 2024-03-04 `v1.27.0`
   - First release.
   - `provider` Add the custom metrics provider.
 
