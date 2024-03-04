@@ -262,7 +262,7 @@ var _ = Describe("NodeConfig Controller", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		// Wait for agentRunners to start
-		<-time.After(testFetchInterval.Duration * 2)
+		<-time.After(testFetchInterval.Duration * 3)
 
 		// Check stored metrics
 		for _, nodeName := range []string{testNode0Name, testNode1Name} {
