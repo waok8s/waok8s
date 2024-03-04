@@ -357,8 +357,8 @@ github.com/stretchr/testify v1.8.2/go.mod h1:w2LPCIKwWwSfY2zedu0+kehJoqGctiVI29o
 github.com/tailscale/depaware v0.0.0-20210622194025-720c4b409502/go.mod h1:p9lPsd+cx33L3H9nNoecRRxPssFKUwwI50I3pZ0yT+8=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20220101234140-673ab2c3ae75 h1:6fotK7otjonDflCTK0BCfls4SPy3NcCVb5dqqmbRknE=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20220101234140-673ab2c3ae75/go.mod h1:KO6IkyS8Y3j8OdNO85qEYBsRPuteD+YciPomcXdrMnk=
-github.com/waok8s/wao-core v1.27.0-beta.0 h1:A1hbhO7EXZxhkkCsMeOK3/yPSmqgjwFIAmnXt/i+TBA=
-github.com/waok8s/wao-core v1.27.0-beta.0/go.mod h1:7ZCzuxpVF3wbf6RDwhG83Zh+k/V8JUlStl8Iml3MSag=
+github.com/waok8s/wao-core v1.27.0-beta.1 h1:Mc/9YxpxzwReI4SvrWEnT2SsuHHLZwgCP812H51gVVY=
+github.com/waok8s/wao-core v1.27.0-beta.1/go.mod h1:7ZCzuxpVF3wbf6RDwhG83Zh+k/V8JUlStl8Iml3MSag=
 github.com/xeipuuv/gojsonpointer v0.0.0-20180127040702-4e3ac2762d5f/go.mod h1:N2zxlSyiKSe5eX1tZViRH5QA0qijqEDrYZiPEAiq3wU=
 github.com/xeipuuv/gojsonreference v0.0.0-20180127040603-bd5ef7bd5415/go.mod h1:GwrjFmJcFw6At/Gs6z4yjiIwzuJ1/+UwLxMQDVQXShQ=
 github.com/xeipuuv/gojsonschema v1.2.0/go.mod h1:anYRn/JVcOK2ZgGU+IjEV4nwlhoK5sQluxsYJ78Id3Y=
