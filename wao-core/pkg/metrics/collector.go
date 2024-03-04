@@ -45,7 +45,7 @@ func (r *agentRunner) Run() {
 	for {
 		select {
 		case <-r.stopCh:
-			lg.Info("stop")
+			lg.Info("stopped")
 			return
 		case <-time.After(r.interval):
 			ctx, cancel := context.WithTimeout(context.Background(), r.timeout)
@@ -71,7 +71,11 @@ func (r *agentRunner) Run() {
 	}
 }
 
-func (r *agentRunner) Stop() { close(r.stopCh) }
+func (r *agentRunner) Stop() {
+	lg := slog.With("func", "agentRunner.Stop", "nodeName", r.nodeName, "agent.ValueType", r.agent.ValueType())
+	lg.Info("stop")
+	close(r.stopCh)
+}
 
 type collectorKey string
 
@@ -100,11 +104,13 @@ func (c *Collector) Unregister(k collectorKey) {
 
 	v, ok := c.m.Load(k)
 	if !ok {
+		lg.Error("agentRunner not found")
 		return
 	}
 
-	ar, ok := v.(agentRunner)
+	ar, ok := v.(*agentRunner)
 	if !ok {
+		lg.Error("agentRunner type assertion failed")
 		return
 	}
 
