@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"math/rand"
 	"sync"
 	"time"
 
@@ -31,9 +32,16 @@ func newAgentRunner(agent Agent, metricStore *Store, nodeName string, interval t
 	}
 }
 
+var agentRunnerMaxInitialDelay = 10 * time.Second
+
 func (r *agentRunner) Run() {
 	lg := slog.With("func", "agentRunner.Run", "nodeName", r.nodeName, "agent.ValueType", r.agent.ValueType())
-	lg.Info("start")
+
+	// random sleep to avoid spikes
+	d := time.Duration(rand.Int63n(int64(min(r.interval, agentRunnerMaxInitialDelay))))
+	lg.Info("start with initial delay", "delay", d)
+	time.Sleep(d)
+
 	for {
 		select {
 		case <-r.stopCh:
