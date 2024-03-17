@@ -83,7 +83,7 @@ Versioning: we use the same major.minor as Kubernetes, and the patch is our own.
 
 ## Acknowledgements
 
-This work is based on results obtained from a project, JPNP21005, subsidized by the New Energy and Industrial Technology Development Organization (NEDO).
+This work is supported by the New Energy and Industrial Technology Development Organization (NEDO) under its "Program to Develop and Promote the Commercialization of Energy Conservation Technologies to Realize a Decarbonized Society" ([JPNP21005](https://www.nedo.go.jp/english/activities/activities_ZZJP_100197.html)).
 
 ## License
 
