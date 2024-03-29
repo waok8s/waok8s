@@ -162,8 +162,8 @@ This project is following [Scheduling Framework](https://kubernetes.io/docs/conc
 
 Versioning: we use the same major.minor as Kubernetes, and the patch is our own.
 
-- What comes next:
-  - TBD
+- 2024-03-29 `v1.28.0`
+  - Support Kubernetes v1.28.
 - 2024-03-04 `v1.27.0`
   - First release.
   - `minimizepower` Add the scheduler plugin.

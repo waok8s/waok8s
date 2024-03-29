@@ -157,7 +157,7 @@ func (pl *PodSpread) PreFilter(ctx context.Context, cycleState *framework.CycleS
 	allocatableNodes := getAllocatableNodes(pl.schedulingSession[rs.Name], pod, nodeList)
 	klog.InfoS("list allocatable node", "allocatableNodes", allocatableNodes)
 
-	nodenames := sets.NewString(allocatableNodes...)
+	nodenames := sets.New[string](allocatableNodes...)
 	result.NodeNames = nodenames
 
 	return result, nil
