@@ -1,6 +1,6 @@
 module github.com/waok8s/wao-metrics-adapter
 
-go 1.21.3
+go 1.21.8
 
 require (
 	github.com/waok8s/wao-core v1.28.0-beta.0
@@ -89,7 +89,7 @@ require (
 	golang.org/x/exp v0.0.0-20220722155223-a9213eeb770e // indirect
 	golang.org/x/net v0.19.0 // indirect
 	golang.org/x/oauth2 v0.8.0 // indirect
-	golang.org/x/sync v0.2.0 // indirect
+	golang.org/x/sync v0.5.0 // indirect
 	golang.org/x/sys v0.15.0 // indirect
 	golang.org/x/term v0.15.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
@@ -106,9 +106,9 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	k8s.io/api v0.28.8 // indirect
-	k8s.io/apiextensions-apiserver v0.28.3 // indirect
-	k8s.io/apiserver v0.28.3 // indirect
-	k8s.io/kms v0.28.3 // indirect
+	k8s.io/apiextensions-apiserver v0.28.8 // indirect
+	k8s.io/apiserver v0.28.8 // indirect
+	k8s.io/kms v0.28.8 // indirect
 	k8s.io/kube-openapi v0.0.0-20230901164831-6c774f458599 // indirect
 	k8s.io/utils v0.0.0-20230726121419-3b25d923346b // indirect
 	moul.io/http2curl/v2 v2.3.0 // indirect
