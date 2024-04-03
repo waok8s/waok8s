@@ -37,7 +37,7 @@ WAO Scheduler schedules pods with features focused on minimizing power consumpti
 Install WAO Scheduler with default configuration.
 
 ```sh
-kubectl apply -f https://github.com/waok8s/wao-scheduler/releases/download/v1.27.0/wao-scheduler.yaml
+kubectl apply -f https://github.com/waok8s/wao-scheduler/releases/download/v1.28.0/wao-scheduler.yaml
 ```
 
 Wait for the scheduler to be ready.
