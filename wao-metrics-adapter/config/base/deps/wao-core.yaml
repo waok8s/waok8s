@@ -786,7 +786,7 @@ spec:
         - --leader-elect
         command:
         - /manager
-        image: ghcr.io/waok8s/wao-controller:v1.28.0
+        image: ghcr.io/waok8s/wao-controller:v1.29.0-beta.0
         livenessProbe:
           httpGet:
             path: /healthz
