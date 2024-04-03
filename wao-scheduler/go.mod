@@ -3,7 +3,7 @@ module github.com/waok8s/wao-scheduler
 go 1.21.8
 
 require (
-	github.com/waok8s/wao-core v1.28.0-beta.0
+	github.com/waok8s/wao-core v1.28.0
 	k8s.io/api v0.28.8
 	k8s.io/apimachinery v0.28.8
 	k8s.io/client-go v0.28.8
