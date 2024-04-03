@@ -36,7 +36,7 @@ This repository contains CRDs, controllers and libraries for WAO. They are inten
 Install CRDs and controllers.
 
 ```sh
-kubectl apply -f https://github.com/waok8s/wao-core/releases/download/v1.28.0/wao-core.yaml
+kubectl apply -f https://github.com/waok8s/wao-core/releases/download/v1.29.0/wao-core.yaml
 ```
 
 Wait for the pod to be ready.
@@ -273,6 +273,8 @@ This project uses [Kubebuilder](https://github.com/kubernetes-sigs/kubebuilder) 
 
 Versioning: we use the same major.minor as Kubernetes, and the patch is our own.
 
+- 2024-04-12 `v1.29.0`
+  - Support Kubernetes v1.29.
 - 2024-03-29 `v1.28.0`
   - Support Kubernetes v1.28.
 - 2024-03-04 `v1.27.0`
