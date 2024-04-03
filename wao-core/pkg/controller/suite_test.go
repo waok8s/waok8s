@@ -19,6 +19,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	waoclient "github.com/waok8s/wao-core/pkg/client"
 	waocontroller "github.com/waok8s/wao-core/pkg/controller"
@@ -217,8 +218,10 @@ var _ = Describe("NodeConfig Controller", func() {
 
 		// Setup manager
 		mgr, err := ctrl.NewManager(cfg, ctrl.Options{
-			Scheme:             scheme.Scheme,
-			MetricsBindAddress: "0", // disable metrics server to avoid port conflict
+			Scheme: scheme.Scheme,
+			Metrics: metricsserver.Options{
+				BindAddress: "0", // disable metrics server to avoid port conflict
+			},
 		})
 		Expect(err).NotTo(HaveOccurred())
 
