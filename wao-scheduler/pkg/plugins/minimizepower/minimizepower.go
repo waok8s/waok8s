@@ -67,7 +67,7 @@ func getArgs(obj runtime.Object) (MinimizePowerArgs, error) {
 }
 
 // New initializes a new plugin and returns it.
-func New(obj runtime.Object, fh framework.Handle) (framework.Plugin, error) {
+func New(_ context.Context, obj runtime.Object, fh framework.Handle) (framework.Plugin, error) {
 
 	// get plugin args
 	args, err := getArgs(obj)
@@ -102,7 +102,7 @@ func New(obj runtime.Object, fh framework.Handle) (framework.Plugin, error) {
 	if err != nil {
 		return nil, err
 	}
-	go ca.Start(context.TODO())
+	go ca.Start(context.TODO()) // NOTE: this context needs live until the scheduler stops
 	c, err := client.New(fh.KubeConfig(), client.Options{
 		Scheme: scheme,
 		Cache:  &client.CacheOptions{Reader: ca},
