@@ -321,8 +321,8 @@ github.com/stretchr/testify v1.8.4/go.mod h1:sz/lmYIOXD/1dqDmKjjqLyZ2RngseejIcXl
 github.com/tailscale/depaware v0.0.0-20210622194025-720c4b409502/go.mod h1:p9lPsd+cx33L3H9nNoecRRxPssFKUwwI50I3pZ0yT+8=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20220101234140-673ab2c3ae75 h1:6fotK7otjonDflCTK0BCfls4SPy3NcCVb5dqqmbRknE=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20220101234140-673ab2c3ae75/go.mod h1:KO6IkyS8Y3j8OdNO85qEYBsRPuteD+YciPomcXdrMnk=
-github.com/waok8s/wao-core v1.28.0-beta.0 h1:TxZgGW8BmykNBhG4eP5wg33IP4+COlA1YzTNyN4NkW0=
-github.com/waok8s/wao-core v1.28.0-beta.0/go.mod h1:YY4vs3TWfxfdm5dHhJBmAW8xWAbTT4E3wFCHKYyWegg=
+github.com/waok8s/wao-core v1.28.0 h1:moFYct0ruGimWPJUBIdhdecPfX3q3QjCanczFc/BNO4=
+github.com/waok8s/wao-core v1.28.0/go.mod h1:ZezHEaWdTWJphrVsToXHRhDlZa6H1vy1beQwR6vno2o=
 github.com/xiang90/probing v0.0.0-20190116061207-43a291ad63a2 h1:eY9dn8+vbi4tKz5Qo6v2eYzo7kUS51QINcR5jNpbZS8=
 github.com/xiang90/probing v0.0.0-20190116061207-43a291ad63a2/go.mod h1:UETIi67q53MR2AWcXfiuqkDkRtnGDLqkBTpCHuJHxtU=
 github.com/yuin/goldmark v1.1.25/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
