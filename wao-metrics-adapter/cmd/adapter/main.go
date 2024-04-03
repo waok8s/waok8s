@@ -11,6 +11,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	basecmd "sigs.k8s.io/custom-metrics-apiserver/pkg/cmd"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	waocontroller "github.com/waok8s/wao-core/pkg/controller"
 	waometrics "github.com/waok8s/wao-core/pkg/metrics"
@@ -69,7 +70,9 @@ func main() {
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&zap.Options{Development: true})))
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                 waocontroller.Scheme,
-		MetricsBindAddress:     "0",
+		Metrics: metricsserver.Options{
+			BindAddress: "0", // disable metrics server to avoid port conflict
+		},
 		HealthProbeBindAddress: "",
 		LeaderElection:         false,
 	})
