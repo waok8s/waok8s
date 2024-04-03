@@ -1,6 +1,6 @@
 module github.com/waok8s/wao-scheduler
 
-go 1.21.3
+go 1.21.8
 
 require (
 	github.com/waok8s/wao-core v1.28.0-beta.0
