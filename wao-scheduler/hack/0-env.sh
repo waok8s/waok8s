@@ -8,15 +8,15 @@ SCRIPT=$(realpath "$0")
 PROJECT_ROOT=$(dirname "$(dirname "$SCRIPT")")
 PROJECT_NAME=$(basename "$PROJECT_ROOT")
 
-KUBECTL_VERSION=v1.27.3
+KUBECTL_VERSION=v1.28.8
 KUSTOMIZE_VERSION=v5.2.1
-KIND_VERSION=v0.20.0
+KIND_VERSION=v0.22.0
 
 LOCALBIN=$PROJECT_ROOT/bin # bin/
 
 KIND=$LOCALBIN/kind # bin/kind
-KUBECTL_DIR=$LOCALBIN/kubectl-$KUBECTL_VERSION # bin/kubectl-v1.27.3
-KUBECTL=$KUBECTL_DIR/kubectl # bin/kubectl-v1.27.3/kubectl
+KUBECTL_DIR=$LOCALBIN/kubectl-$KUBECTL_VERSION # bin/kubectl-v1.28.8
+KUBECTL=$KUBECTL_DIR/kubectl # bin/kubectl-v1.28.8/kubectl
 KUSTOMIZE=$LOCALBIN/kustomize # bin/kustomize
 
 DOCKER=$(which docker) # assumes docker command is available
