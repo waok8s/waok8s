@@ -5,7 +5,7 @@
 
 # consts
 
-KIND_IMAGE=${KIND_IMAGE:-"kindest/node:v1.27.3@sha256:3966ac761ae0136263ffdb6cfd4db23ef8a83cba8a463690e98317add2c9ba72"}
+KIND_IMAGE=${KIND_IMAGE:-"kindest/node:v1.28.7@sha256:9bc6c451a289cf96ad0bbaf33d416901de6fd632415b076ab05f5fa7e4f65c58"}
 
 # main
 
