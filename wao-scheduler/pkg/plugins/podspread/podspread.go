@@ -99,7 +99,7 @@ const (
 )
 
 // New initializes a new plugin and returns it.
-func New(_ runtime.Object, fh framework.Handle) (framework.Plugin, error) {
+func New(_ context.Context, _ runtime.Object, fh framework.Handle) (framework.Plugin, error) {
 	return &PodSpread{
 		schedulingSession: map[string]*SchedulingSession{},
 		clientset:         fh.ClientSet(),
