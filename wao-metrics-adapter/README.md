@@ -34,7 +34,7 @@ WAO Metrics Adapter exposes the following custom metrics for WAO:
 Install WAO Metrics Adapter.
 
 ```sh
-kubectl apply -f https://github.com/waok8s/wao-metrics-adapter/releases/download/v1.28.0/wao-metrics-adapter.yaml
+kubectl apply -f https://github.com/waok8s/wao-metrics-adapter/releases/download/v1.29.0/wao-metrics-adapter.yaml
 ```
 
 Wait for the pod to be ready.
@@ -75,6 +75,8 @@ This project is using [custom-metrics-apiserver](https://github.com/kubernetes-s
 
 Versioning: we use the same major.minor as Kubernetes, and the patch is our own.
 
+- 2024-05-07 `v1.29.0`
+  - Support Kubernetes v1.29.
 - 2024-03-29 `v1.28.0`
   - Support Kubernetes v1.28.
 - 2024-03-04 `v1.27.0`
