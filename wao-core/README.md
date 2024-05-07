@@ -273,7 +273,7 @@ This project uses [Kubebuilder](https://github.com/kubernetes-sigs/kubebuilder) 
 
 Versioning: we use the same major.minor as Kubernetes, and the patch is our own.
 
-- 2024-04-12 `v1.29.0`
+- 2024-05-07 `v1.29.0`
   - Support Kubernetes v1.29.
 - 2024-03-29 `v1.28.0`
   - Support Kubernetes v1.28.
