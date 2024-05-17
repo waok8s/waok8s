@@ -274,11 +274,13 @@ spec:
                           items:
                             type: string
                           type: array
+                          x-kubernetes-list-type: atomic
                       required:
                       - key
                       - operator
                       type: object
                     type: array
+                    x-kubernetes-list-type: atomic
                   matchLabels:
                     additionalProperties:
                       type: string
@@ -786,7 +788,7 @@ spec:
         - --leader-elect
         command:
         - /manager
-        image: ghcr.io/waok8s/wao-controller:v1.29.0
+        image: ghcr.io/waok8s/wao-controller:v1.30.0
         livenessProbe:
           httpGet:
             path: /healthz
