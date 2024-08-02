@@ -34,6 +34,9 @@ type MinimizePowerArgs struct {
 	PodUsageAssumption float64 `json:"podUsageAssumption,omitempty"`
 
 	CPUUsageFormat string `json:"cpuUsageFormat,omitempty"`
+
+	MetricsQPS   float32 `json:"metricsQPS,omitempty"`
+	MetricsBurst int     `json:"metricsBurst,omitempty"`
 }
 
 func (args *MinimizePowerArgs) Default() {
@@ -54,6 +57,13 @@ func (args *MinimizePowerArgs) Default() {
 		args.CPUUsageFormat = CPUUsageFormatPercent
 	}
 
+	// default QPS is 5 and Burst is 10 but we set a reasonable value for a normal cluster here
+	if args.MetricsQPS == 0 {
+		args.MetricsQPS = 50
+	}
+	if args.MetricsBurst == 0 {
+		args.MetricsBurst = 100
+	}
 }
 
 func (args *MinimizePowerArgs) Validate() error {
@@ -64,6 +74,13 @@ func (args *MinimizePowerArgs) Validate() error {
 
 	if args.CPUUsageFormat != CPUUsageFormatRaw && args.CPUUsageFormat != CPUUsageFormatPercent {
 		return fmt.Errorf("cpuUsageFormat must be either `Raw` or `Percent`")
+	}
+
+	if args.MetricsQPS <= 0 {
+		return fmt.Errorf("metricsQPS must be greater than 0")
+	}
+	if args.MetricsBurst <= 0 {
+		return fmt.Errorf("metricsBurst must be greater than 0")
 	}
 
 	return nil
