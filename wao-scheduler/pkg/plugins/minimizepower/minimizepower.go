@@ -77,8 +77,6 @@ func New(_ context.Context, obj runtime.Object, fh framework.Handle) (framework.
 	klog.InfoS("MinimizePower.New", "args", args)
 
 	cfg := fh.KubeConfig()
-	cfg.QPS = args.MetricsQPS
-	cfg.Burst = args.MetricsBurst
 
 	// init metrics client
 	mc, err := metricsclientv1beta1.NewForConfig(cfg)
