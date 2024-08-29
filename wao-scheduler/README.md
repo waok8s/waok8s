@@ -11,6 +11,7 @@ A kube-scheduler with MinimizePower plugin and PodSpread plugin to schedule pods
   - [Deploy Pods with MinimizePower](#deploy-pods-with-minimizepower)
   - [Deploy Pods with PodSpread](#deploy-pods-with-podspread)
 - [Configuration](#configuration)
+  - [Client QPS and Burst](#client-qps-and-burst)
   - [MinimizePowerArgs](#minimizepowerargs)
 - [Development](#development)
   - [Components](#components)
@@ -124,6 +125,20 @@ profiles:
         - name: MinimizePower
           weight: 20
         - name: PodSpread
+```
+
+### Client QPS and Burst
+
+Our scheduler uses metrics client to get server inlet temperature and delta pressure of each node.
+It is recommended to set a higher QPS and burst to avoid client throttling.
+For a normal cluster (up to several hundreds of nodes), the following configuration should work well.
+
+```diff
+  apiVersion: kubescheduler.config.k8s.io/v1
+  kind: KubeSchedulerConfiguration
++ clientConnection:
++   qps: 150
++   burst: 300
 ```
 
 ### MinimizePowerArgs
