@@ -51,7 +51,7 @@ func (args *MinimizePowerArgs) Default() {
 	}
 
 	if args.CPUUsageFormat == "" {
-		args.CPUUsageFormat = CPUUsageFormatPercent
+		args.CPUUsageFormat = DefaultCPUUsageFormat
 	}
 
 }
