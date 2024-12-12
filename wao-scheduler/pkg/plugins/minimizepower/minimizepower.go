@@ -233,9 +233,17 @@ func (pl *MinimizePower) Score(ctx context.Context, state *framework.CycleState,
 		klog.ErrorS(err, "MinimizePower.Score score=ScoreError as error occurred", "pod", pod.Name, "node", nodeName)
 		return ScoreError, nil
 	}
+	if inletTemp == nil {
+		klog.ErrorS(fmt.Errorf("inletTemp == nil"), "MinimizePower.Score score=ScoreError as error occurred", "pod", pod.Name, "node", nodeName)
+		return ScoreError, nil
+	}
 	deltaP, err := pl.metricsclient.GetCustomMetricForNode(ctx, nodeName, waometrics.ValueDeltaPressure)
 	if err != nil {
 		klog.ErrorS(err, "MinimizePower.Score score=ScoreError as error occurred", "pod", pod.Name, "node", nodeName)
+		return ScoreError, nil
+	}
+	if deltaP == nil {
+		klog.ErrorS(fmt.Errorf("deltaP == nil"), "MinimizePower.Score score=ScoreError as error occurred", "pod", pod.Name, "node", nodeName)
 		return ScoreError, nil
 	}
 	klog.InfoS("MinimizePower.Score metrics", "pod", pod.Name, "node", nodeName, "inlet_temp", inletTemp.Value.AsApproximateFloat64(), "delta_p", deltaP.Value.AsApproximateFloat64())
