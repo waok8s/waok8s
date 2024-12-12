@@ -54,6 +54,9 @@ type metricsCache struct {
 	CustomMetrics map[string]*custommetricsv1beta2.MetricValue
 
 	ExpiredAt time.Time
+
+	// mu is used to avoid concurrent requests for the same key (which would result in multiple requests to origin servers)
+	mu sync.Mutex
 }
 
 func (c *CachedMetricsClient) get(ctx context.Context, obj types.NamespacedName, metricType string, metricName string) (*metricsCache, error) {
@@ -63,6 +66,13 @@ func (c *CachedMetricsClient) get(ctx context.Context, obj types.NamespacedName,
 
 	if v, ok1 := c.cache.Load(key); ok1 {
 		if cv, ok2 := v.(*metricsCache); ok2 {
+
+			// Wait until the cache is ready
+			cv.mu.Lock()
+			lg.Debug("metrics cache is available")
+			cv.mu.Unlock() // Unlock immediately; NOTE: performance optimization
+
+			// Check if the cache is expired
 			if cv.ExpiredAt.After(time.Now()) {
 				lg.Debug("metrics cache hit")
 				return cv, nil
@@ -71,10 +81,13 @@ func (c *CachedMetricsClient) get(ctx context.Context, obj types.NamespacedName,
 	}
 	lg.Debug("metrics cache missed")
 
+	// Push an empty cache with a lock
 	cv := &metricsCache{
 		CustomMetrics: make(map[string]*custommetricsv1beta2.MetricValue),
 		ExpiredAt:     time.Now().Add(c.ttl),
 	}
+	cv.mu.Lock()
+	c.cache.Store(key, cv)
 
 	switch metricType {
 	case metricTypeNode:
@@ -82,16 +95,22 @@ func (c *CachedMetricsClient) get(ctx context.Context, obj types.NamespacedName,
 		case metricNameMetrics:
 			nodeMetrics, err := c.metricsclientset.NodeMetricses().Get(ctx, obj.Name, metav1.GetOptions{})
 			if err != nil {
+				cv.mu.Unlock()
+				c.cache.Delete(cv)
 				return nil, fmt.Errorf("unable to get metrics for obj=%s metricType=%s metricName=%s: %w", obj, metricType, metricName, err)
 			}
 			cv.NodeMetrics = nodeMetrics
 		case metricNameInletTemp, metricNameDeltaP:
 			metricValue, err := c.custommetricsclient.RootScopedMetrics().GetForObject(schema.GroupKind{Group: "", Kind: "node"}, obj.Name, metricName, labels.NewSelector())
 			if err != nil {
+				cv.mu.Unlock()
+				c.cache.Delete(cv)
 				return nil, fmt.Errorf("unable to get metrics for obj=%s metricType=%s metricName=%s: %w", obj, metricType, metricName, err)
 			}
 			cv.CustomMetrics[metricName] = metricValue
 		default:
+			cv.mu.Unlock()
+			c.cache.Delete(cv)
 			return nil, fmt.Errorf("unknown metricName=%s for metricType=%s", metricName, metricType)
 		}
 	case metricTypePod:
@@ -99,16 +118,23 @@ func (c *CachedMetricsClient) get(ctx context.Context, obj types.NamespacedName,
 		case metricNameMetrics:
 			podMetrics, err := c.metricsclientset.PodMetricses(obj.Namespace).Get(ctx, obj.Name, metav1.GetOptions{})
 			if err != nil {
+				cv.mu.Unlock()
+				c.cache.Delete(cv)
 				return nil, fmt.Errorf("unable to get metrics for obj=%s metricType=%s metricName=%s: %w", obj, metricType, metricName, err)
 			}
 			cv.PodMetrics = podMetrics
 		default:
+			cv.mu.Unlock()
+			c.cache.Delete(cv)
 			return nil, fmt.Errorf("unknown metricName=%s for metricType=%s", metricName, metricType)
 		}
 	default:
+		cv.mu.Unlock()
+		c.cache.Delete(cv)
 		return nil, fmt.Errorf("unknown metricType=%s", metricType)
 	}
 
+	cv.mu.Unlock()
 	c.cache.Store(key, cv)
 
 	return cv, nil
