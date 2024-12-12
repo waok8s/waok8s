@@ -96,7 +96,7 @@ func (c *CachedMetricsClient) get(ctx context.Context, obj types.NamespacedName,
 			nodeMetrics, err := c.metricsclientset.NodeMetricses().Get(ctx, obj.Name, metav1.GetOptions{})
 			if err != nil {
 				cv.mu.Unlock()
-				c.cache.Delete(cv)
+				c.cache.Delete(key)
 				return nil, fmt.Errorf("unable to get metrics for obj=%s metricType=%s metricName=%s: %w", obj, metricType, metricName, err)
 			}
 			cv.NodeMetrics = nodeMetrics
@@ -104,13 +104,13 @@ func (c *CachedMetricsClient) get(ctx context.Context, obj types.NamespacedName,
 			metricValue, err := c.custommetricsclient.RootScopedMetrics().GetForObject(schema.GroupKind{Group: "", Kind: "node"}, obj.Name, metricName, labels.NewSelector())
 			if err != nil {
 				cv.mu.Unlock()
-				c.cache.Delete(cv)
+				c.cache.Delete(key)
 				return nil, fmt.Errorf("unable to get metrics for obj=%s metricType=%s metricName=%s: %w", obj, metricType, metricName, err)
 			}
 			cv.CustomMetrics[metricName] = metricValue
 		default:
 			cv.mu.Unlock()
-			c.cache.Delete(cv)
+			c.cache.Delete(key)
 			return nil, fmt.Errorf("unknown metricName=%s for metricType=%s", metricName, metricType)
 		}
 	case metricTypePod:
@@ -119,18 +119,18 @@ func (c *CachedMetricsClient) get(ctx context.Context, obj types.NamespacedName,
 			podMetrics, err := c.metricsclientset.PodMetricses(obj.Namespace).Get(ctx, obj.Name, metav1.GetOptions{})
 			if err != nil {
 				cv.mu.Unlock()
-				c.cache.Delete(cv)
+				c.cache.Delete(key)
 				return nil, fmt.Errorf("unable to get metrics for obj=%s metricType=%s metricName=%s: %w", obj, metricType, metricName, err)
 			}
 			cv.PodMetrics = podMetrics
 		default:
 			cv.mu.Unlock()
-			c.cache.Delete(cv)
+			c.cache.Delete(key)
 			return nil, fmt.Errorf("unknown metricName=%s for metricType=%s", metricName, metricType)
 		}
 	default:
 		cv.mu.Unlock()
-		c.cache.Delete(cv)
+		c.cache.Delete(key)
 		return nil, fmt.Errorf("unknown metricType=%s", metricType)
 	}
 

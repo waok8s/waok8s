@@ -100,13 +100,13 @@ func (c *CachedPredictorClient) do(ctx context.Context, valueType string,
 		prov, err := fromnodeconfig.NewEndpointProvider(c.client, namespace, endpointTerm)
 		if err != nil {
 			cv.mu.Unlock()
-			c.cache.Delete(cv)
+			c.cache.Delete(key)
 			return nil, err
 		}
 		ep, err := prov.Get(ctx, predictorType)
 		if err != nil {
 			cv.mu.Unlock()
-			c.cache.Delete(cv)
+			c.cache.Delete(key)
 			return nil, err
 		}
 		cv.PowerConsumptionEndpoint = ep
@@ -114,13 +114,13 @@ func (c *CachedPredictorClient) do(ctx context.Context, valueType string,
 		pred, err := fromnodeconfig.NewPowerConsumptionPredictor(c.client, namespace, endpointTerm)
 		if err != nil {
 			cv.mu.Unlock()
-			c.cache.Delete(cv)
+			c.cache.Delete(key)
 			return nil, err
 		}
 		watt, err := pred.Predict(ctx, cpuUsage, inletTemp, deltaP)
 		if err != nil {
 			cv.mu.Unlock()
-			c.cache.Delete(cv)
+			c.cache.Delete(key)
 			return nil, err
 		}
 		cv.Watt = watt
