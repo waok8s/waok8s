@@ -134,8 +134,8 @@ func (c *CachedMetricsClient) get(ctx context.Context, obj types.NamespacedName,
 		return nil, fmt.Errorf("unknown metricType=%s", metricType)
 	}
 
-	cv.mu.Unlock()
 	c.cache.Store(key, cv)
+	cv.mu.Unlock()
 
 	return cv, nil
 }

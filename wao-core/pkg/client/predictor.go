@@ -130,8 +130,8 @@ func (c *CachedPredictorClient) do(ctx context.Context, valueType string,
 		return nil, fmt.Errorf("unknown valueType=%s", valueType)
 	}
 
-	cv.mu.Unlock()
 	c.cache.Store(key, cv)
+	cv.mu.Unlock()
 
 	return cv, nil
 }
