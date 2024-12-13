@@ -70,7 +70,7 @@ func (c *CachedMetricsClient) get(ctx context.Context, obj types.NamespacedName,
 			// Wait until the cache is ready
 			cv.mu.Lock()
 			lg.Debug("metrics cache is available")
-			cv.mu.Unlock() // Unlock immediately; NOTE: performance optimization
+			cv.mu.Unlock() // NOTE: any better way to do this?
 
 			// Check if the cache is expired
 			if cv.ExpiredAt.After(time.Now()) {

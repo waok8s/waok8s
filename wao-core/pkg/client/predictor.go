@@ -77,7 +77,7 @@ func (c *CachedPredictorClient) do(ctx context.Context, valueType string,
 			// Wait until the cache is ready
 			cv.mu.Lock()
 			lg.Debug("predictor cache is available")
-			cv.mu.Unlock() // Unlock immediately; NOTE: performance optimization
+			cv.mu.Unlock() // NOTE: any better way to do this?
 
 			// Check if the cache is expired
 			if cv.ExpiredAt.After(time.Now()) {
