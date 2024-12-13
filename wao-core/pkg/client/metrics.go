@@ -81,7 +81,7 @@ func (c *CachedMetricsClient) get(ctx context.Context, obj types.NamespacedName,
 	}
 	lg.Debug("metrics cache missed")
 
-	// Push an empty cache with a lock
+	// Push an empty cache and lock it to avoid concurrent requests
 	cv := &metricsCache{
 		CustomMetrics: make(map[string]*custommetricsv1beta2.MetricValue),
 		ExpiredAt:     time.Now().Add(c.ttl),

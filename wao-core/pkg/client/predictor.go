@@ -88,7 +88,7 @@ func (c *CachedPredictorClient) do(ctx context.Context, valueType string,
 	}
 	lg.Debug("predictor cache missed")
 
-	// Push an empty cache with a lock
+	// Push an empty cache and lock it to avoid concurrent requests
 	cv := &predictionCache{
 		ExpiredAt: time.Now().Add(c.ttl),
 	}
