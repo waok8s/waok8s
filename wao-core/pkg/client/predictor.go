@@ -57,6 +57,9 @@ type predictionCache struct {
 	// ResponseTime         float64
 
 	ExpiredAt time.Time
+
+	// mu is used to avoid concurrent requests for the same key (which would result in multiple requests to origin servers)
+	mu sync.Mutex
 }
 
 func (c *CachedPredictorClient) do(ctx context.Context, valueType string,
@@ -70,6 +73,13 @@ func (c *CachedPredictorClient) do(ctx context.Context, valueType string,
 
 	if v, ok1 := c.cache.Load(key); ok1 {
 		if cv, ok2 := v.(*predictionCache); ok2 {
+
+			// Wait until the cache is ready
+			cv.mu.Lock()
+			lg.Debug("predictor cache is available")
+			cv.mu.Unlock() // NOTE: any better way to do this?
+
+			// Check if the cache is expired
 			if cv.ExpiredAt.After(time.Now()) {
 				lg.Debug("predictor cache hit")
 				return cv, nil
@@ -78,36 +88,50 @@ func (c *CachedPredictorClient) do(ctx context.Context, valueType string,
 	}
 	lg.Debug("predictor cache missed")
 
+	// Push an empty cache and lock it to avoid concurrent requests
 	cv := &predictionCache{
 		ExpiredAt: time.Now().Add(c.ttl),
 	}
+	cv.mu.Lock()
+	c.cache.Store(key, cv)
 
 	switch valueType {
 	case valueTypePowerConsumptionEndpoint:
 		prov, err := fromnodeconfig.NewEndpointProvider(c.client, namespace, endpointTerm)
 		if err != nil {
+			cv.mu.Unlock()
+			c.cache.Delete(key)
 			return nil, err
 		}
 		ep, err := prov.Get(ctx, predictorType)
 		if err != nil {
+			cv.mu.Unlock()
+			c.cache.Delete(key)
 			return nil, err
 		}
 		cv.PowerConsumptionEndpoint = ep
 	case valueTypeWatt:
 		pred, err := fromnodeconfig.NewPowerConsumptionPredictor(c.client, namespace, endpointTerm)
 		if err != nil {
+			cv.mu.Unlock()
+			c.cache.Delete(key)
 			return nil, err
 		}
 		watt, err := pred.Predict(ctx, cpuUsage, inletTemp, deltaP)
 		if err != nil {
+			cv.mu.Unlock()
+			c.cache.Delete(key)
 			return nil, err
 		}
 		cv.Watt = watt
 	default:
+		cv.mu.Unlock()
+		c.cache.Delete(cv)
 		return nil, fmt.Errorf("unknown valueType=%s", valueType)
 	}
 
 	c.cache.Store(key, cv)
+	cv.mu.Unlock()
 
 	return cv, nil
 }
