@@ -33,7 +33,7 @@ func WithCurlLogger(lg *slog.Logger) RequestEditorFn {
 		if err != nil {
 			lg.Error("failed to get curl command", "err", err)
 		} else {
-			lg.Info("sending request", "curl", cmd.String())
+			lg.Debug("sending request", "curl", cmd.String())
 		}
 
 		return nil
