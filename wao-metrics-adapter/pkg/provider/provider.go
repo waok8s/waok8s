@@ -4,8 +4,10 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"net/http"
 	"time"
 
+	apierr "k8s.io/apimachinery/pkg/api/errors"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -111,36 +113,37 @@ func metricValueScale(objRef custom_metrics.ObjectReference, t time.Time, key st
 }
 
 // metricFor constructs a result for a single metric value.
+// The `error` return value is ensured to be in the metav1.Status format.
 func (p *Provider) metricFor(namespace, name string, info provider.CustomMetricInfo) (*custom_metrics.MetricValue, error) {
 	// get value
 	info, err := p.validateResource(namespace, name, info)
 	if err != nil {
-		return nil, err
+		return nil, apierr.NewBadRequest(err.Error())
 	}
 	k := waometrics.StoreKey(namespace, name, info)
 	m, ok := p.metricsStore.Get(k)
 	if !ok {
-		return nil, fmt.Errorf("metric %s for %s not found", info.Metric, k)
+		return nil, provider.NewMetricNotFoundForError(info.GroupResource, info.Metric, types.NamespacedName{Namespace: namespace, Name: name}.String())
 	}
 
 	// check timestamp
 	switch info.Metric {
 	case waometrics.ValueInletTemperature:
 		if m.InletTempTimestamp.Add(MetricTTL).Before(time.Now()) {
-			return nil, fmt.Errorf("metric %s for %s is expired", info.Metric, k)
+			return nil, newMetricExpiredForError(info.GroupResource, info.Metric, types.NamespacedName{Namespace: namespace, Name: name}.String())
 		}
 	case waometrics.ValueDeltaPressure:
 		if m.DeltaPressureTimestamp.Add(MetricTTL).Before(time.Now()) {
-			return nil, fmt.Errorf("metric %s for %s is expired", info.Metric, k)
+			return nil, newMetricExpiredForError(info.GroupResource, info.Metric, types.NamespacedName{Namespace: namespace, Name: name}.String())
 		}
 	default:
-		return nil, fmt.Errorf("metric not supported: name=%s", info.Metric)
+		return nil, apierr.NewInternalError(fmt.Errorf("metric not supported: name=%s", info.Metric))
 	}
 
 	// construct result
 	objRef, err := helpers.ReferenceFor(p.mapper, types.NamespacedName{Namespace: namespace, Name: name}, info)
 	if err != nil {
-		return nil, err
+		return nil, apierr.NewInternalError(err)
 	}
 	switch info.Metric {
 	case waometrics.ValueInletTemperature:
@@ -150,18 +153,22 @@ func (p *Provider) metricFor(namespace, name string, info provider.CustomMetricI
 		v, s := fixedScale(m.DeltaPressure, 6)
 		return metricValueScale(objRef, time.Now(), info.Metric, v, s), nil
 	default:
-		return nil, fmt.Errorf("metric not supported: name=%s", info.Metric)
+		return nil, apierr.NewInternalError(fmt.Errorf("metric not supported: name=%s", info.Metric))
 	}
 }
 
+// GetMetricByName implements CustomMetricsProvider interface.
+// The `error` return value is ensured to be in the metav1.Status format.
 func (p *Provider) GetMetricByName(ctx context.Context, name types.NamespacedName, info provider.CustomMetricInfo, _ labels.Selector) (*custom_metrics.MetricValue, error) {
 	return p.metricFor(name.Namespace, name.Name, info)
 }
 
+// GetMetricBySelector implements CustomMetricsProvider interface.
+// The `error` return value is ensured to be in the metav1.Status format.
 func (p *Provider) GetMetricBySelector(ctx context.Context, namespace string, selector labels.Selector, info provider.CustomMetricInfo, _ labels.Selector) (*custom_metrics.MetricValueList, error) {
 	names, err := helpers.ListObjectNames(p.mapper, p.client, namespace, selector, info)
 	if err != nil {
-		return nil, err
+		return nil, apierr.NewInternalError(fmt.Errorf("failed to list objects: %w", err))
 	}
 
 	res := make([]custom_metrics.MetricValue, len(names))
@@ -176,4 +183,14 @@ func (p *Provider) GetMetricBySelector(ctx context.Context, namespace string, se
 	return &custom_metrics.MetricValueList{
 		Items: res,
 	}, nil
+}
+
+// newMetricExpiredForError returns a StatusError, specialized for the case where a metric is expired.
+func newMetricExpiredForError(resource schema.GroupResource, metricName string, resourceName string) *apierr.StatusError {
+	return &apierr.StatusError{ErrStatus: metav1.Status{
+		Status:  metav1.StatusFailure,
+		Code:    int32(http.StatusNotFound),
+		Reason:  metav1.StatusReasonNotFound,
+		Message: fmt.Sprintf("metric %s for %s %s is expired", metricName, resource.String(), resourceName),
+	}}
 }
