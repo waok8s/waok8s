@@ -23,7 +23,9 @@ import (
 	_ "k8s.io/component-base/logs/json/register"
 	_ "k8s.io/component-base/metrics/prometheus/clientgo" // for client metric registration
 	_ "k8s.io/component-base/metrics/prometheus/version"  // for version metric registration
-	"k8s.io/kubernetes/cmd/kube-proxy/app"
+
+	// "k8s.io/kubernetes/cmd/kube-proxy/app"
+	"github.com/waok8s/wao-loadbalancer/cmd/kube-proxy/app"
 )
 
 func main() {
