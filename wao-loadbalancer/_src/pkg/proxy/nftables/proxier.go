@@ -214,6 +214,9 @@ func NewProxier(ipFamily v1.IPFamily,
 	nodePortAddressStrings []string,
 	initOnly bool,
 ) (*Proxier, error) {
+
+	fmt.Println("NewProxier (customized) called")
+
 	nodePortAddresses := proxyutil.NewNodePortAddresses(ipFamily, nodePortAddressStrings, nodeIP)
 
 	if initOnly {
