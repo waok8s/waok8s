@@ -215,7 +215,7 @@ func NewProxier(ipFamily v1.IPFamily,
 	initOnly bool,
 ) (*Proxier, error) {
 
-	fmt.Println("NewProxier (customized) called")
+	klog.V(2).InfoS("WAO-LoadBalancer: NewProxier")
 
 	nodePortAddresses := proxyutil.NewNodePortAddresses(ipFamily, nodePortAddressStrings, nodeIP)
 
