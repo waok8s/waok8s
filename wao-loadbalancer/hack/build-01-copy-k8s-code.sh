@@ -2,7 +2,7 @@
 
 set -e -x
 
-K8S_VERSION="v1.29.4"
+K8S_VERSION="v1.30.0"
 K8S_DIR="bin/src/kubernetes"
 
 # main
