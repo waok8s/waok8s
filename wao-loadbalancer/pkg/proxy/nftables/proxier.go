@@ -44,18 +44,26 @@ import (
 	"k8s.io/client-go/tools/events"
 	utilsysctl "k8s.io/component-helpers/node/util/sysctl"
 	"k8s.io/klog/v2"
-	"k8s.io/kubernetes/pkg/proxy"
-	"k8s.io/kubernetes/pkg/proxy/conntrack"
-	"k8s.io/kubernetes/pkg/proxy/healthcheck"
-	"k8s.io/kubernetes/pkg/proxy/metaproxier"
-	"k8s.io/kubernetes/pkg/proxy/metrics"
-	proxyutil "k8s.io/kubernetes/pkg/proxy/util"
-	proxyutiliptables "k8s.io/kubernetes/pkg/proxy/util/iptables"
 	"k8s.io/kubernetes/pkg/util/async"
 	utilexec "k8s.io/utils/exec"
 	netutils "k8s.io/utils/net"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/knftables"
+
+	// "k8s.io/kubernetes/pkg/proxy"
+	// "k8s.io/kubernetes/pkg/proxy/conntrack"
+	// "k8s.io/kubernetes/pkg/proxy/healthcheck"
+	// "k8s.io/kubernetes/pkg/proxy/metaproxier"
+	// "k8s.io/kubernetes/pkg/proxy/metrics"
+	// proxyutil "k8s.io/kubernetes/pkg/proxy/util"
+	// proxyutiliptables "k8s.io/kubernetes/pkg/proxy/util/iptables"
+	"github.com/waok8s/wao-loadbalancer/pkg/proxy"
+	"github.com/waok8s/wao-loadbalancer/pkg/proxy/conntrack"
+	"github.com/waok8s/wao-loadbalancer/pkg/proxy/healthcheck"
+	"github.com/waok8s/wao-loadbalancer/pkg/proxy/metaproxier"
+	"github.com/waok8s/wao-loadbalancer/pkg/proxy/metrics"
+	proxyutil "github.com/waok8s/wao-loadbalancer/pkg/proxy/util"
+	proxyutiliptables "github.com/waok8s/wao-loadbalancer/pkg/proxy/util/iptables"
 )
 
 const (
@@ -189,6 +197,9 @@ type Proxier struct {
 	// serviceCIDRs is a comma separated list of ServiceCIDRs belonging to the IPFamily
 	// which proxier is operating on, can be directly consumed by knftables.
 	serviceCIDRs string
+
+	// WAO
+	wao *Wao
 }
 
 // Proxier implements proxy.Provider
@@ -211,6 +222,9 @@ func NewProxier(ipFamily v1.IPFamily,
 	nodePortAddressStrings []string,
 	initOnly bool,
 ) (*Proxier, error) {
+
+	klog.V(2).InfoS("WAO-LoadBalancer: NewProxier")
+
 	nodePortAddresses := proxyutil.NewNodePortAddresses(ipFamily, nodePortAddressStrings, nodeIP)
 
 	if initOnly {
@@ -261,6 +275,9 @@ func NewProxier(ipFamily v1.IPFamily,
 	burstSyncs := 2
 	klog.V(2).InfoS("NFTables sync params", "ipFamily", ipFamily, "minSyncPeriod", minSyncPeriod, "syncPeriod", syncPeriod, "burstSyncs", burstSyncs)
 	proxier.syncRunner = async.NewBoundedFrequencyRunner("sync-runner", proxier.syncProxyRules, minSyncPeriod, syncPeriod, burstSyncs)
+
+	// WAO
+	proxier.wao = NewWao()
 
 	return proxier, nil
 }
@@ -989,6 +1006,9 @@ func (proxier *Proxier) syncProxyRules() {
 		klog.V(2).InfoS("SyncProxyRules complete", "elapsed", time.Since(start))
 	}()
 
+	// WAO
+	proxier.wao.collectNodeAndPodList()
+
 	serviceUpdateResult := proxier.svcPortMap.Update(proxier.serviceChanges)
 	endpointUpdateResult := proxier.endpointsMap.Update(proxier.endpointsChanges)
 
@@ -1077,6 +1097,9 @@ func (proxier *Proxier) syncProxyRules() {
 	// metric.
 	serviceNoLocalEndpointsTotalInternal := 0
 	serviceNoLocalEndpointsTotalExternal := 0
+
+	// WAO
+	proxier.wao.calcNodesScore()
 
 	// Build rules for each service-port.
 	for svcName, svc := range proxier.svcPortMap {
@@ -1670,25 +1693,51 @@ func (proxier *Proxier) writeServiceToEndpointRules(tx *knftables.Transaction, s
 		}
 	}
 
+	// WAO
+	var clusterIps []string
+	for _, ep := range endpoints {
+		epInfo, ok := ep.(*endpointInfo)
+		if !ok {
+			continue
+		}
+		clusterIps = append(clusterIps, epInfo.IP())
+	}
+	modRanges := proxier.wao.calcModRanges(clusterIps)
+
 	// Now write loadbalancing rule
 	var elements []string
+	var num int // WAO
 	for i, ep := range endpoints {
 		epInfo, ok := ep.(*endpointInfo)
 		if !ok {
 			continue
 		}
 
+		// WAO
+		modRange := strconv.Itoa(i)
+		if len(modRanges) > 0 {
+			if modRanges[i] == 0 {
+				continue
+			}
+			modRange = strconv.Itoa(num) + "-" + strconv.Itoa(num+int(modRanges[i]-1))
+			num += int(modRanges[i])
+		}
+
 		elements = append(elements,
-			strconv.Itoa(i), ":", "goto", epInfo.chainName,
+			modRange, ":", "goto", epInfo.chainName, // WAO
 		)
 		if i != len(endpoints)-1 {
 			elements = append(elements, ",")
 		}
 	}
+	// WAO
+	if num == 0 {
+		num = len(endpoints)
+	}
 	tx.Add(&knftables.Rule{
 		Chain: svcChain,
 		Rule: knftables.Concat(
-			"numgen random mod", len(endpoints), "vmap",
+			"numgen random mod", num, "vmap", // WAO
 			"{", elements, "}",
 		),
 	})
