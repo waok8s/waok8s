@@ -47,7 +47,6 @@ import (
 	"k8s.io/kubernetes/pkg/proxy"
 	proxyconfigapi "k8s.io/kubernetes/pkg/proxy/apis/config"
 	"k8s.io/kubernetes/pkg/proxy/iptables"
-	"k8s.io/kubernetes/pkg/proxy/ipvs"
 	utilipset "k8s.io/kubernetes/pkg/proxy/ipvs/ipset"
 	utilipvs "k8s.io/kubernetes/pkg/proxy/ipvs/util"
 	proxymetrics "k8s.io/kubernetes/pkg/proxy/metrics"
@@ -57,7 +56,9 @@ import (
 	utiliptables "k8s.io/kubernetes/pkg/util/iptables"
 	"k8s.io/utils/exec"
 
+	// "k8s.io/kubernetes/pkg/proxy/ipvs"
 	// "k8s.io/kubernetes/pkg/proxy/nftables"
+	"github.com/waok8s/wao-loadbalancer/pkg/proxy/ipvs"
 	"github.com/waok8s/wao-loadbalancer/pkg/proxy/nftables"
 )
 
