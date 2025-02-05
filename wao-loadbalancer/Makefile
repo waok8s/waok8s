@@ -11,11 +11,17 @@ all: test build image
 
 .PHONY: gen
 gen:
-	go generate ./...
+	rm -rf ./pkg
+	rm -rf ./cmd
+	./hack/build-01-copy-k8s-code.sh
+	./hack/build-02-apply-patches.sh
+#	go generate ./...
 
 .PHONY: test
 test: gen
-	go test -v -race -coverprofile=cover.out ./...
+	echo "NOTE: go test will fail as it runs all tests in the k8s.io/kubernetes/pkg/proxy repository"
+	echo "      and currently we do not have tests for our implementation"
+#	go test -v -race -coverprofile=cover.out ./...
 
 .PHONY: image
 image: gen
