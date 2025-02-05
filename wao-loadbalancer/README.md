@@ -21,11 +21,10 @@ A kube-proxy with energy-aware load balancing feature.
 
 ## Overview
 
-WAO Load Balancer is a custom kube-proxy that uses WAO to achieve energy-aware load balancing. Calculating the weight of each node based on the power consumption model, then updating the weight of the node in the kube-proxy implementation.
+WAO Load Balancer is a custom kube-proxy that uses WAO to achieve energy-aware load balancing. Calculating the weight of each node based on the power consumption model, then updating the weight of the node in the kube-proxy implementation. Only kube-proxy in `nftables` mode is supported.
 
-The following mode of kube-proxy is supported:
-- nftables
-- ipvs (deprecated)
+> [!NOTE]
+> We previously supported `ipvs` mode, but it is now removed.
 
 ## Getting Started
 
