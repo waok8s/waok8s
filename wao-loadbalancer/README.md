@@ -82,13 +82,13 @@ This work is supported by the New Energy and Industrial Technology Development O
 
 ## License
 
-> [!INFO]
+> [!NOTE]
 > The original Kubernetes code is [licensed under Apache-2.0](https://github.com/kubernetes/kubernetes/blob/master/LICENSE).
 
-Copyright 2021 Osaka University.
-Copyright 2022 Bitmedia, Inc.
-Copyright 2024 Neutrix Cloud Japan Corporation.
-Copyright 2025 Bitmedia, Inc.
+Copyright 2021 Osaka University.  
+Copyright 2022 Bitmedia, Inc.  
+Copyright 2024 Neutrix Cloud Japan Corporation.  
+Copyright 2025 Bitmedia, Inc.  
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
