@@ -17,5 +17,7 @@ jobs:
           go-version-file: go.mod
       - name: "test: unit tests"
         run: make test
+      - name: "test: deploy"
+        run: ./hack/dev-kind-reset-cluster.sh && ./hack/dev-kind-deploy.sh
       # - name: "test: integration tests"
       #   run: ./test/reset-test-cluster.sh && ./test/run-tests.sh
