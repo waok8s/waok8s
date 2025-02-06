@@ -22,10 +22,10 @@ make image IMAGE_REGISTRY=$IMAGE_REGISTRY IMAGE_NAME=$IMAGE_NAME VERSION="$VERSI
 
 # deploy WAO-LB
 "$KIND" load docker-image "$IMAGE" -n "$KIND_CLUSTER_NAME"
-. config/base/patches/kube-proxy-set-mode-nftables.sh
+. config/base/patches/kube-proxy-set-mode-nftables.sh # just for safety (our implementation ignores the value in the config file)
 . config/base/patches/kube-proxy-set-image-waolb.sh
 "$KUBECTL" rollout restart daemonset kube-proxy -n kube-system
-"$KUBECTL" rollout status daemonset/kube-proxy -n kube-system --timeout=30s
+"$KUBECTL" rollout status daemonset kube-proxy -n kube-system --timeout=30s
 
 echo ''
 echo 'Completed!'

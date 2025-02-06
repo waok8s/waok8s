@@ -1,0 +1,76 @@
+---
+# This is the DaemonSet for WAO Load Balancer.
+# This DaemonSet is based on the kube-proxy DaemonSet, but has some notable points:
+# - Name and labels are changed to `wao-loadbalancer`.
+# - `service.kubernetes.io/service-proxy-name` label is set.
+# - Use same ConfigMap as the kube-proxy DaemonSet (but you can change it if needed).
+# - In our custom kube-proxy, the following values set in cmd args and ConfigMap is ignored:
+#   - --proxy-mode: fixed to `nftables` (we only support nftables mode)
+#   - --healthz-bind-address: fixed to `0.0.0.0:10356` (kube-proxy uses 0.0.0.0:10256 by default)
+#   - --metrics-bind-address: fixed to `0.0.0.0:10349` (kube-proxy uses 127.0.0.1:10249 by default)
+# - `xtables-lock` is no longer needed as we use `nftables` mode, but it's still mounted for safety.
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  labels:
+    app: wao-loadbalancer
+  name: wao-loadbalancer
+  namespace: kube-system
+spec:
+  selector:
+    matchLabels:
+      app: wao-loadbalancer
+  template:
+    metadata:
+      labels:
+        app: wao-loadbalancer
+        service.kubernetes.io/service-proxy-name: wao-loadbalancer
+    spec:
+      containers:
+        - command:
+            - /usr/local/bin/kube-proxy
+            - --config=/var/lib/kube-proxy/config.conf
+            - --hostname-override=$(NODE_NAME)
+            - --v=5 # default: 2
+          env:
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: spec.nodeName
+          # image: registry.k8s.io/kube-proxy:v1.30.0
+          image: localhost/wao-loadbalancer:v0.0.1-dev
+          name: kube-proxy
+          resources: {}
+          securityContext:
+            privileged: true
+          volumeMounts:
+            - mountPath: /var/lib/kube-proxy
+              name: kube-proxy
+            - mountPath: /run/xtables.lock
+              name: xtables-lock
+            - mountPath: /lib/modules
+              name: lib-modules
+              readOnly: true
+      hostNetwork: true
+      nodeSelector:
+        kubernetes.io/os: linux
+      priorityClassName: system-node-critical
+      securityContext: {}
+      serviceAccount: kube-proxy
+      serviceAccountName: kube-proxy
+      tolerations:
+        - operator: Exists
+      volumes:
+        - configMap:
+            defaultMode: 420
+            name: kube-proxy # Use the same ConfigMap as the kube-proxy DaemonSet
+          name: kube-proxy
+        - hostPath:
+            path: /run/xtables.lock
+            type: FileOrCreate
+          name: xtables-lock # This is no longer needed, but it's still mounted for safety
+        - hostPath:
+            path: /lib/modules
+            type: ""
+          name: lib-modules

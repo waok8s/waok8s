@@ -8,6 +8,8 @@ A kube-proxy with energy-aware load balancing feature.
 - [Overview](#overview)
 - [Getting Started](#getting-started)
   - [Installation](#installation)
+    - [Use WAO-LoadBalancer as second Service Proxy (Reccomended)](#use-wao-loadbalancer-as-second-service-proxy-reccomended)
+    - [Use WAO-LoadBalancer as the default Service Proxy](#use-wao-loadbalancer-as-the-default-service-proxy)
   - [Deploy Services](#deploy-services)
   - [Check Current Weights](#check-current-weights)
 - [Configuration](#configuration)
@@ -33,9 +35,27 @@ WAO Load Balancer is a custom kube-proxy that uses WAO to achieve energy-aware l
 > [!NOTE]
 > Make sure you have [wao-core](https://github.com/waok8s/wao-core) and [wao-metrics-adapter](https://github.com/waok8s/wao-metrics-adapter) set up.
 
+We have two ways to use WAO Load Balancer described below. Before deploying WAO Load Balancer, we mention some notable points:
+- WAO Load Balancer is based on kube-proxy. We just changed some logic in logic.
+- Proxy mode is always `nftables`, the value in config file is ignored.
+- Healthz server is running on `0.0.0.0:10356`, the value in config file is ignored.
+- Metrics server is running on `0.0.0.0:10349`, the value in config file is ignored.
 
-1. Ensure kube-proxy is running in nftables mode.
-2. Replace the container image of kube-proxy with our custom image.
+#### Use WAO-LoadBalancer as second Service Proxy (Reccomended)
+
+Kubernetes has `service.kubernetes.io/service-proxy-name` label for this purpose.
+Set the label with specific value to kube-proxy Pod, then the kube-proxy will only handle services with the same label.
+So you can run WAO Load Balancer as a second service proxy by following these steps:
+1. Deploy the WAO Load Balancer as a second service proxy.
+2. Set the label `service.kubernetes.io/service-proxy-name: wao-loadbalancer` to Services that you want to use WAO Load Balancer.
+
+> [!NOTE]
+> This kube-proxy feature is not described in the official documentation yet, but can be found in [KEP-2447](https://github.com/kubernetes/enhancements/tree/13a4bd1c2eb29d39275ba433ecf952882e0092c5/keps/sig-network/2447-Make-kube-proxy-service-abstraction-optional), and also supported by other service proxies (e.g., [Kube-router](https://github.com/cloudnativelabs/kube-router/issues/979), [Cilium](https://docs.cilium.io/en/stable/network/kubernetes/kubeproxy-free/)).
+
+#### Use WAO-LoadBalancer as the default Service Proxy
+
+WAO Load Balancer can be used as a drop-in replacement for the default kube-proxy by following these steps:
+1. Replace the container image of kube-proxy with our custom image.
 
 ### Deploy Services
 
@@ -89,7 +109,7 @@ This work is supported by the New Energy and Industrial Technology Development O
 ## License
 
 > [!NOTE]
-> The original Kubernetes code is [licensed under Apache-2.0](https://github.com/kubernetes/kubernetes/blob/master/LICENSE).
+> The original Kubernetes code is licensed under [its own license](https://github.com/kubernetes/kubernetes/blob/master/LICENSE).
 
 Copyright 2021 Osaka University.  
 Copyright 2022 Bitmedia, Inc.  
