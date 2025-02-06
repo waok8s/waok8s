@@ -29,15 +29,15 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-  # release:
-  #   name: Release on GitHub
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/checkout@v3
-  #     - uses: actions/setup-go@v3
-  #       with:
-  #         go-version-file: go.mod
-  #     - run: REGISTRY=ghcr.io/${GITHUB_REPOSITORY_OWNER,,} ./hack/dist.sh
-  #     - uses: softprops/action-gh-release@v1
-  #       with:
-  #         files: wao-loadbalancer.yaml
+  release:
+    name: Release on GitHub
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v3
+        with:
+          go-version-file: go.mod
+      - run: REGISTRY=ghcr.io/${GITHUB_REPOSITORY_OWNER,,} ./hack/dist.sh
+      - uses: softprops/action-gh-release@v1
+        with:
+          files: wao-loadbalancer.yaml
