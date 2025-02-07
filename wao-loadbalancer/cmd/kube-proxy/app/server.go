@@ -903,21 +903,20 @@ func (s *ProxyServer) Run() error {
 
 	// WAO: check service proxy name
 	var proxyNameReq *labels.Requirement
-	proxyName := os.Getenv(EnvVarProxyName)
-	if proxyName != "" {
+	if WAOProxyName != "" {
 		noProxyName, err := labels.NewRequirement(apis.LabelServiceProxyName, selection.DoesNotExist, nil)
 		if err != nil {
 			return err
 		}
 		proxyNameReq = noProxyName
-		s.logger.Info("WAO: Proxy Name is not set, act as default service proxy", EnvVarProxyName, proxyName)
+		s.logger.Info("WAO: default service proxy mode", EnvVarProxyName, "")
 	} else {
-		withProxyName, err := labels.NewRequirement(apis.LabelServiceProxyName, selection.Equals, []string{proxyName})
+		withProxyName, err := labels.NewRequirement(apis.LabelServiceProxyName, selection.Equals, []string{WAOProxyName})
 		if err != nil {
 			return err
 		}
 		proxyNameReq = withProxyName
-		s.logger.Info("WAO: Proxy Name is set, act as secondary service proxy", EnvVarProxyName, proxyName)
+		s.logger.Info("WAO: non-default service proxy mode", EnvVarProxyName, WAOProxyName)
 	}
 
 	noHeadlessEndpoints, err := labels.NewRequirement(v1.IsHeadlessService, selection.DoesNotExist, nil)

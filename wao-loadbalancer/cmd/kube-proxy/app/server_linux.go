@@ -80,10 +80,15 @@ func (o *Options) platformApplyDefaults(config *proxyconfigapi.KubeProxyConfigur
 	o.logger.V(2).Info("DetectLocalMode", "localMode", string(config.DetectLocalMode))
 
 	// WAO
-	config.Mode = proxyconfigapi.ProxyModeNFTables        // fix mode to nftables for WAO
-	config.HealthzBindAddress = DefaultHealthzBindAddress // TODO: parse the value and edit the port
-	config.MetricsBindAddress = DefaultMetricsBindAddress // TODO: parse the value and edit the port
-	o.logger.V(2).Info("Applied default values for WAO Load Balancer", "mode", config.Mode, "healthzBindAddress", config.HealthzBindAddress, "metricsBindAddress", config.MetricsBindAddress)
+	config.Mode = proxyconfigapi.ProxyModeNFTables // fix mode to nftables for WAO
+	if WAOProxyName == "" {
+		o.logger.V(2).Info("Applied values for WAO Load Balancer (default service proxy mode)", "mode", config.Mode)
+	} else {
+		// avoid conflicts with kube-proxy when WAO-LB is running in non-default mode
+		config.HealthzBindAddress = DefaultHealthzBindAddress
+		config.MetricsBindAddress = DefaultMetricsBindAddress
+		o.logger.V(2).Info("Applied values for WAO Load Balancer (non-default service proxy mode)", "mode", config.Mode, "healthzBindAddress", config.HealthzBindAddress, "metricsBindAddress", config.MetricsBindAddress)
+	}
 }
 
 // platformSetup is called after setting up the ProxyServer, but before creating the
