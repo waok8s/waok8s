@@ -107,7 +107,24 @@ kubectl exec -n kube-system <kube-proxy-pod> -- nft list ruleset
 
 ## Configuration
 
-// TODO: write about configuration (envvars, etc.)
+Currently we don't have a configuration file for WAO-LB specific settings.
+Here is a non-comprehensive list of the variables and their implementation status:
+
+- Service Proxy Name
+  - Environment variable `WAO_SERVICE_PROXY_NAME`
+  - Set this value triggers the non-default service proxy mode
+- nftables Table Name
+  - Not implemented yet
+  - Fixed to `wao-loadbalancer`
+- WAO Metrics Cache TTL
+  - Not implemented yet
+  - Fixed to `30s`
+- WAO Predictor Cache TTL
+  - Not implemented yet
+  - Fixed to `30m`
+- Predictor Pallarelism
+  - Not implemented yet
+  - Fixed to `64`
 
 ## Development
 
