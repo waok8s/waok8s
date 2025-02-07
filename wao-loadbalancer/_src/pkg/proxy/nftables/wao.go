@@ -33,6 +33,10 @@ import (
 )
 
 const (
+	NFTableNameWAOLB = "wao-loadbalancer"
+)
+
+const (
 	// parallelism for better CPU utilization,
 	// using k8s.io/kubernetes/pkg/scheduler/internal/parallelize as a reference.
 	parallelism = 16
