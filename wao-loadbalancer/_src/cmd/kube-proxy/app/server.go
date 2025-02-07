@@ -912,7 +912,7 @@ func (s *ProxyServer) Run() error {
 		proxyNameReq = noProxyName
 		s.logger.Info("WAO: Proxy Name is not set, act as default service proxy", EnvVarProxyName, proxyName)
 	} else {
-		withProxyName, err := labels.NewRequirement(apis.LabelServiceProxyName, selection.Equals, []string{nftables.LabelValueServiceProxyName})
+		withProxyName, err := labels.NewRequirement(apis.LabelServiceProxyName, selection.Equals, []string{proxyName})
 		if err != nil {
 			return err
 		}
