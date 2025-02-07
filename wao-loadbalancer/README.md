@@ -40,16 +40,21 @@ We have two ways to use WAO-LB described below. Before deploying WAO-LB, we ment
 - Proxy mode is always `nftables`, the value in config file is ignored.
 - Healthz server is running on `0.0.0.0:10356`, the value in config file is ignored.
 - Metrics server is running on `0.0.0.0:10349`, the value in config file is ignored.
+- Environment variable `WAO_SERVICE_PROXY_NAME` is used to set the service proxy name.
+  - Empty string or unset: act as the default service proxy (handle all normal services).
+- nftables table name is `wao-loadbalancer` instead of `kube-proxy`.
 
 #### Use WAO-LB as second Service Proxy (Recommended)
 
 Kubernetes has `service.kubernetes.io/service-proxy-name` label for this purpose.
-Set the label with specific value to kube-proxy Pod, then the kube-proxy will only handle services with the same label.
+Set the label with specific value to Services, then the default kube-proxy will ignore them.
+
 So you can run WAO-LB as a second service proxy by following these steps:
 1. Edit kube-proxy ConfigMap to set the proxy mode to `nftables`.
   - WAO-LB ignores this value, but `iptables` kube-proxy fails if there are another kube-proxy in `nftables` mode.
 2. Deploy the WAO-LB as a second service proxy.
 3. Set the label `service.kubernetes.io/service-proxy-name: wao-loadbalancer` to Services that you want to use WAO-LB.
+  - If you want to change service proxy name of WAO-LB, edit environment variable `WAO_SERVICE_PROXY_NAME` in the `wao-loadbalancer` Deployment.
 
 > [!NOTE]
 > This kube-proxy feature is not described in the official documentation yet, but can be found in [KEP-2447](https://github.com/kubernetes/enhancements/tree/13a4bd1c2eb29d39275ba433ecf952882e0092c5/keps/sig-network/2447-Make-kube-proxy-service-abstraction-optional), and also supported by other service proxies (e.g., [Kube-router](https://github.com/cloudnativelabs/kube-router/issues/979), [Cilium](https://docs.cilium.io/en/stable/network/kubernetes/kubeproxy-free/)).
@@ -84,13 +89,18 @@ Do like this:
 
 ### Check Current Weights
 
-Run `nft` on the node is the easiest way.
+Use `nft` command is the easiest way.
 
-// TODO: TBD
+```sh
+kubectl exec -n kube-system <kube-proxy-pod> -- nft list table
+kubectl exec -n kube-system <kube-proxy-pod> -- nft list ruleset
+```
+
+// TODO: write more details
 
 ## Configuration
 
-// TODO: TBD
+// TODO: write about configuration (envvars, etc.)
 
 ## Development
 

@@ -2,7 +2,7 @@
 # This is the DaemonSet for WAO Load Balancer.
 # This DaemonSet is based on the kube-proxy DaemonSet, but has some notable points:
 # - Name and labels are changed to `wao-loadbalancer`.
-# - `service.kubernetes.io/service-proxy-name` label is set.
+# - Environment variable `WAO_SERVICE_PROXY_NAME` is added to specify the service proxy name.
 # - Use same ConfigMap as the kube-proxy DaemonSet (but you can change it if needed).
 # - In our custom kube-proxy, the following values set in cmd args and ConfigMap is ignored:
 #   - --proxy-mode: fixed to `nftables` (we only support nftables mode)
@@ -24,7 +24,6 @@ spec:
     metadata:
       labels:
         app: wao-loadbalancer
-        service.kubernetes.io/service-proxy-name: wao-loadbalancer
     spec:
       containers:
         - command:
@@ -38,6 +37,9 @@ spec:
                 fieldRef:
                   apiVersion: v1
                   fieldPath: spec.nodeName
+            # delete this entry if you want to use WAO Load Balancer as the default service proxy
+            - name: WAO_SERVICE_PROXY_NAME
+              value: "wao-loadbalancer"
           # image: registry.k8s.io/kube-proxy:v1.30.0
           image: localhost/wao-loadbalancer:v0.0.1-dev
           name: kube-proxy
