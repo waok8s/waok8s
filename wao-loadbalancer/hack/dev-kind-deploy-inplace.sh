@@ -22,16 +22,13 @@ make image IMAGE_REGISTRY=$IMAGE_REGISTRY IMAGE_NAME=$IMAGE_NAME VERSION="$VERSI
 
 # deploy WAO-LB
 "$KIND" load docker-image "$IMAGE" -n "$KIND_CLUSTER_NAME"
-. config/base/patches/kube-proxy-set-mode-nftables.sh
+. config/base/patches/kube-proxy-set-mode-nftables.sh # just for safety (our implementation ignores the value in the config file)
 . config/base/patches/kube-proxy-set-image-waolb.sh
 "$KUBECTL" rollout restart daemonset kube-proxy -n kube-system
-"$KUBECTL" rollout status daemonset/kube-proxy -n kube-system --timeout=30s
+"$KUBECTL" rollout status daemonset kube-proxy -n kube-system --timeout=30s
 
 echo ''
 echo 'Completed!'
 echo ''
-# TODO: add instructions
-# echo 'Check Pods:'
-# echo "    kubectl logs $($KUBECTL get pods -l app=wao-scheduler -o jsonpath="{.items[0].metadata.name}" --field-selector=status.phase=Running -n kube-system) -f -nkube-system"
-# echo 'Run a Deployment:'
-# echo '    kubectl delete -f config/samples/dep.yaml ; kubectl apply -f config/samples/dep.yaml && sleep 2 && kubectl get pod'
+echo 'Run the sample Deployment and Services:'
+echo '    kubectl delete -f config/samples ; kubectl apply -f config/samples && sleep 2 && kubectl get endpointslice'

@@ -78,6 +78,12 @@ func (o *Options) platformApplyDefaults(config *proxyconfigapi.KubeProxyConfigur
 		config.DetectLocalMode = proxyconfigapi.LocalModeClusterCIDR
 	}
 	o.logger.V(2).Info("DetectLocalMode", "localMode", string(config.DetectLocalMode))
+
+	// WAO
+	config.Mode = proxyconfigapi.ProxyModeNFTables // fix mode to nftables for WAO
+	config.HealthzBindAddress = "0.0.0.0:10356"    // TODO: parse the value and edit the port
+	config.MetricsBindAddress = "0.0.0.0:10349"    // TODO: parse the value and edit the port
+	o.logger.V(2).Info("Applied default values for WAO-LB", "mode", config.Mode, "healthzBindAddress", config.HealthzBindAddress, "metricsBindAddress", config.MetricsBindAddress)
 }
 
 // platformSetup is called after setting up the ProxyServer, but before creating the

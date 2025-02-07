@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-waolb
+  labels:
+    app: nginx
+    service.kubernetes.io/service-proxy-name: wao-loadbalancer
+spec:
+  ports:
+    - port: 80
+      targetPort: 80
+  selector:
+    app: nginx
