@@ -8,7 +8,7 @@ A kube-proxy with energy-aware load balancing feature.
 - [Overview](#overview)
 - [Getting Started](#getting-started)
   - [Installation](#installation)
-    - [Use WAO-LB as second Service Proxy (Recommended)](#use-wao-lb-as-second-service-proxy-recommended)
+    - [Use WAO-LB as non-default Service Proxy (Recommended)](#use-wao-lb-as-non-default-service-proxy-recommended)
     - [Use WAO-LB as the default Service Proxy](#use-wao-lb-as-the-default-service-proxy)
   - [Deploy Services](#deploy-services)
   - [Check Current Weights](#check-current-weights)
@@ -35,26 +35,32 @@ WAO Load Balancer (WAO-LB) is a custom kube-proxy that uses WAO to achieve energ
 > [!NOTE]
 > Make sure you have [wao-core](https://github.com/waok8s/wao-core) and [wao-metrics-adapter](https://github.com/waok8s/wao-metrics-adapter) set up.
 
-We have two ways to use WAO-LB described below. Before deploying WAO-LB, we mention some notable points:
-- WAO-LB is based on kube-proxy. We just changed some logic.
-- Proxy mode is always `nftables`, the value in config file is ignored.
-- Healthz server is running on `0.0.0.0:10356`, the value in config file is ignored.
-- Metrics server is running on `0.0.0.0:10349`, the value in config file is ignored.
-- Environment variable `WAO_SERVICE_PROXY_NAME` is used to set the service proxy name.
-  - Empty string or unset: act as the default service proxy (handle all normal services).
-- nftables table name is `wao-loadbalancer` instead of `kube-proxy`.
+There are two ways to use WAO-LB: as a non-default service proxy or as the default service proxy, and there are some notable points:
 
-#### Use WAO-LB as second Service Proxy (Recommended)
+- In both modes:
+  - WAO-LB is based on kube-proxy. We just changed some logic.
+  - Proxy mode is always `nftables`, the value in config file is ignored.
+  - nftables table name is `wao-loadbalancer` instead of `kube-proxy`.
+- In non-default service proxy mode:
+  - Healthz server is running on `0.0.0.0:10356`, the value in config file is ignored.
+  - Metrics server is running on `0.0.0.0:10349`, the value in config file is ignored.
+  - Environment variable `WAO_SERVICE_PROXY_NAME` must be set (this triggers the non-default service proxy mode, recommended value is `wao-loadbalancer`).
+- In default service proxy mode:
+  - Healthz server and metrics server are set by the config file.
+  - Environment variable `WAO_SERVICE_PROXY_NAME` must be empty or not set.
+
+#### Use WAO-LB as non-default Service Proxy (Recommended)
 
 Kubernetes has `service.kubernetes.io/service-proxy-name` label for this purpose.
 Set the label with specific value to Services, then the default kube-proxy will ignore them.
 
-So you can run WAO-LB as a second service proxy by following these steps:
+So you can run WAO-LB as a non-default service proxy by following these steps:
 1. Edit kube-proxy ConfigMap to set the proxy mode to `nftables`.
   - WAO-LB ignores this value, but `iptables` kube-proxy fails if there are another kube-proxy in `nftables` mode.
-2. Deploy the WAO-LB as a second service proxy.
+2. Deploy the WAO-LB as a non-default service proxy.
+  - Environment variable `WAO_SERVICE_PROXY_NAME` must be set.
 3. Set the label `service.kubernetes.io/service-proxy-name: wao-loadbalancer` to Services that you want to use WAO-LB.
-  - If you want to change service proxy name of WAO-LB, edit environment variable `WAO_SERVICE_PROXY_NAME` in the `wao-loadbalancer` Deployment.
+  - If you want to change service proxy name of WAO-LB, edit environment variable `WAO_SERVICE_PROXY_NAME`.
 
 > [!NOTE]
 > This kube-proxy feature is not described in the official documentation yet, but can be found in [KEP-2447](https://github.com/kubernetes/enhancements/tree/13a4bd1c2eb29d39275ba433ecf952882e0092c5/keps/sig-network/2447-Make-kube-proxy-service-abstraction-optional), and also supported by other service proxies (e.g., [Kube-router](https://github.com/cloudnativelabs/kube-router/issues/979), [Cilium](https://docs.cilium.io/en/stable/network/kubernetes/kubeproxy-free/)).
@@ -63,6 +69,7 @@ So you can run WAO-LB as a second service proxy by following these steps:
 
 WAO-LB can be used as a drop-in replacement for the default kube-proxy by following these steps:
 1. Replace the container image of kube-proxy with our custom image.
+  - Ensure that the environment variable `WAO_SERVICE_PROXY_NAME` is empty or not set.
 
 ### Deploy Services
 
@@ -126,7 +133,7 @@ Versioning: we use the same major.minor as Kubernetes, and the patch is our own.
 
 - 2025-xx-xx `v1.30.0-alpha.1`
   - Drop support for `ipvs` mode (now only `nftables` mode is supported).
-  - Support second service proxy deployment.
+  - Support non-default service proxy deployment.
   - Internal improvements.
   - TBD
 - 2025-02-05 `v1.30.0-alpha.0`
