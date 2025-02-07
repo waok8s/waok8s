@@ -61,7 +61,10 @@ import (
 const (
 	// Our nftables table. All of our chains/sets/maps are created inside this table,
 	// so they don't need any "kube-" or "kube-proxy-" prefix of their own.
-	kubeProxyTable = "kube-proxy"
+	// kubeProxyTable = "kube-proxy"
+
+	// WAO
+	kubeProxyTable = NFTableNameWAOLB
 
 	// base chains
 	filterPreroutingChain     = "filter-prerouting"
