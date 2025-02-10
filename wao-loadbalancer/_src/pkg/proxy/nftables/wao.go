@@ -20,6 +20,7 @@ import (
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/klog/v2"
 
+	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	metricsclientv1beta1 "k8s.io/metrics/pkg/client/clientset/versioned/typed/metrics/v1beta1"
 	custommetricsclient "k8s.io/metrics/pkg/client/custom_metrics"
 
