@@ -23,6 +23,8 @@ make image IMAGE_REGISTRY=$IMAGE_REGISTRY IMAGE_NAME=$IMAGE_NAME VERSION="$VERSI
 # deploy WAO-LB
 "$KIND" load docker-image "$IMAGE" -n "$KIND_CLUSTER_NAME"
 . config/base/patches/kube-proxy-set-mode-nftables.sh # our implementation ignores this value but we cannot have both modes at the same time (it causes iptables one to fail)
+"$KUBECTL" rollout restart daemonset kube-proxy -n kube-system
+"$KUBECTL" rollout status daemonset kube-proxy -n kube-system --timeout=30s
 "$KUBECTL" apply -k config/base
 "$KUBECTL" rollout restart daemonset wao-loadbalancer -n kube-system
 "$KUBECTL" rollout status daemonset wao-loadbalancer -n kube-system --timeout=30s
