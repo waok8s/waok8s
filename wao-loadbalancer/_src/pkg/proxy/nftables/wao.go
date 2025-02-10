@@ -21,7 +21,7 @@ import (
 	"k8s.io/klog/v2"
 
 	metricsclientv1beta1 "k8s.io/metrics/pkg/client/clientset/versioned/typed/metrics/v1beta1"
-	"k8s.io/metrics/pkg/client/custom_metrics"
+	custommetricsclient "k8s.io/metrics/pkg/client/custom_metrics"
 
 	waov1beta1 "github.com/waok8s/wao-core/api/wao/v1beta1"
 	waoclient "github.com/waok8s/wao-core/pkg/client"
@@ -47,11 +47,20 @@ const (
 	DefaultPredictorCacheTTL = 30 * time.Minute
 )
 
+var (
+	scheme = runtime.NewScheme()
+)
+
+func init() {
+	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
+	utilruntime.Must(waov1beta1.AddToScheme(scheme))
+}
+
 type WAOLB struct {
-	clientSet       *kubernetes.Clientset
-	ctrlClient      client.Client
-	metricsClient   *waoclient.CachedMetricsClient
-	predictorClient *waoclient.CachedPredictorClient
+	k8sclient       *kubernetes.Clientset
+	ctrlclient      client.Client
+	metricsclient   *waoclient.CachedMetricsClient
+	predictorclient *waoclient.CachedPredictorClient
 
 	nodeNames     []string
 	endpoint2Node map[string]string
@@ -60,53 +69,55 @@ type WAOLB struct {
 
 func NewWAOLB() (*WAOLB, error) {
 
-	var clientSet *kubernetes.Clientset
-	config, err := rest.InClusterConfig()
+	cfg, err := rest.InClusterConfig()
 	if err != nil {
 		return nil, err
 	}
-	clientSet, err = kubernetes.NewForConfig(config)
+
+	// init kubernetes client
+	clientSet, err := kubernetes.NewForConfig(cfg)
 	if err != nil {
 		return nil, err
 	}
 
 	// init metrics client
-	mc, err := metricsclientv1beta1.NewForConfig(config)
+	mc, err := metricsclientv1beta1.NewForConfig(cfg)
 	if err != nil {
 		return nil, err
 	}
+
 	// init custom metrics client
 	// https://github.com/kubernetes/kubernetes/blob/7b9d244efd19f0d4cce4f46d1f34a6c7cff97b18/test/e2e/instrumentation/monitoring/custom_metrics_stackdriver.go#L59
-	dc, err := discovery.NewDiscoveryClientForConfig(config)
+	dc, err := discovery.NewDiscoveryClientForConfig(cfg)
 	if err != nil {
 		return nil, err
 	}
 	rm := restmapper.NewDeferredDiscoveryRESTMapper(cacheddiscovery.NewMemCacheClient(dc))
 	rm.Reset()
-	avg := custom_metrics.NewAvailableAPIsGetter(dc)
-	cmc := custom_metrics.NewForConfig(config, rm, avg)
+	avg := custommetricsclient.NewAvailableAPIsGetter(dc)
+	cmc := custommetricsclient.NewForConfig(cfg, rm, avg)
+
 	// init controller-runtime client
-	scheme := runtime.NewScheme()
-	utilruntime.Must(waov1beta1.AddToScheme(scheme))
-	ca, err := cache.New(config, cache.Options{
+	ca, err := cache.New(cfg, cache.Options{
 		Scheme: scheme,
 	})
 	if err != nil {
 		return nil, err
 	}
-	go ca.Start(context.TODO())
-	c, err := client.New(config, client.Options{
+	go ca.Start(context.TODO()) // NOTE: this context needs live until the kube-proxy stops
+	c, err := client.New(cfg, client.Options{
 		Scheme: scheme,
 		Cache:  &client.CacheOptions{Reader: ca},
 	})
 	if err != nil {
 		return nil, err
 	}
+
 	return &WAOLB{
-		clientSet:       clientSet,
-		ctrlClient:      c,
-		metricsClient:   waoclient.NewCachedMetricsClient(mc, cmc, DefaultMetricsCacheTTL),
-		predictorClient: waoclient.NewCachedPredictorClient(clientSet, DefaultMetricsCacheTTL),
+		k8sclient:       clientSet,
+		ctrlclient:      c,
+		metricsclient:   waoclient.NewCachedMetricsClient(mc, cmc, DefaultMetricsCacheTTL),
+		predictorclient: waoclient.NewCachedPredictorClient(clientSet, DefaultMetricsCacheTTL),
 		nodeNames:       []string{},
 		endpoint2Node:   make(map[string]string),
 		nodeScores:      make(map[string]int64),
@@ -116,7 +127,7 @@ func NewWAOLB() (*WAOLB, error) {
 // Get list of nodes Name inside Cluster
 func (w *WAOLB) GetNodesName() {
 	nodesName := []string{}
-	nodes, err := w.clientSet.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{})
+	nodes, err := w.k8sclient.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
 		klog.Warningf("Cannot get list of nodes. Error : %v", err)
 	}
@@ -135,7 +146,7 @@ func (w *WAOLB) GetNodesName() {
 func (w *WAOLB) GetPodsEndpoint() {
 	endpointsBelongNode := make(map[string]string)
 
-	pods, err := w.clientSet.CoreV1().Pods("").List(context.TODO(), metav1.ListOptions{})
+	pods, err := w.k8sclient.CoreV1().Pods("").List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
 		klog.Warningf("Cannot get list of pods. Error : %v", err)
 	}
@@ -182,14 +193,14 @@ func (w *WAOLB) Score(nodeName string) int64 {
 
 	ctx := context.TODO()
 
-	nodeInfo, err := w.clientSet.CoreV1().Nodes().Get(ctx, nodeName, metav1.GetOptions{})
+	nodeInfo, err := w.k8sclient.CoreV1().Nodes().Get(ctx, nodeName, metav1.GetOptions{})
 	if err != nil {
 		klog.Errorf("%v : Cannot get Nodes info. Error : %v", nodeName, err)
 		return -1
 	}
 
 	// get node metrics
-	nodeMetrics, err := w.metricsClient.GetNodeMetrics(ctx, nodeName)
+	nodeMetrics, err := w.metricsclient.GetNodeMetrics(ctx, nodeName)
 	if err != nil {
 		klog.ErrorS(err, "wao.Score score=ScoreError as error occurred", "node", nodeName)
 		return -1
@@ -208,12 +219,12 @@ func (w *WAOLB) Score(nodeName string) int64 {
 	klog.InfoS("wao.Score usage (formatted)", "node", nodeName, "usage_before", beforeUsage, "cpu_capacity", cpuCapacity)
 
 	// get custom metrics
-	inletTemp, err := w.metricsClient.GetCustomMetricForNode(ctx, nodeName, waometrics.ValueInletTemperature)
+	inletTemp, err := w.metricsclient.GetCustomMetricForNode(ctx, nodeName, waometrics.ValueInletTemperature)
 	if err != nil {
 		klog.ErrorS(err, "wao.Score score=ScoreError as error occurred", "node", nodeName)
 		return -1
 	}
-	deltaP, err := w.metricsClient.GetCustomMetricForNode(ctx, nodeName, waometrics.ValueDeltaPressure)
+	deltaP, err := w.metricsclient.GetCustomMetricForNode(ctx, nodeName, waometrics.ValueDeltaPressure)
 	if err != nil {
 		klog.ErrorS(err, "wao.Score score=ScoreError as error occurred", "node", nodeName)
 		return -1
@@ -223,7 +234,7 @@ func (w *WAOLB) Score(nodeName string) int64 {
 	// get NodeConfig
 	var nc *waov1beta1.NodeConfig
 	var ncs waov1beta1.NodeConfigList
-	if err := w.ctrlClient.List(ctx, &ncs); err != nil {
+	if err := w.ctrlclient.List(ctx, &ncs); err != nil {
 		klog.ErrorS(err, "wao.Score score=ScoreError as error occurred", "node", nodeName)
 		return -1
 	}
@@ -249,7 +260,7 @@ func (w *WAOLB) Score(nodeName string) int64 {
 	}
 
 	if nc.Spec.Predictor.PowerConsumptionEndpointProvider != nil {
-		ep2, err := w.predictorClient.GetPredictorEndpoint(ctx, nc.Namespace, nc.Spec.Predictor.PowerConsumptionEndpointProvider, predictor.TypePowerConsumption)
+		ep2, err := w.predictorclient.GetPredictorEndpoint(ctx, nc.Namespace, nc.Spec.Predictor.PowerConsumptionEndpointProvider, predictor.TypePowerConsumption)
 		if err != nil {
 			klog.ErrorS(err, "wao.Score score=ScoreError as error occurred", "node", nodeName)
 			return -1
@@ -259,7 +270,7 @@ func (w *WAOLB) Score(nodeName string) int64 {
 	}
 
 	// do predict
-	beforeWatt, err := w.predictorClient.PredictPowerConsumption(ctx, nc.Namespace, ep, beforeUsage, inletTemp.Value.AsApproximateFloat64(), deltaP.Value.AsApproximateFloat64())
+	beforeWatt, err := w.predictorclient.PredictPowerConsumption(ctx, nc.Namespace, ep, beforeUsage, inletTemp.Value.AsApproximateFloat64(), deltaP.Value.AsApproximateFloat64())
 	if err != nil {
 		klog.ErrorS(err, "wao.Score score=ScoreError as error occurred", "node", nodeName)
 		return -1
