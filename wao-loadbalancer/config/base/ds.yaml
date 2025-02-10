@@ -59,8 +59,8 @@ spec:
         kubernetes.io/os: linux
       priorityClassName: system-node-critical
       securityContext: {}
-      serviceAccount: kube-proxy
-      serviceAccountName: kube-proxy
+      # serviceAccountName: kube-proxy
+      serviceAccountName: wao-loadbalancer
       tolerations:
         - operator: Exists
       volumes:

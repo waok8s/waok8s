@@ -1,2 +1,3 @@
 resources:
 - ds.yaml
+- sa.yaml
