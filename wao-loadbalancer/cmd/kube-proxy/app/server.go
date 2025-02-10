@@ -903,7 +903,7 @@ func (s *ProxyServer) Run() error {
 
 	// WAO: check service proxy name
 	var proxyNameReq *labels.Requirement
-	if WAOProxyName != "" {
+	if WAOProxyName == "" {
 		noProxyName, err := labels.NewRequirement(apis.LabelServiceProxyName, selection.DoesNotExist, nil)
 		if err != nil {
 			return err
