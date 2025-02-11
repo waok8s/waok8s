@@ -8,8 +8,8 @@ A kube-proxy with energy-aware load balancing feature.
 - [Overview](#overview)
 - [Getting Started](#getting-started)
   - [Installation](#installation)
-    - [Use WAO-LB as non-default Service Proxy (Recommended)](#use-wao-lb-as-non-default-service-proxy-recommended)
-    - [Use WAO-LB as the default Service Proxy](#use-wao-lb-as-the-default-service-proxy)
+    - [Use WAO-LB as Non-Default Service Proxy (Recommended)](#use-wao-lb-as-non-default-service-proxy-recommended)
+    - [Use WAO-LB as the Default Service Proxy](#use-wao-lb-as-the-default-service-proxy)
   - [Deploy Services](#deploy-services)
   - [Check Current Weights](#check-current-weights)
 - [Configuration](#configuration)
@@ -51,7 +51,7 @@ There are two ways to use WAO-LB: as a non-default service proxy or as the defau
   - Healthz server and metrics server are set by the config file.
   - Environment variable `WAO_SERVICE_PROXY_NAME` must be empty or not set.
 
-#### Use WAO-LB as non-default Service Proxy (Recommended)
+#### Use WAO-LB as Non-Default Service Proxy (Recommended)
 
 Kubernetes has `service.kubernetes.io/service-proxy-name` label for this purpose.
 Set the label with specific value to Services, then the default kube-proxy will ignore them.
@@ -67,7 +67,7 @@ So you can run WAO-LB as a non-default service proxy by following these steps:
 > [!NOTE]
 > This kube-proxy feature is not described in the official documentation yet, but can be found in [KEP-2447](https://github.com/kubernetes/enhancements/tree/13a4bd1c2eb29d39275ba433ecf952882e0092c5/keps/sig-network/2447-Make-kube-proxy-service-abstraction-optional), and also supported by other service proxies (e.g., [Kube-router](https://github.com/cloudnativelabs/kube-router/issues/979), [Cilium](https://docs.cilium.io/en/stable/network/kubernetes/kubeproxy-free/)).
 
-#### Use WAO-LB as the default Service Proxy
+#### Use WAO-LB as the Default Service Proxy
 
 WAO-LB can be used as a drop-in replacement for the default kube-proxy by following these steps:
 1. Replace the container image of kube-proxy with our custom image.
