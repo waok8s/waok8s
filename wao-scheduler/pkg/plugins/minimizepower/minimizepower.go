@@ -96,14 +96,14 @@ func New(_ context.Context, obj runtime.Object, fh framework.Handle) (framework.
 	cmc := custommetricsclient.NewForConfig(cfg, rm, avg)
 
 	// init controller-runtime client
-	ca, err := cache.New(fh.KubeConfig(), cache.Options{
+	ca, err := cache.New(cfg, cache.Options{
 		Scheme: scheme,
 	})
 	if err != nil {
 		return nil, err
 	}
 	go ca.Start(context.TODO()) // NOTE: this context needs live until the scheduler stops
-	c, err := client.New(fh.KubeConfig(), client.Options{
+	c, err := client.New(cfg, client.Options{
 		Scheme: scheme,
 		Cache:  &client.CacheOptions{Reader: ca},
 	})
