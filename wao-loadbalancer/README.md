@@ -148,11 +148,11 @@ Here is a non-comprehensive list of the variables and their implementation statu
 
 Versioning: we use the same major.minor as Kubernetes, and the patch is our own.
 
-- 2025-xx-xx `v1.30.0-alpha.1`
+- 2025-02-12 `v1.30.0-alpha.1`
   - Drop support for `ipvs` mode (now only `nftables` mode is supported).
   - Support non-default service proxy deployment.
   - Internal improvements.
-  - TBD
+  - Example K8s configs are available.
 - 2025-02-05 `v1.30.0-alpha.0`
   - Support both `ipvs` and `nftables` mode.
   - Now the container image is available.
