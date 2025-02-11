@@ -5,6 +5,8 @@ metadata:
   labels:
     app: nginx
     service.kubernetes.io/service-proxy-name: wao-loadbalancer
+  annotations:
+    waok8s.github.io/cpu-per-request: "500m" # CPU per request (not yet implemented)
 spec:
   ports:
     - port: 80

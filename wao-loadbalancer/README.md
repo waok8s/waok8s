@@ -13,6 +13,8 @@ A kube-proxy with energy-aware load balancing feature.
   - [Deploy Services](#deploy-services)
   - [Check Current Weights](#check-current-weights)
 - [Configuration](#configuration)
+  - [Service Configuration](#service-configuration)
+  - [WAO-LB Configuration](#wao-lb-configuration)
 - [Development](#development)
   - [Components](#components)
 - [Changelog](#changelog)
@@ -107,6 +109,31 @@ kubectl exec -n kube-system <kube-proxy-pod> -- nft list ruleset
 
 ## Configuration
 
+### Service Configuration
+
+```diff
+  apiVersion: v1
+  kind: Service
+  metadata:
+    name: nginx-waolb
+    labels:
+      app: nginx
++     service.kubernetes.io/service-proxy-name: wao-loadbalancer
+    annotations:
++     waok8s.github.io/cpu-per-request: "500m" # CPU per request
+  ...
+```
+
+- `service.kubernetes.io/service-proxy-name` label
+  - Set this value if WAO-LB is running as a non-default service proxy.
+- (not yet implemented) `waok8s.github.io/cpu-per-request` annotation
+  - Set this value to specify the CPU request per request.
+  - The default value is `100m` (0.1 CPU).
+  - AI inference or other heavy tasks should set a higher value.
+  - The value is used to predict node power consumption.
+
+### WAO-LB Configuration
+
 Currently we don't have a configuration file for WAO-LB specific settings.
 Here is a non-comprehensive list of the variables and their implementation status:
 
@@ -125,6 +152,9 @@ Here is a non-comprehensive list of the variables and their implementation statu
 - Predictor Pallarelism
   - Not implemented yet
   - Fixed to `64`
+- CPU request per access
+  - (not yet implemented) Annotation `waok8s.github.io/cpu-per-request` in Service do this
+  - The default value is fixed to `100m` (0.1 CPU) for now
 
 ## Development
 
