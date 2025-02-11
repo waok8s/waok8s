@@ -909,7 +909,7 @@ func (s *ProxyServer) Run() error {
 			return err
 		}
 		proxyNameReq = noProxyName
-		s.logger.Info("WAO: default service proxy mode", EnvVarProxyName, "")
+		s.logger.Info("WAO: default service proxy mode", EnvVarProxyName, WAOProxyName) // WAOProxyName == ""
 	} else {
 		withProxyName, err := labels.NewRequirement(apis.LabelServiceProxyName, selection.Equals, []string{WAOProxyName})
 		if err != nil {
