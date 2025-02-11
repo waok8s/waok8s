@@ -194,6 +194,7 @@ This work is supported by the New Energy and Industrial Technology Development O
 
 ## License
 
+Copyright 2021 Osaka University.
 Copyright 2023 Bitmedia, Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
