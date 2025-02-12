@@ -20,7 +20,7 @@ make image IMAGE_REGISTRY=$IMAGE_REGISTRY IMAGE_NAME=$IMAGE_NAME VERSION="$VERSI
 # deploy WAO
 "$KUBECTL" apply -f config/base/deps
 
-# deploy WAO-LB
+# deploy WAO Load Balancer
 "$KIND" load docker-image "$IMAGE" -n "$KIND_CLUSTER_NAME"
 . config/base/patches/kube-proxy-set-mode-nftables.sh # our implementation ignores this value but we cannot have both modes at the same time (it causes iptables one to fail)
 . config/base/patches/kube-proxy-set-loglevel.sh # v=5 for debugging (use same log level in both)

@@ -20,7 +20,7 @@ make image IMAGE_REGISTRY=$IMAGE_REGISTRY IMAGE_NAME=$IMAGE_NAME VERSION="$VERSI
 # deploy WAO
 "$KUBECTL" apply -f config/base/deps
 
-# deploy WAO-LB
+# deploy WAO Load Balancer
 "$KIND" load docker-image "$IMAGE" -n "$KIND_CLUSTER_NAME"
 "$KUBECTL" apply -f config/base/sa.yaml # create the ServiceAccount
 . config/base/patches/kube-proxy-set-mode-nftables.sh # just for safety (our implementation ignores the value in the config file)

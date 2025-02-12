@@ -84,7 +84,7 @@ func (o *Options) platformApplyDefaults(config *proxyconfigapi.KubeProxyConfigur
 	if WAOProxyName == "" {
 		o.logger.V(2).Info("Applied values for WAO Load Balancer (default service proxy mode)", "mode", config.Mode)
 	} else {
-		// avoid conflicts with kube-proxy when WAO-LB is running in non-default mode
+		// avoid conflicts with kube-proxy when WAO Load Balancer is running in non-default mode
 		config.HealthzBindAddress = DefaultHealthzBindAddress
 		config.MetricsBindAddress = DefaultMetricsBindAddress
 		o.logger.V(2).Info("Applied values for WAO Load Balancer (non-default service proxy mode)", "mode", config.Mode, "healthzBindAddress", config.HealthzBindAddress, "metricsBindAddress", config.MetricsBindAddress)
