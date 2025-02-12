@@ -6,6 +6,8 @@ A kube-proxy with energy-aware load balancing feature.
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 
 - [Overview](#overview)
+  - [Architecture](#architecture)
+  - [Weight Calculation](#weight-calculation)
 - [Getting Started](#getting-started)
   - [Installation](#installation)
     - [Use WAO-LB as Non-Default Service Proxy (Recommended)](#use-wao-lb-as-non-default-service-proxy-recommended)
@@ -29,6 +31,20 @@ WAO Load Balancer (WAO-LB) is a custom kube-proxy that uses WAO to achieve energ
 
 > [!NOTE]
 > We previously supported `ipvs` mode, but it is now removed.
+
+### Architecture
+
+Basically same as kube-proxy.
+
+### Weight Calculation
+
+The weight of each node is calculated based on its estimated delta power consumption per request.
+
+The weight of each node is calculated based on its estimated delta power consumption per request. The idea is to assign a score in the range `(0, 100]` such that a lower delta power (i.e., more energy-efficient) corresponds to a higher score. 
+
+When using this method, the node with the lowest delta power consumption receives the maximum score of 100, and nodes with higher power consumption receive proportionally lower scores.
+
+$score_i = 100 \times \frac{\min(\mathbf{deltaPowers})}{power_i}$
 
 ## Getting Started
 
