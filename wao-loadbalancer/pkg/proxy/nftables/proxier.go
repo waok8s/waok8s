@@ -269,9 +269,10 @@ func NewProxier(ipFamily v1.IPFamily,
 	burstSyncs := 2
 	klog.V(2).InfoS("NFTables sync params", "ipFamily", ipFamily, "minSyncPeriod", minSyncPeriod, "syncPeriod", syncPeriod, "burstSyncs", burstSyncs)
 	proxier.syncRunner = async.NewBoundedFrequencyRunner("sync-runner", proxier.syncProxyRules, minSyncPeriod, syncPeriod, burstSyncs)
+
 	// WAO
-	klog.V(2).InfoS("WAO: NewProxier")
-	waoLB, err := NewWAOLB()
+	klog.V(2).InfoS("WAO: NewProxier", "ipFamily", ipFamily)
+	waoLB, err := NewWAOLB(proxier.ipFamily)
 	if err != nil {
 		klog.ErrorS(err, "Failed to initialize WAO Load Balancer")
 		return nil, err

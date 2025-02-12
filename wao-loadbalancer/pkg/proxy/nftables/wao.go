@@ -7,37 +7,42 @@ import (
 	"strconv"
 	"time"
 
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-
-	"k8s.io/client-go/discovery"
-	cacheddiscovery "k8s.io/client-go/discovery/cached"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/restmapper"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/klog/v2"
 
+	// scheme
+	"k8s.io/apimachinery/pkg/runtime"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+
+	// kubeconfig
+	"k8s.io/client-go/rest"
+
+	// controller-runtime
+	"sigs.k8s.io/controller-runtime/pkg/cache"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	// metrics
+	"k8s.io/client-go/discovery"
+	cacheddiscovery "k8s.io/client-go/discovery/cached"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/restmapper"
 	metricsclientv1beta1 "k8s.io/metrics/pkg/client/clientset/versioned/typed/metrics/v1beta1"
 	custommetricsclient "k8s.io/metrics/pkg/client/custom_metrics"
 
+	// wao
 	waov1beta1 "github.com/waok8s/wao-core/api/wao/v1beta1"
 	waoclient "github.com/waok8s/wao-core/pkg/client"
 	waometrics "github.com/waok8s/wao-core/pkg/metrics"
 	"github.com/waok8s/wao-core/pkg/predictor"
-
-	"sigs.k8s.io/controller-runtime/pkg/cache"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
+	// NFTableNameWAONode is the name of the nftables table for WAO Load Balancer.
 	NFTableNameWAOLB = "wao-loadbalancer"
-)
 
-const (
 	// Parallelism is the number of goroutines to use for parallelizing work.
 	// See: kubernetes/pkg/scheduler/framework/parallelize
 	Parallelism = 64
@@ -58,6 +63,8 @@ func init() {
 }
 
 type WAOLB struct {
+	ipFamily corev1.IPFamily
+
 	k8sclient       *kubernetes.Clientset
 	ctrlclient      client.Client
 	metricsclient   *waoclient.CachedMetricsClient
@@ -68,7 +75,7 @@ type WAOLB struct {
 	nodeScores    map[string]int64
 }
 
-func NewWAOLB() (*WAOLB, error) {
+func NewWAOLB(ipFamily corev1.IPFamily) (*WAOLB, error) {
 
 	cfg, err := rest.InClusterConfig()
 	if err != nil {
@@ -115,17 +122,20 @@ func NewWAOLB() (*WAOLB, error) {
 	}
 
 	return &WAOLB{
+		ipFamily: ipFamily,
+
 		k8sclient:       clientSet,
 		ctrlclient:      c,
 		metricsclient:   waoclient.NewCachedMetricsClient(mc, cmc, DefaultMetricsCacheTTL),
 		predictorclient: waoclient.NewCachedPredictorClient(clientSet, DefaultMetricsCacheTTL),
-		nodeNames:       []string{},
-		endpoint2Node:   make(map[string]string),
-		nodeScores:      make(map[string]int64),
+
+		nodeNames:     []string{},
+		endpoint2Node: make(map[string]string),
+		nodeScores:    make(map[string]int64),
 	}, nil
 }
 
-// Get list of nodes Name inside Cluster
+// GetNodesName lists ready nodes in the cluster.
 func (w *WAOLB) GetNodesName() {
 	nodesName := []string{}
 	nodes, err := w.k8sclient.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{})
@@ -135,7 +145,7 @@ func (w *WAOLB) GetNodesName() {
 
 	for _, node := range nodes.Items {
 		for _, nodeStatus := range node.Status.Conditions {
-			if nodeStatus.Type == v1.NodeReady && nodeStatus.Status == v1.ConditionTrue {
+			if nodeStatus.Type == corev1.NodeReady && nodeStatus.Status == corev1.ConditionTrue {
 				nodesName = append(nodesName, node.Name)
 			}
 		}
@@ -143,7 +153,7 @@ func (w *WAOLB) GetNodesName() {
 	w.nodeNames = nodesName
 }
 
-// Get list of pods endpoint inside Cluster
+// GetPodsEndpoint lists all running pods and their endpoints.
 func (w *WAOLB) GetPodsEndpoint() {
 	endpointsBelongNode := make(map[string]string)
 
@@ -153,7 +163,7 @@ func (w *WAOLB) GetPodsEndpoint() {
 	}
 
 	for _, pod := range pods.Items {
-		if pod.Status.Phase == v1.PodRunning {
+		if pod.Status.Phase == corev1.PodRunning {
 			endpointsBelongNode[pod.Status.PodIP] = pod.Spec.NodeName
 		}
 	}
@@ -171,15 +181,16 @@ func (w *WAOLB) CalcNodesScore() {
 	piece := len(w.nodeNames)
 	workqueue.ParallelizeUntil(context.TODO(), Parallelism, piece, func(piece int) {
 		w.nodeScores[w.nodeNames[piece]] = int64(w.Score(w.nodeNames[piece]))
-	}, chunkSizeFor(piece))
+	}, betterChunkSize(piece, Parallelism))
 	klog.Infof("NodesScore: %#v", w.nodeScores)
 }
 
-// chunkSizeFor returns a chunk size for the given number of items to use for parallel work.
+// betterChunkSize is a helper function to calculate the chunk size for parallel work.
+// It returns max(1, min(sqrt(n), n/Parallelism)) in workqueue.Options format.
 // See: kubernetes/pkg/scheduler/framework/parallelize
-func chunkSizeFor(n int) workqueue.Options {
+func betterChunkSize(n, parallelism int) workqueue.Options {
 	s := int(math.Sqrt(float64(n)))
-	if r := n/Parallelism + 1; s > r {
+	if r := n/parallelism + 1; s > r {
 		s = r
 	} else if s < 1 {
 		s = 1
