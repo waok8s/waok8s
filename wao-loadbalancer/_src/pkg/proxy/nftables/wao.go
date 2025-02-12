@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"strconv"
+	"strings"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -318,6 +319,24 @@ func (w *WAOLB) CalcModRanges(endpointList []string) (modRanges []int64) {
 			modRange = int64(MaxModRange * minScore / score)
 		}
 		modRanges = append(modRanges, modRange)
+	}
+	return
+}
+
+// decodeSvcPortNameString decodes svcPortNameString into namespace, svcName, and portName.
+//
+// "default/nginx" -> namespace="default", svcName="nginx", portName=""
+// "default/nginx:http" -> namespace="default", svcName="nginx", portName="http"
+func decodeSvcPortNameString(svcPortNameString string) (namespace string, svcName string, portName string) {
+	v := strings.Split(svcPortNameString, "/")
+	if len(v) != 2 {
+		return
+	}
+	namespace = v[0]
+	vv := strings.Split(v[1], ":")
+	svcName = vv[0]
+	if len(vv) == 2 {
+		portName = vv[1]
 	}
 	return
 }
