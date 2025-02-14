@@ -1047,10 +1047,25 @@ func (proxier *Proxier) syncProxyRules() {
 		}
 	}
 
-	// WAO
-	// collect information
-	proxier.waoLB.CollectNodeAndPodList()
-	proxier.waoLB.CalcNodesScore()
+	// WAO: calc scores for all services
+	// TODO: make this concurrent
+	klog.InfoS("WAO: syncProxyRules calculating scores for all svcPortNames")
+	proxier.waoLB.scores = map[string]map[string]int{}
+	defer func() {
+		proxier.waoLB.scores = map[string]map[string]int{} // clear scores
+		klog.InfoS("WAO: syncProxyRules cleared scores", "len(scores)", len(proxier.waoLB.scores))
+	}()
+	for svcPortName, _ := range proxier.svcPortMap {
+		svcNS, svcName, _ := decodeSvcPortNameString(svcPortName.String())
+		scores, err := proxier.waoLB.ScoreService(context.TODO(), types.NamespacedName{Namespace: svcNS, Name: svcName})
+		if err != nil {
+			klog.ErrorS(err, "WAO: syncProxyRules failed to score service", "svcPortName", svcPortName.String())
+			continue
+		}
+		proxier.waoLB.scores[svcPortName.String()] = scores
+		klog.V(5).InfoS("WAO: syncProxyRules added scores", "svcPortName", svcPortName.String())
+	}
+	klog.InfoS("WAO: syncProxyRules added scores for svcPortNames", "len(scores)", len(proxier.waoLB.scores))
 
 	// Now start the actual syncing transaction
 	tx := proxier.nftables.NewTransaction()
@@ -1692,75 +1707,97 @@ func (proxier *Proxier) writeServiceToEndpointRules(tx *knftables.Transaction, s
 		}
 	}
 
-	// // Now write loadbalancing rule
-	// var elements []string
-	// for i, ep := range endpoints {
-	// 	epInfo, ok := ep.(*endpointInfo)
-	// 	if !ok {
-	// 		continue
-	// 	}
-
-	// 	elements = append(elements,
-	// 		strconv.Itoa(i), ":", "goto", epInfo.chainName,
-	// 	)
-	// 	if i != len(endpoints)-1 {
-	// 		elements = append(elements, ",")
-	// 	}
-	// }
-	// tx.Add(&knftables.Rule{
-	// 	Chain: svcChain,
-	// 	Rule: knftables.Concat(
-	// 		"numgen random mod", len(endpoints), "vmap",
-	// 		"{", elements, "}",
-	// 	),
-	// })
-
-	// WAO
-	var clusterIps []string
-	for _, ep := range endpoints {
-		epInfo, ok := ep.(*endpointInfo)
-		if !ok {
-			continue
+	// WAO: get scores for this svcPortName
+	var useWAO bool
+	scores, ok := proxier.waoLB.scores[svcPortNameString]
+	if ok {
+		// Check if any endpoint has a normal score
+		// NOTE: There is always at least one endpoint with a score of 100 (ScoreMax). So normally this should be true.
+		for _, ep := range endpoints {
+			if scores[ep.IP()] > 0 {
+				useWAO = true
+				break
+			}
 		}
-		clusterIps = append(clusterIps, epInfo.IP())
+		klog.ErrorS(fmt.Errorf("all scores are score <= 0"), "WAO: writeServiceToEndpointRules unexpected scores", "svcPortName", svcPortNameString, "scores", scores)
 	}
-	modRanges := proxier.waoLB.CalcModRanges(clusterIps)
-	var num int
+	klog.V(5).InfoS("WAO: writeServiceToEndpointRules", "svcPortName", svcPortNameString, "useWAO", useWAO)
 
 	// Now write loadbalancing rule
-	var elements []string
-	for i, ep := range endpoints {
-		epInfo, ok := ep.(*endpointInfo)
-		if !ok {
-			continue
-		}
 
-		// WAO
-		modRange := strconv.Itoa(i)
-		if len(modRanges) > 0 {
-			if modRanges[i] == 0 {
+	if useWAO {
+
+		// WAO: use WAO logic
+
+		var totalScore int
+		var elements []string
+		for _, ep := range endpoints {
+
+			// cast to endpointInfo
+			epInfo, ok := ep.(*endpointInfo)
+			if !ok {
 				continue
 			}
-			modRange = strconv.Itoa(num) + "-" + strconv.Itoa(num+int(modRanges[i]-1))
-			num += int(modRanges[i])
-		}
 
-		elements = append(elements,
-			modRange, ":", "goto", epInfo.chainName, // WAO
-		)
-		if i != len(endpoints)-1 {
+			// get score
+			score, ok := scores[epInfo.IP()]
+			if !ok {
+				klog.V(5).InfoS("WAO: writeServiceToEndpointRules score is missing, so skip", "svcPortName", svcPortNameString, "epInfo.IP", epInfo.IP())
+				continue
+			}
+			if score <= 0 {
+				klog.V(5).InfoS("WAO: writeServiceToEndpointRules score <= 0, so skip", "svcPortName", svcPortNameString, "epInfo.IP", epInfo.IP(), "score", score)
+				continue
+			}
+
+			// construct and add the rule
+			modRange := fmt.Sprintf("%d-%d", totalScore, totalScore+score-1) // 50-99
+			elements = append(elements,
+				modRange, ":", "goto", epInfo.chainName, // 50-99 : goto foobar
+			)
 			elements = append(elements, ",")
+
+			// update totalScore
+			totalScore += score
 		}
+		endpoints = endpoints[:len(endpoints)-1] // remove the last comma
+
+		tx.Add(&knftables.Rule{
+			Chain: svcChain,
+			Rule: knftables.Concat(
+				// NOTE: numgen random supports int32, so usually this should be fine.
+				// totalScore is in [ScoreMax, NumPodMax * ScoreMax], so it should be in [100, 150_000 * 100] = [100, 15_000_000] and this is fine.
+				// To be strict, it is in [ScoreMax, NumPodMax * NumEndpointMaxIPAddresses * ScoreMax] = [100, 1_500_000_000] and this is still fine (but usually doesn't happen).
+				"numgen random mod", totalScore, "vmap",
+				"{", elements, "}",
+			),
+		})
+
+	} else {
+
+		// WAO: fallback to the default logic
+
+		var elements []string
+		for i, ep := range endpoints {
+			epInfo, ok := ep.(*endpointInfo)
+			if !ok {
+				continue
+			}
+
+			elements = append(elements,
+				strconv.Itoa(i), ":", "goto", epInfo.chainName,
+			)
+			if i != len(endpoints)-1 {
+				elements = append(elements, ",")
+			}
+		}
+		tx.Add(&knftables.Rule{
+			Chain: svcChain,
+			Rule: knftables.Concat(
+				"numgen random mod", len(endpoints), "vmap",
+				"{", elements, "}",
+			),
+		})
+
 	}
-	// WAO
-	if num == 0 {
-		num = len(endpoints)
-	}
-	tx.Add(&knftables.Rule{
-		Chain: svcChain,
-		Rule: knftables.Concat(
-			"numgen random mod", num, "vmap", // WAO
-			"{", elements, "}",
-		),
-	})
 }
