@@ -159,18 +159,21 @@ Here is a non-comprehensive list of the variables and their implementation statu
 - nftables Table Name
   - Not implemented yet
   - Fixed to `wao-loadbalancer`
+- CPU request per access
+  - (not yet implemented) Annotation `waok8s.github.io/cpu-per-request` in Service do this
+  - The default value is fixed to `100m` (0.1 CPU) for now
 - WAO Metrics Cache TTL
   - Not implemented yet
   - Fixed to `30s`
 - WAO Predictor Cache TTL
   - Not implemented yet
   - Fixed to `30m`
-- Predictor Pallarelism
+- Predictor CPU Usage Format 
+  - Not implemented yet
+  - Fixed to `Percent`
+- Pallarelism in Service Score Calculation
   - Not implemented yet
   - Fixed to `64`
-- CPU request per access
-  - (not yet implemented) Annotation `waok8s.github.io/cpu-per-request` in Service do this
-  - The default value is fixed to `100m` (0.1 CPU) for now
 
 ## Development
 
