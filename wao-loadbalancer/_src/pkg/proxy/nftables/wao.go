@@ -81,8 +81,11 @@ type WAOLB struct {
 	// endpoint2Node map[string]string
 	// nodeScores    map[string]int64
 
-	// scores is a map[svcPortNameString]map[endpointIP]score, initialized and used in the Proxier.
-	scores map[string]map[string]int
+	// Scores is a map[svcPortNameString]map[endpointIP]score.
+	// Score() calculates the scores and updates this map.
+	// To read the scores, users should carefully use this map directly.
+	// This map is not thread-safe.
+	Scores map[string]map[string]int
 }
 
 func NewWAOLB(ipFamily corev1.IPFamily) (*WAOLB, error) {
@@ -331,6 +334,34 @@ func betterChunkSize(n, parallelism int) workqueue.Options {
 // 	}
 // 	return
 // }
+
+// Score concurrently calculates scores of all services and updates w.scores.
+// It clears w.scores before calculating scores.
+// If an error occurs during the calculation of a service, the service is ignored.
+// See ScoreService and ScoreNode for details.
+func (w *WAOLB) Score(ctx context.Context, svcPortNames []string) {
+	klog.V(5).InfoS("WAO: Score", "len(svcPortNames)", len(svcPortNames))
+
+	w.Scores = map[string]map[string]int{} // map[svcPortNameString]map[endpointIP]score
+	klog.V(5).InfoS("WAO: Score cleared w.scores")
+
+	// NOTE: w.Scores is not thread-safe, but we don't update the same key in parallel, so it's safe here.
+	klog.InfoS("WAO: Score start parallelizing", "n", len(svcPortNames), "parallelism", Parallelism)
+	n := len(svcPortNames)
+	workqueue.ParallelizeUntil(ctx, Parallelism, n, func(piece int) {
+		svcPortName := svcPortNames[piece]
+		svcNS, svcName, _ := decodeSvcPortNameString(svcPortName)
+		scores, err := w.ScoreService(ctx, types.NamespacedName{Namespace: svcNS, Name: svcName})
+		if err != nil {
+			klog.ErrorS(err, "WAO: Score failed to score service", "svcPortName", svcPortName)
+			return
+		}
+		w.Scores[svcPortName] = scores // set the value only if no error
+		klog.V(5).InfoS("WAO: Score added scores", "svcPortName", svcPortName)
+	}, betterChunkSize(n, Parallelism))
+
+	klog.V(5).InfoS("WAO: Score updated w.scores", "len(svcPortNames)", len(svcPortNames), "len(w.scores)", len(w.Scores))
+}
 
 // ScoreService calculates scores of the given Service for all nodes.
 // Returns map[endpointIP]score. The score is in [0, 100].

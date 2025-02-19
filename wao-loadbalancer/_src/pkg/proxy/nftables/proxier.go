@@ -1048,24 +1048,13 @@ func (proxier *Proxier) syncProxyRules() {
 	}
 
 	// WAO: calc scores for all services
-	// TODO: make this concurrent
 	klog.InfoS("WAO: syncProxyRules calculating scores for all svcPortNames")
-	proxier.waoLB.scores = map[string]map[string]int{}
-	defer func() {
-		proxier.waoLB.scores = map[string]map[string]int{} // clear scores
-		klog.InfoS("WAO: syncProxyRules cleared scores", "len(scores)", len(proxier.waoLB.scores))
-	}()
-	for svcPortName, _ := range proxier.svcPortMap {
-		svcNS, svcName, _ := decodeSvcPortNameString(svcPortName.String())
-		scores, err := proxier.waoLB.ScoreService(context.TODO(), types.NamespacedName{Namespace: svcNS, Name: svcName})
-		if err != nil {
-			klog.ErrorS(err, "WAO: syncProxyRules failed to score service", "svcPortName", svcPortName.String())
-			continue
-		}
-		proxier.waoLB.scores[svcPortName.String()] = scores
-		klog.V(5).InfoS("WAO: syncProxyRules added scores", "svcPortName", svcPortName.String())
+	svcPortNames := make([]string, 0, len(proxier.svcPortMap))
+	for svcPortName := range proxier.svcPortMap {
+		svcPortNames = append(svcPortNames, svcPortName.String())
 	}
-	klog.InfoS("WAO: syncProxyRules added scores for svcPortNames", "len(scores)", len(proxier.waoLB.scores))
+	proxier.waoLB.Score(context.TODO(), []string(svcPortNames))
+	klog.InfoS("WAO: syncProxyRules added scores for svcPortNames", "len(scores)", len(proxier.waoLB.Scores))
 
 	// Now start the actual syncing transaction
 	tx := proxier.nftables.NewTransaction()
@@ -1709,7 +1698,7 @@ func (proxier *Proxier) writeServiceToEndpointRules(tx *knftables.Transaction, s
 
 	// WAO: get scores for this svcPortName
 	var useWAO bool
-	scores, ok := proxier.waoLB.scores[svcPortNameString]
+	scores, ok := proxier.waoLB.Scores[svcPortNameString]
 	if ok {
 		// Check if any endpoint has a normal score
 		// NOTE: There is always at least one endpoint with a score of 100 (ScoreMax). So normally this should be true.
