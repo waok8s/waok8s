@@ -272,7 +272,7 @@ func NewProxier(ipFamily v1.IPFamily,
 
 	// WAO
 	klog.V(2).InfoS("WAO: NewProxier", "ipFamily", ipFamily)
-	waoLB, err := NewWAOLB(proxier.ipFamily)
+	waoLB, err := NewWAOLB(WAOLBOptions{IPFamily: proxier.ipFamily})
 	if err != nil {
 		klog.ErrorS(err, "Failed to initialize WAO Load Balancer")
 		return nil, err

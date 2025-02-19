@@ -69,17 +69,32 @@ func init() {
 	utilruntime.Must(waov1beta1.AddToScheme(scheme))
 }
 
+type WAOLBOptions struct {
+	IPFamily          corev1.IPFamily
+	MetricsCacheTTL   time.Duration
+	PredictorCacheTTL time.Duration
+}
+
+func DefaultingWAOLBOptions(opts WAOLBOptions) WAOLBOptions {
+	if opts.IPFamily == "" {
+		// This is required; no default value.
+		// NOTE: "" is interpreted as "corev1.IPFamilyUnknown" in the k8s codebase.
+	}
+	if opts.MetricsCacheTTL == 0 {
+		opts.MetricsCacheTTL = DefaultMetricsCacheTTL
+	}
+	if opts.PredictorCacheTTL == 0 {
+		opts.PredictorCacheTTL = DefaultPredictorCacheTTL
+	}
+	return opts
+}
+
 type WAOLB struct {
 	ipFamily corev1.IPFamily
 
-	// k8sclient       *kubernetes.Clientset
 	ctrlclient      client.Client
 	metricsclient   *waoclient.CachedMetricsClient
 	predictorclient *waoclient.CachedPredictorClient
-
-	// nodeNames     []string
-	// endpoint2Node map[string]string
-	// nodeScores    map[string]int64
 
 	// Scores is a map[svcPortNameString]map[endpointIP]score.
 	// Score() calculates the scores and updates this map.
@@ -88,7 +103,13 @@ type WAOLB struct {
 	Scores map[string]map[string]int
 }
 
-func NewWAOLB(ipFamily corev1.IPFamily) (*WAOLB, error) {
+func NewWAOLB(opts WAOLBOptions) (*WAOLB, error) {
+
+	opts = DefaultingWAOLBOptions(opts)
+
+	if opts.IPFamily == "" {
+		return nil, fmt.Errorf("NewWAOLB: IPFamily is required")
+	}
 
 	cfg, err := rest.InClusterConfig()
 	if err != nil {
@@ -135,68 +156,13 @@ func NewWAOLB(ipFamily corev1.IPFamily) (*WAOLB, error) {
 	}
 
 	return &WAOLB{
-		ipFamily: ipFamily,
+		ipFamily: opts.IPFamily,
 
-		// k8sclient:       clientSet,
 		ctrlclient:      c,
-		metricsclient:   waoclient.NewCachedMetricsClient(mc, cmc, DefaultMetricsCacheTTL),
-		predictorclient: waoclient.NewCachedPredictorClient(clientSet, DefaultMetricsCacheTTL),
-
-		// nodeNames:     []string{},
-		// endpoint2Node: make(map[string]string),
-		// nodeScores:    make(map[string]int64),
+		metricsclient:   waoclient.NewCachedMetricsClient(mc, cmc, opts.MetricsCacheTTL),
+		predictorclient: waoclient.NewCachedPredictorClient(clientSet, opts.PredictorCacheTTL),
 	}, nil
 }
-
-// // GetNodesName lists ready nodes in the cluster.
-// func (w *WAOLB) GetNodesName() {
-// 	nodesName := []string{}
-// 	nodes, err := w.k8sclient.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{})
-// 	if err != nil {
-// 		klog.Warningf("Cannot get list of nodes. Error : %v", err)
-// 	}
-
-// 	for _, node := range nodes.Items {
-// 		for _, nodeStatus := range node.Status.Conditions {
-// 			if nodeStatus.Type == corev1.NodeReady && nodeStatus.Status == corev1.ConditionTrue {
-// 				nodesName = append(nodesName, node.Name)
-// 			}
-// 		}
-// 	}
-// 	w.nodeNames = nodesName
-// }
-
-// // GetPodsEndpoint lists all running pods and their endpoints.
-// func (w *WAOLB) GetPodsEndpoint() {
-// 	endpointsBelongNode := make(map[string]string)
-
-// 	pods, err := w.k8sclient.CoreV1().Pods("").List(context.TODO(), metav1.ListOptions{})
-// 	if err != nil {
-// 		klog.Warningf("Cannot get list of pods. Error : %v", err)
-// 	}
-
-// 	for _, pod := range pods.Items {
-// 		if pod.Status.Phase == corev1.PodRunning {
-// 			endpointsBelongNode[pod.Status.PodIP] = pod.Spec.NodeName
-// 		}
-// 	}
-// 	w.endpoint2Node = endpointsBelongNode
-// }
-
-// func (w *WAOLB) CollectNodeAndPodList() {
-// 	w.GetNodesName()
-// 	w.GetPodsEndpoint()
-// 	klog.Infof("NodesName: %#v", w.nodeNames)
-// 	klog.Infof("Endpoints: %#v", w.endpoint2Node)
-// }
-
-// func (w *WAOLB) CalcNodesScore() {
-// 	piece := len(w.nodeNames)
-// 	workqueue.ParallelizeUntil(context.TODO(), Parallelism, piece, func(piece int) {
-// 		w.nodeScores[w.nodeNames[piece]] = int64(w.Score(w.nodeNames[piece]))
-// 	}, betterChunkSize(piece, Parallelism))
-// 	klog.Infof("NodesScore: %#v", w.nodeScores)
-// }
 
 // betterChunkSize is a helper function to calculate the chunk size for parallel work.
 // It returns max(1, min(sqrt(n), n/Parallelism)) in workqueue.Options format.
