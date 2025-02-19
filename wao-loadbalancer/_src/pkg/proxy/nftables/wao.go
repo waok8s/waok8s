@@ -37,6 +37,7 @@ import (
 	// wao
 	waov1beta1 "github.com/waok8s/wao-core/api/wao/v1beta1"
 	waoclient "github.com/waok8s/wao-core/pkg/client"
+	waometrics "github.com/waok8s/wao-core/pkg/metrics"
 	"github.com/waok8s/wao-core/pkg/predictor"
 )
 
@@ -98,8 +99,8 @@ func DefaultingWAOLBOptions(opts WAOLBOptions) WAOLBOptions {
 	if opts.PredictorCacheTTL == 0 {
 		opts.PredictorCacheTTL = DefaultPredictorCacheTTL
 	}
-	if args.CPUUsageFormat == "" {
-		args.CPUUsageFormat = DefaultCPUUsageFormat
+	if opts.CPUUsageFormat == "" {
+		opts.CPUUsageFormat = DefaultCPUUsageFormat
 	}
 	return opts
 }
@@ -114,14 +115,14 @@ func ValidatingWAOLBOptions(opts WAOLBOptions) error {
 	if opts.PredictorCacheTTL <= 0 {
 		return fmt.Errorf("ValidatingWAOLBOptions: PredictorCacheTTL must be positive")
 	}
-	if args.CPUUsageFormat != CPUUsageFormatRaw && args.CPUUsageFormat != CPUUsageFormatPercent {
+	if opts.CPUUsageFormat != CPUUsageFormatRaw && opts.CPUUsageFormat != CPUUsageFormatPercent {
 		return fmt.Errorf("ValidatingWAOLBOptions: CPUUsageFormat must be either `Raw` or `Percent`")
 	}
 	return nil
 }
 
 type WAOLB struct {
-	ipFamily corev1.IPFamily
+	opts WAOLBOptions
 
 	ctrlclient      client.Client
 	metricsclient   *waoclient.CachedMetricsClient
@@ -186,7 +187,7 @@ func NewWAOLB(opts WAOLBOptions) (*WAOLB, error) {
 	}
 
 	return &WAOLB{
-		ipFamily: opts.IPFamily,
+		opts: opts,
 
 		ctrlclient:      c,
 		metricsclient:   waoclient.NewCachedMetricsClient(mc, cmc, opts.MetricsCacheTTL),
@@ -264,14 +265,14 @@ func (w *WAOLB) ScoreService(ctx context.Context, svcName types.NamespacedName) 
 		return nil, err
 	}
 	for _, e := range ess.Items {
-		if e.AddressType == discoveryv1.AddressType(w.ipFamily) {
+		if e.AddressType == discoveryv1.AddressType(w.opts.IPFamily) {
 			es = e.DeepCopy()
 			break
 		}
 	}
 	if es == nil {
-		err := fmt.Errorf("EndpointSlice not found svc=%s ipFamily=%s", svc.Name, w.ipFamily)
-		klog.ErrorS(err, "WAO: ScoreService failed to get EndpointSlice with same IPFamily", "svc", types.NamespacedName{Namespace: svc.Namespace, Name: svc.Name}, "ipFamily", w.ipFamily)
+		err := fmt.Errorf("EndpointSlice not found svc=%s ipFamily=%s", svc.Name, w.opts.IPFamily)
+		klog.ErrorS(err, "WAO: ScoreService failed to get EndpointSlice with same IPFamily", "svc", types.NamespacedName{Namespace: svc.Namespace, Name: svc.Name}, "ipFamily", w.opts.IPFamily)
 		return nil, err
 	}
 	klog.V(5).InfoS("WAO: ScoreService EndpointSlice", "svc", types.NamespacedName{Namespace: svc.Namespace, Name: svc.Name}, "endpointSlice", types.NamespacedName{Namespace: es.Namespace, Name: es.Name})
@@ -313,7 +314,7 @@ func (w *WAOLB) ScoreNode(ctx context.Context, nodeName string, cpuUsage resourc
 
 	// get node and node metrics
 	var node *corev1.Node
-	if err := w.ctrlclient.Get(ctx, types.NamespacedName{Name: nodeName}, corev1.Node{}); err != nil {
+	if err := w.ctrlclient.Get(ctx, types.NamespacedName{Name: nodeName}, node); err != nil {
 		klog.ErrorS(err, "WAO: ScoreNode failed to get Node", "nodeName", nodeName)
 		return 0, err
 	}
@@ -323,24 +324,8 @@ func (w *WAOLB) ScoreNode(ctx context.Context, nodeName string, cpuUsage resourc
 		return 0, err
 	}
 
-	// get additional usage (add assumed pod CPU usage for not running pods)
-	// NOTE: We need to assume the CPU usage of pods that have scheduled to this node but are not yet running,
-	// as the next replica (if the pod belongs to a deployment, etc.) will be scheduled soon and we need to consider the CPU usage of these pods.
+	// NOTE: WAO Load Balancer doesn't use assumedAdditionalUsage; so it's always 0.
 	var assumedAdditionalUsage float64
-	for _, p := range nodeInfo.Pods {
-		if p.Pod.Spec.NodeName != node.Name {
-			continue
-		}
-		if p.Pod.Status.Phase == corev1.PodRunning ||
-			p.Pod.Status.Phase == corev1.PodSucceeded ||
-			p.Pod.Status.Phase == corev1.PodFailed ||
-			p.Pod.Status.Phase == corev1.PodUnknown {
-			continue // only pending pods are counted
-		}
-		// NOTE: No need to check pod.Status.Conditions as pods on this node with pending status are just what we want.
-		// However, pods that have just been started and are not yet using CPU are not counted. (this is a restriction for now)
-		assumedAdditionalUsage += PodCPURequestOrLimit(p.Pod) * pl.args.PodUsageAssumption
-	}
 	// prepare beforeUsage and afterUsage
 	beforeUsage := nodeMetrics.Usage.Cpu().AsApproximateFloat64()
 	beforeUsage += assumedAdditionalUsage
@@ -358,10 +343,10 @@ func (w *WAOLB) ScoreNode(ctx context.Context, nodeName string, cpuUsage resourc
 			},
 		},
 	}
-	afterUsage := beforeUsage + PodCPURequestOrLimit(pod)
+	afterUsage := beforeUsage + PodCPURequestOrLimit(virtualPod)
 	if beforeUsage == afterUsage { // The Pod has both requests.cpu and limits.cpu empty or zero. Normally, this should not happen.
 		klog.ErrorS(fmt.Errorf("beforeUsage == afterUsage v=%v", beforeUsage), "WAO: ScoreNode error", "node", nodeName, "cpuUsage", cpuUsage.String())
-		return ScoreError, nil
+		return 0, nil
 	}
 	// NOTE: Normally, status.capacity.cpu and status.allocatable.cpu are the same.
 	cpuCapacity := node.Status.Capacity.Cpu().AsApproximateFloat64()
@@ -371,7 +356,7 @@ func (w *WAOLB) ScoreNode(ctx context.Context, nodeName string, cpuUsage resourc
 	klog.V(5).InfoS("WAO: ScoreNode usage", "node", nodeName, "cpuUsage", cpuUsage.String(), "usage_before", beforeUsage, "usage_after", afterUsage, "additional_usage_included", assumedAdditionalUsage)
 
 	// format usage
-	switch pl.args.CPUUsageFormat {
+	switch w.opts.CPUUsageFormat {
 	case CPUUsageFormatRaw:
 		// do nothing
 	case CPUUsageFormatPercent:
@@ -422,10 +407,10 @@ func (w *WAOLB) ScoreNode(ctx context.Context, nodeName string, cpuUsage resourc
 		ep = &waov1beta1.EndpointTerm{}
 	}
 	if nc.Spec.Predictor.PowerConsumptionEndpointProvider != nil {
-		ep2, err := pl.predictorclient.GetPredictorEndpoint(ctx, nc.Namespace, nc.Spec.Predictor.PowerConsumptionEndpointProvider, predictor.TypePowerConsumption)
+		ep2, err := w.predictorclient.GetPredictorEndpoint(ctx, nc.Namespace, nc.Spec.Predictor.PowerConsumptionEndpointProvider, predictor.TypePowerConsumption)
 		if err != nil {
 			klog.ErrorS(err, "WAO: ScoreNode GetPredictorEndpoint", "node", nodeName)
-			return
+			return 0, err
 		}
 		ep.Type = ep2.Type
 		ep.Endpoint = ep2.Endpoint
