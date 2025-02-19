@@ -313,8 +313,8 @@ func (w *WAOLB) ScoreNode(ctx context.Context, nodeName string, cpuUsage resourc
 	klog.V(5).InfoS("WAO: ScoreNode", "nodeName", nodeName, "cpuUsage", cpuUsage.String())
 
 	// get node and node metrics
-	var node *corev1.Node
-	if err := w.ctrlclient.Get(ctx, types.NamespacedName{Name: nodeName}, node); err != nil {
+	var node corev1.Node
+	if err := w.ctrlclient.Get(ctx, types.NamespacedName{Name: nodeName}, &node); err != nil {
 		klog.ErrorS(err, "WAO: ScoreNode failed to get Node", "nodeName", nodeName)
 		return 0, err
 	}

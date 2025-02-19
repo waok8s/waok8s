@@ -1749,7 +1749,7 @@ func (proxier *Proxier) writeServiceToEndpointRules(tx *knftables.Transaction, s
 			// update totalScore
 			totalScore += score
 		}
-		endpoints = endpoints[:len(endpoints)-1] // remove the last comma
+		elements = elements[:len(elements)-1] // remove the last comma
 
 		tx.Add(&knftables.Rule{
 			Chain: svcChain,
