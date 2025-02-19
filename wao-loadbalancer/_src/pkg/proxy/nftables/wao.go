@@ -65,7 +65,7 @@ const (
 	DefaultMetricsCacheTTL   = 30 * time.Second
 	DefaultPredictorCacheTTL = 30 * time.Minute
 
-	DefaultCPUUsageFormat = CPUUsageFormatRaw
+	DefaultCPUUsageFormat = CPUUsageFormatPercent
 )
 
 var (
