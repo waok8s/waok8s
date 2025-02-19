@@ -37,6 +37,13 @@ import (
 	// wao
 	waov1beta1 "github.com/waok8s/wao-core/api/wao/v1beta1"
 	waoclient "github.com/waok8s/wao-core/pkg/client"
+	"github.com/waok8s/wao-core/pkg/predictor"
+)
+
+// Copied from wao-scheduler.
+const (
+	CPUUsageFormatRaw     string = "Raw"
+	CPUUsageFormatPercent string = "Percent"
 )
 
 const (
@@ -57,6 +64,8 @@ const (
 
 	DefaultMetricsCacheTTL   = 30 * time.Second
 	DefaultPredictorCacheTTL = 30 * time.Minute
+
+	DefaultCPUUsageFormat = CPUUsageFormatRaw
 )
 
 var (
@@ -70,9 +79,12 @@ func init() {
 }
 
 type WAOLBOptions struct {
-	IPFamily          corev1.IPFamily
+	IPFamily corev1.IPFamily
+
 	MetricsCacheTTL   time.Duration
 	PredictorCacheTTL time.Duration
+
+	CPUUsageFormat string
 }
 
 func DefaultingWAOLBOptions(opts WAOLBOptions) WAOLBOptions {
@@ -86,7 +98,26 @@ func DefaultingWAOLBOptions(opts WAOLBOptions) WAOLBOptions {
 	if opts.PredictorCacheTTL == 0 {
 		opts.PredictorCacheTTL = DefaultPredictorCacheTTL
 	}
+	if args.CPUUsageFormat == "" {
+		args.CPUUsageFormat = DefaultCPUUsageFormat
+	}
 	return opts
+}
+
+func ValidatingWAOLBOptions(opts WAOLBOptions) error {
+	if opts.IPFamily == "" {
+		return fmt.Errorf("ValidatingWAOLBOptions: IPFamily is required")
+	}
+	if opts.MetricsCacheTTL <= 0 {
+		return fmt.Errorf("ValidatingWAOLBOptions: MetricsCacheTTL must be positive")
+	}
+	if opts.PredictorCacheTTL <= 0 {
+		return fmt.Errorf("ValidatingWAOLBOptions: PredictorCacheTTL must be positive")
+	}
+	if args.CPUUsageFormat != CPUUsageFormatRaw && args.CPUUsageFormat != CPUUsageFormatPercent {
+		return fmt.Errorf("ValidatingWAOLBOptions: CPUUsageFormat must be either `Raw` or `Percent`")
+	}
+	return nil
 }
 
 type WAOLB struct {
@@ -106,9 +137,8 @@ type WAOLB struct {
 func NewWAOLB(opts WAOLBOptions) (*WAOLB, error) {
 
 	opts = DefaultingWAOLBOptions(opts)
-
-	if opts.IPFamily == "" {
-		return nil, fmt.Errorf("NewWAOLB: IPFamily is required")
+	if err := ValidatingWAOLBOptions(opts); err != nil {
+		return nil, err
 	}
 
 	cfg, err := rest.InClusterConfig()
@@ -401,10 +431,150 @@ func (w *WAOLB) ScoreService(ctx context.Context, svcName types.NamespacedName) 
 }
 
 // ScoreNode returns the predicted delta power consumption of the given node. The returned value is in watt, not normalized.
+// This logic is basically the same as the wao-scheduler code.
 func (w *WAOLB) ScoreNode(ctx context.Context, nodeName string, cpuUsage resource.Quantity) (int, error) {
-	klog.V(5).InfoS("WAO: ScoreNode", "nodeName", nodeName, "cpuUsage", cpuUsage)
+	klog.V(5).InfoS("WAO: ScoreNode", "nodeName", nodeName, "cpuUsage", cpuUsage.String())
 
-	panic("not implemented")
+	// get node and node metrics
+	var node *corev1.Node
+	if err := w.ctrlclient.Get(ctx, types.NamespacedName{Name: nodeName}, corev1.Node{}); err != nil {
+		klog.ErrorS(err, "WAO: ScoreNode failed to get Node", "nodeName", nodeName)
+		return 0, err
+	}
+	nodeMetrics, err := w.metricsclient.GetNodeMetrics(ctx, node.Name)
+	if err != nil {
+		klog.ErrorS(err, "WAO: ScoreNode failed to get NodeMetrics", "nodeName", nodeName)
+		return 0, err
+	}
+
+	// get additional usage (add assumed pod CPU usage for not running pods)
+	// NOTE: We need to assume the CPU usage of pods that have scheduled to this node but are not yet running,
+	// as the next replica (if the pod belongs to a deployment, etc.) will be scheduled soon and we need to consider the CPU usage of these pods.
+	var assumedAdditionalUsage float64
+	for _, p := range nodeInfo.Pods {
+		if p.Pod.Spec.NodeName != node.Name {
+			continue
+		}
+		if p.Pod.Status.Phase == corev1.PodRunning ||
+			p.Pod.Status.Phase == corev1.PodSucceeded ||
+			p.Pod.Status.Phase == corev1.PodFailed ||
+			p.Pod.Status.Phase == corev1.PodUnknown {
+			continue // only pending pods are counted
+		}
+		// NOTE: No need to check pod.Status.Conditions as pods on this node with pending status are just what we want.
+		// However, pods that have just been started and are not yet using CPU are not counted. (this is a restriction for now)
+		assumedAdditionalUsage += PodCPURequestOrLimit(p.Pod) * pl.args.PodUsageAssumption
+	}
+	// prepare beforeUsage and afterUsage
+	beforeUsage := nodeMetrics.Usage.Cpu().AsApproximateFloat64()
+	beforeUsage += assumedAdditionalUsage
+	virtualPod := &corev1.Pod{
+		Spec: corev1.PodSpec{
+			Containers: []corev1.Container{
+				{
+					Name: "WAOLB_VIRTUAL_POD",
+					Resources: corev1.ResourceRequirements{
+						Requests: map[corev1.ResourceName]resource.Quantity{
+							corev1.ResourceCPU: cpuUsage,
+						},
+					},
+				},
+			},
+		},
+	}
+	afterUsage := beforeUsage + PodCPURequestOrLimit(pod)
+	if beforeUsage == afterUsage { // The Pod has both requests.cpu and limits.cpu empty or zero. Normally, this should not happen.
+		klog.ErrorS(fmt.Errorf("beforeUsage == afterUsage v=%v", beforeUsage), "WAO: ScoreNode error", "node", nodeName, "cpuUsage", cpuUsage.String())
+		return ScoreError, nil
+	}
+	// NOTE: Normally, status.capacity.cpu and status.allocatable.cpu are the same.
+	cpuCapacity := node.Status.Capacity.Cpu().AsApproximateFloat64()
+	if afterUsage > cpuCapacity { // CPU overcommitment
+		// do nothing as this is a normal situation
+	}
+	klog.V(5).InfoS("WAO: ScoreNode usage", "node", nodeName, "cpuUsage", cpuUsage.String(), "usage_before", beforeUsage, "usage_after", afterUsage, "additional_usage_included", assumedAdditionalUsage)
+
+	// format usage
+	switch pl.args.CPUUsageFormat {
+	case CPUUsageFormatRaw:
+		// do nothing
+	case CPUUsageFormatPercent:
+		beforeUsage = (beforeUsage / cpuCapacity) * 100
+		afterUsage = (afterUsage / cpuCapacity) * 100
+	default:
+		// this never happens as ValidatingWAOLBOptions() checks the value
+	}
+	klog.V(5).InfoS("WAO: ScoreNode usage (formatted)", "node", nodeName, "cpuUsage", cpuUsage.String(), "format", w.opts.CPUUsageFormat, "usage_before", beforeUsage, "usage_after", afterUsage, "cpu_capacity", cpuCapacity)
+
+	// get custom metrics
+	inletTemp, err := w.metricsclient.GetCustomMetricForNode(ctx, nodeName, waometrics.ValueInletTemperature)
+	if err != nil {
+		klog.ErrorS(err, "WAO: ScoreNode GetCustomMetricForNode", "node", nodeName, "metric", waometrics.ValueInletTemperature)
+		return 0, err
+	}
+	deltaP, err := w.metricsclient.GetCustomMetricForNode(ctx, nodeName, waometrics.ValueDeltaPressure)
+	if err != nil {
+		klog.ErrorS(err, "WAO: ScoreNode GetCustomMetricForNode", "node", nodeName, "metric", waometrics.ValueDeltaPressure)
+		return 0, err
+	}
+	klog.V(5).InfoS("WAO: ScoreNode metrics", "node", nodeName, "inlet_temp", inletTemp.Value.AsApproximateFloat64(), "delta_p", deltaP.Value.AsApproximateFloat64())
+
+	// get NodeConfig
+	var nc *waov1beta1.NodeConfig
+	var ncs waov1beta1.NodeConfigList
+	if err := w.ctrlclient.List(ctx, &ncs); err != nil {
+		klog.ErrorS(err, "WAO: ScoreNode failed to list NodeConfig", "node", nodeName)
+		return 0, err
+	}
+	for _, e := range ncs.Items {
+		// TODO: handle node with multiple NodeConfig
+		if e.Spec.NodeName == nodeName {
+			nc = e.DeepCopy()
+			break
+		}
+	}
+	if nc == nil {
+		klog.ErrorS(fmt.Errorf("nodeconfig == nil"), "WAO: ScoreNode error", "node", nodeName)
+		return 0, nil
+	}
+
+	// init predictor endpoint
+	var ep *waov1beta1.EndpointTerm
+	if nc.Spec.Predictor.PowerConsumption != nil {
+		ep = nc.Spec.Predictor.PowerConsumption
+	} else {
+		ep = &waov1beta1.EndpointTerm{}
+	}
+	if nc.Spec.Predictor.PowerConsumptionEndpointProvider != nil {
+		ep2, err := pl.predictorclient.GetPredictorEndpoint(ctx, nc.Namespace, nc.Spec.Predictor.PowerConsumptionEndpointProvider, predictor.TypePowerConsumption)
+		if err != nil {
+			klog.ErrorS(err, "WAO: ScoreNode GetPredictorEndpoint", "node", nodeName)
+			return
+		}
+		ep.Type = ep2.Type
+		ep.Endpoint = ep2.Endpoint
+	}
+
+	// do predict
+	beforeWatt, err := w.predictorclient.PredictPowerConsumption(ctx, nc.Namespace, ep, beforeUsage, inletTemp.Value.AsApproximateFloat64(), deltaP.Value.AsApproximateFloat64())
+	if err != nil {
+		klog.ErrorS(err, "WAO: ScoreNode failed to predict power consumption", "node", nodeName)
+		return 0, err
+	}
+	afterWatt, err := w.predictorclient.PredictPowerConsumption(ctx, nc.Namespace, ep, afterUsage, inletTemp.Value.AsApproximateFloat64(), deltaP.Value.AsApproximateFloat64())
+	if err != nil {
+		klog.ErrorS(err, "WAO: ScoreNode failed to predict power consumption", "node", nodeName)
+		return 0, err
+	}
+	klog.V(5).InfoS("WAO: ScoreNode prediction", "node", nodeName, "watt_before", beforeWatt, "watt_after", afterWatt)
+
+	powerConsumption := int(afterWatt - beforeWatt)
+	if powerConsumption < 0 {
+		klog.InfoS("WAO: ScoreNode round negative scores to 0", "node", nodeName, "watt", afterWatt-beforeWatt)
+		powerConsumption = 0
+	}
+
+	return powerConsumption, nil
 }
 
 // normalizeScores normalizes watts to score in [0, 100].
@@ -453,6 +623,19 @@ func decodeSvcPortNameString(svcPortNameString string) (namespace string, svcNam
 	svcName = vv[0]
 	if len(vv) == 2 {
 		portName = vv[1]
+	}
+	return
+}
+
+// PodCPURequestOrLimit returns the sum of CPU requests or limits of the given pod.
+// Copied from wao-scheduler.
+func PodCPURequestOrLimit(pod *corev1.Pod) (v float64) {
+	for _, c := range pod.Spec.Containers {
+		vv := c.Resources.Requests.Cpu().AsApproximateFloat64()
+		if vv == 0 {
+			vv = c.Resources.Limits.Cpu().AsApproximateFloat64()
+		}
+		v += vv
 	}
 	return
 }
