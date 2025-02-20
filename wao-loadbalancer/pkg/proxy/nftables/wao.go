@@ -213,55 +213,55 @@ func betterChunkSize(n, parallelism int) workqueue.Options {
 // If an error occurs during the calculation of a service, the service is ignored.
 // See ScoreService and ScoreNode for details.
 func (w *WAOLB) Score(ctx context.Context, svcPortNames []string) {
-	klog.V(5).InfoS("WAO: Score", "len(svcPortNames)", len(svcPortNames))
+	klog.V(5).InfoS("WAO: Score", "ipFamily", w.opts.IPFamily, "len(svcPortNames)", len(svcPortNames))
 
 	w.Scores = map[string]map[string]int{} // map[svcPortNameString]map[endpointIP]score
-	klog.V(5).InfoS("WAO: Score cleared w.scores")
+	klog.V(5).InfoS("WAO: Score cleared w.scores", "ipFamily", w.opts.IPFamily)
 
 	// NOTE: w.Scores is not thread-safe, but we don't update the same key in parallel, so it's safe here.
-	klog.InfoS("WAO: Score start parallelizing", "n", len(svcPortNames), "parallelism", Parallelism)
+	klog.InfoS("WAO: Score start parallelizing", "ipFamily", w.opts.IPFamily, "n", len(svcPortNames), "parallelism", Parallelism)
 	n := len(svcPortNames)
 	workqueue.ParallelizeUntil(ctx, Parallelism, n, func(piece int) {
 		svcPortName := svcPortNames[piece]
 		svcNS, svcName, _ := decodeSvcPortNameString(svcPortName)
 		scores, err := w.ScoreService(ctx, types.NamespacedName{Namespace: svcNS, Name: svcName})
 		if err != nil {
-			klog.ErrorS(err, "WAO: Score failed to score service", "svcPortName", svcPortName)
+			klog.ErrorS(err, "WAO: Score failed to score service", "ipFamily", w.opts.IPFamily, "svcPortName", svcPortName)
 			return
 		}
 		w.Scores[svcPortName] = scores // set the value only if no error
-		klog.V(5).InfoS("WAO: Score added scores", "svcPortName", svcPortName)
+		klog.V(5).InfoS("WAO: Score added scores", "ipFamily", w.opts.IPFamily, "svcPortName", svcPortName)
 	}, betterChunkSize(n, Parallelism))
 
-	klog.V(5).InfoS("WAO: Score updated w.scores", "len(svcPortNames)", len(svcPortNames), "len(w.scores)", len(w.Scores))
+	klog.V(5).InfoS("WAO: Score updated w.scores", "ipFamily", w.opts.IPFamily, "len(svcPortNames)", len(svcPortNames), "len(w.scores)", len(w.Scores))
 }
 
 // ScoreService calculates scores of the given Service for all nodes.
 // Returns map[endpointIP]score. The score is in [0, 100].
 func (w *WAOLB) ScoreService(ctx context.Context, svcName types.NamespacedName) (map[string]int, error) {
-	klog.V(5).InfoS("WAO: ScoreService", "svcName", svcName)
+	klog.V(5).InfoS("WAO: ScoreService", "ipFamily", w.opts.IPFamily, "svcName", svcName)
 
 	// get service
 	var svc corev1.Service
 	if err := w.ctrlclient.Get(ctx, svcName, &svc); err != nil {
-		klog.ErrorS(err, "WAO: ScoreService failed to get Service", "svcName", svcName)
+		klog.ErrorS(err, "WAO: ScoreService failed to get Service", "ipFamily", w.opts.IPFamily, "svcName", svcName)
 		return nil, err
 	}
-	klog.V(5).InfoS("WAO: ScoreService Service", "svc", types.NamespacedName{Namespace: svc.Namespace, Name: svc.Name})
+	klog.V(5).InfoS("WAO: ScoreService Service", "ipFamily", w.opts.IPFamily, "svc", types.NamespacedName{Namespace: svc.Namespace, Name: svc.Name})
 
 	// get cpu-per-request
 	cpuPerRequest, err := resource.ParseQuantity(svc.Annotations[AnnotationCPUPerRequest])
 	if err != nil {
 		cpuPerRequest = defaultCPUPerRequest
-		klog.V(5).InfoS("WAO: ScoreService using default cpu-per-request (annotation not found or parsing error)", "svc", svc.Name, "annotation", AnnotationCPUPerRequest)
+		klog.V(5).InfoS("WAO: ScoreService using default cpu-per-request (annotation not found or parsing error)", "ipFamily", w.opts.IPFamily, "svc", svc.Name, "annotation", AnnotationCPUPerRequest)
 	}
-	klog.V(5).InfoS("WAO: ScoreService CPUPerRequest", "svc", types.NamespacedName{Namespace: svc.Namespace, Name: svc.Name}, "cpuPerRequest", cpuPerRequest.String())
+	klog.V(5).InfoS("WAO: ScoreService CPUPerRequest", "ipFamily", w.opts.IPFamily, "svc", types.NamespacedName{Namespace: svc.Namespace, Name: svc.Name}, "cpuPerRequest", cpuPerRequest.String())
 
 	// get endpointSlice
 	var es *discoveryv1.EndpointSlice
 	var ess discoveryv1.EndpointSliceList
 	if err := w.ctrlclient.List(ctx, &ess, client.InNamespace(svc.Namespace), client.MatchingLabels{"kubernetes.io/service-name": svc.Name}); err != nil {
-		klog.ErrorS(err, "WAO: ScoreService failed to list EndpointSlice", "svc", types.NamespacedName{Namespace: svc.Namespace, Name: svc.Name})
+		klog.ErrorS(err, "WAO: ScoreService failed to list EndpointSlice", "ipFamily", w.opts.IPFamily, "svc", types.NamespacedName{Namespace: svc.Namespace, Name: svc.Name})
 		return nil, err
 	}
 	for _, e := range ess.Items {
@@ -272,10 +272,10 @@ func (w *WAOLB) ScoreService(ctx context.Context, svcName types.NamespacedName) 
 	}
 	if es == nil {
 		err := fmt.Errorf("EndpointSlice not found svc=%s ipFamily=%s", svc.Name, w.opts.IPFamily)
-		klog.ErrorS(err, "WAO: ScoreService failed to get EndpointSlice with same IPFamily", "svc", types.NamespacedName{Namespace: svc.Namespace, Name: svc.Name}, "ipFamily", w.opts.IPFamily)
+		klog.ErrorS(err, "WAO: ScoreService failed to get EndpointSlice with same IPFamily", "ipFamily", w.opts.IPFamily, "svc", types.NamespacedName{Namespace: svc.Namespace, Name: svc.Name}, "ipFamily", w.opts.IPFamily)
 		return nil, err
 	}
-	klog.V(5).InfoS("WAO: ScoreService EndpointSlice", "svc", types.NamespacedName{Namespace: svc.Namespace, Name: svc.Name}, "endpointSlice", types.NamespacedName{Namespace: es.Namespace, Name: es.Name})
+	klog.V(5).InfoS("WAO: ScoreService EndpointSlice", "ipFamily", w.opts.IPFamily, "svc", types.NamespacedName{Namespace: svc.Namespace, Name: svc.Name}, "endpointSlice", types.NamespacedName{Namespace: es.Namespace, Name: es.Name})
 
 	// get scores (in watt)
 	watts := map[string]int{} // map[endpointIP]watt
@@ -289,7 +289,7 @@ func (w *WAOLB) ScoreService(ctx context.Context, svcName types.NamespacedName) 
 		}
 		watt, err := w.ScoreNode(ctx, nodeName, cpuPerRequest)
 		if err != nil {
-			klog.ErrorS(err, "WAO: ScoreService ScoreNode failed, so ignore this endpoint", "svc", types.NamespacedName{Namespace: svc.Namespace, Name: svc.Name}, "endpointSlice", types.NamespacedName{Namespace: es.Namespace, Name: es.Name}, "endpointSlice.endpoints", ep)
+			klog.ErrorS(err, "WAO: ScoreService ScoreNode failed, so ignore this endpoint", "ipFamily", w.opts.IPFamily, "svc", types.NamespacedName{Namespace: svc.Namespace, Name: svc.Name}, "endpointSlice", types.NamespacedName{Namespace: es.Namespace, Name: es.Name}, "endpointSlice.endpoints", ep)
 		} else {
 			// NOTE: if multiple addresses are assigned to the same NodeName, the same watt is assigned to all addresses
 			for _, addr := range ep.Addresses {
@@ -297,11 +297,11 @@ func (w *WAOLB) ScoreService(ctx context.Context, svcName types.NamespacedName) 
 			}
 		}
 	}
-	klog.V(5).InfoS("WAO: ScoreService watts", "svc", types.NamespacedName{Namespace: svc.Namespace, Name: svc.Name}, "watts", watts)
+	klog.V(5).InfoS("WAO: ScoreService watts", "ipFamily", w.opts.IPFamily, "svc", types.NamespacedName{Namespace: svc.Namespace, Name: svc.Name}, "watts", watts)
 
 	// normalize scores
 	scores := normalizeScores(watts)
-	klog.V(5).InfoS("WAO: ScoreService scores", "svc", types.NamespacedName{Namespace: svc.Namespace, Name: svc.Name}, "scores", scores)
+	klog.V(5).InfoS("WAO: ScoreService scores", "ipFamily", w.opts.IPFamily, "svc", types.NamespacedName{Namespace: svc.Namespace, Name: svc.Name}, "scores", scores)
 
 	// return
 	return scores, nil
@@ -310,17 +310,17 @@ func (w *WAOLB) ScoreService(ctx context.Context, svcName types.NamespacedName) 
 // ScoreNode returns the predicted delta power consumption of the given node. The returned value is in watt, not normalized.
 // This logic is basically the same as the wao-scheduler code.
 func (w *WAOLB) ScoreNode(ctx context.Context, nodeName string, cpuUsage resource.Quantity) (int, error) {
-	klog.V(5).InfoS("WAO: ScoreNode", "nodeName", nodeName, "cpuUsage", cpuUsage.String())
+	klog.V(5).InfoS("WAO: ScoreNode", "ipFamily", w.opts.IPFamily, "nodeName", nodeName, "cpuUsage", cpuUsage.String())
 
 	// get node and node metrics
 	var node corev1.Node
 	if err := w.ctrlclient.Get(ctx, types.NamespacedName{Name: nodeName}, &node); err != nil {
-		klog.ErrorS(err, "WAO: ScoreNode failed to get Node", "nodeName", nodeName)
+		klog.ErrorS(err, "WAO: ScoreNode failed to get Node", "ipFamily", w.opts.IPFamily, "nodeName", nodeName)
 		return 0, err
 	}
 	nodeMetrics, err := w.metricsclient.GetNodeMetrics(ctx, node.Name)
 	if err != nil {
-		klog.ErrorS(err, "WAO: ScoreNode failed to get NodeMetrics", "nodeName", nodeName)
+		klog.ErrorS(err, "WAO: ScoreNode failed to get NodeMetrics", "ipFamily", w.opts.IPFamily, "nodeName", nodeName)
 		return 0, err
 	}
 
@@ -345,7 +345,7 @@ func (w *WAOLB) ScoreNode(ctx context.Context, nodeName string, cpuUsage resourc
 	}
 	afterUsage := beforeUsage + PodCPURequestOrLimit(virtualPod)
 	if beforeUsage == afterUsage { // The Pod has both requests.cpu and limits.cpu empty or zero. Normally, this should not happen.
-		klog.ErrorS(fmt.Errorf("beforeUsage == afterUsage v=%v", beforeUsage), "WAO: ScoreNode error", "node", nodeName, "cpuUsage", cpuUsage.String())
+		klog.ErrorS(fmt.Errorf("beforeUsage == afterUsage v=%v", beforeUsage), "WAO: ScoreNode error", "ipFamily", w.opts.IPFamily, "node", nodeName, "cpuUsage", cpuUsage.String())
 		return 0, nil
 	}
 	// NOTE: Normally, status.capacity.cpu and status.allocatable.cpu are the same.
@@ -353,7 +353,7 @@ func (w *WAOLB) ScoreNode(ctx context.Context, nodeName string, cpuUsage resourc
 	if afterUsage > cpuCapacity { // CPU overcommitment
 		// do nothing as this is a normal situation
 	}
-	klog.V(5).InfoS("WAO: ScoreNode usage", "node", nodeName, "cpuUsage", cpuUsage.String(), "usage_before", beforeUsage, "usage_after", afterUsage, "additional_usage_included", assumedAdditionalUsage)
+	klog.V(5).InfoS("WAO: ScoreNode usage", "ipFamily", w.opts.IPFamily, "node", nodeName, "cpuUsage", cpuUsage.String(), "usage_before", beforeUsage, "usage_after", afterUsage, "additional_usage_included", assumedAdditionalUsage)
 
 	// format usage
 	switch w.opts.CPUUsageFormat {
@@ -365,26 +365,26 @@ func (w *WAOLB) ScoreNode(ctx context.Context, nodeName string, cpuUsage resourc
 	default:
 		// this never happens as ValidatingWAOLBOptions() checks the value
 	}
-	klog.V(5).InfoS("WAO: ScoreNode usage (formatted)", "node", nodeName, "cpuUsage", cpuUsage.String(), "format", w.opts.CPUUsageFormat, "usage_before", beforeUsage, "usage_after", afterUsage, "cpu_capacity", cpuCapacity)
+	klog.V(5).InfoS("WAO: ScoreNode usage (formatted)", "ipFamily", w.opts.IPFamily, "node", nodeName, "cpuUsage", cpuUsage.String(), "format", w.opts.CPUUsageFormat, "usage_before", beforeUsage, "usage_after", afterUsage, "cpu_capacity", cpuCapacity)
 
 	// get custom metrics
 	inletTemp, err := w.metricsclient.GetCustomMetricForNode(ctx, nodeName, waometrics.ValueInletTemperature)
 	if err != nil {
-		klog.ErrorS(err, "WAO: ScoreNode GetCustomMetricForNode", "node", nodeName, "metric", waometrics.ValueInletTemperature)
+		klog.ErrorS(err, "WAO: ScoreNode GetCustomMetricForNode", "ipFamily", w.opts.IPFamily, "node", nodeName, "metric", waometrics.ValueInletTemperature)
 		return 0, err
 	}
 	deltaP, err := w.metricsclient.GetCustomMetricForNode(ctx, nodeName, waometrics.ValueDeltaPressure)
 	if err != nil {
-		klog.ErrorS(err, "WAO: ScoreNode GetCustomMetricForNode", "node", nodeName, "metric", waometrics.ValueDeltaPressure)
+		klog.ErrorS(err, "WAO: ScoreNode GetCustomMetricForNode", "ipFamily", w.opts.IPFamily, "node", nodeName, "metric", waometrics.ValueDeltaPressure)
 		return 0, err
 	}
-	klog.V(5).InfoS("WAO: ScoreNode metrics", "node", nodeName, "inlet_temp", inletTemp.Value.AsApproximateFloat64(), "delta_p", deltaP.Value.AsApproximateFloat64())
+	klog.V(5).InfoS("WAO: ScoreNode metrics", "ipFamily", w.opts.IPFamily, "node", nodeName, "inlet_temp", inletTemp.Value.AsApproximateFloat64(), "delta_p", deltaP.Value.AsApproximateFloat64())
 
 	// get NodeConfig
 	var nc *waov1beta1.NodeConfig
 	var ncs waov1beta1.NodeConfigList
 	if err := w.ctrlclient.List(ctx, &ncs); err != nil {
-		klog.ErrorS(err, "WAO: ScoreNode failed to list NodeConfig", "node", nodeName)
+		klog.ErrorS(err, "WAO: ScoreNode failed to list NodeConfig", "ipFamily", w.opts.IPFamily, "node", nodeName)
 		return 0, err
 	}
 	for _, e := range ncs.Items {
@@ -395,7 +395,7 @@ func (w *WAOLB) ScoreNode(ctx context.Context, nodeName string, cpuUsage resourc
 		}
 	}
 	if nc == nil {
-		klog.ErrorS(fmt.Errorf("nodeconfig == nil"), "WAO: ScoreNode error", "node", nodeName)
+		klog.ErrorS(fmt.Errorf("nodeconfig == nil"), "WAO: ScoreNode error", "ipFamily", w.opts.IPFamily, "node", nodeName)
 		return 0, nil
 	}
 
@@ -409,7 +409,7 @@ func (w *WAOLB) ScoreNode(ctx context.Context, nodeName string, cpuUsage resourc
 	if nc.Spec.Predictor.PowerConsumptionEndpointProvider != nil {
 		ep2, err := w.predictorclient.GetPredictorEndpoint(ctx, nc.Namespace, nc.Spec.Predictor.PowerConsumptionEndpointProvider, predictor.TypePowerConsumption)
 		if err != nil {
-			klog.ErrorS(err, "WAO: ScoreNode GetPredictorEndpoint", "node", nodeName)
+			klog.ErrorS(err, "WAO: ScoreNode GetPredictorEndpoint", "ipFamily", w.opts.IPFamily, "node", nodeName)
 			return 0, err
 		}
 		ep.Type = ep2.Type
@@ -419,19 +419,19 @@ func (w *WAOLB) ScoreNode(ctx context.Context, nodeName string, cpuUsage resourc
 	// do predict
 	beforeWatt, err := w.predictorclient.PredictPowerConsumption(ctx, nc.Namespace, ep, beforeUsage, inletTemp.Value.AsApproximateFloat64(), deltaP.Value.AsApproximateFloat64())
 	if err != nil {
-		klog.ErrorS(err, "WAO: ScoreNode failed to predict power consumption", "node", nodeName)
+		klog.ErrorS(err, "WAO: ScoreNode failed to predict power consumption", "ipFamily", w.opts.IPFamily, "node", nodeName)
 		return 0, err
 	}
 	afterWatt, err := w.predictorclient.PredictPowerConsumption(ctx, nc.Namespace, ep, afterUsage, inletTemp.Value.AsApproximateFloat64(), deltaP.Value.AsApproximateFloat64())
 	if err != nil {
-		klog.ErrorS(err, "WAO: ScoreNode failed to predict power consumption", "node", nodeName)
+		klog.ErrorS(err, "WAO: ScoreNode failed to predict power consumption", "ipFamily", w.opts.IPFamily, "node", nodeName)
 		return 0, err
 	}
-	klog.V(5).InfoS("WAO: ScoreNode prediction", "node", nodeName, "watt_before", beforeWatt, "watt_after", afterWatt)
+	klog.V(5).InfoS("WAO: ScoreNode prediction", "ipFamily", w.opts.IPFamily, "node", nodeName, "watt_before", beforeWatt, "watt_after", afterWatt)
 
 	powerConsumption := int(afterWatt - beforeWatt)
 	if powerConsumption < 0 {
-		klog.InfoS("WAO: ScoreNode round negative scores to 0", "node", nodeName, "watt", afterWatt-beforeWatt)
+		klog.InfoS("WAO: ScoreNode round negative scores to 0", "ipFamily", w.opts.IPFamily, "node", nodeName, "watt", afterWatt-beforeWatt)
 		powerConsumption = 0
 	}
 
