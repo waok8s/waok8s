@@ -118,6 +118,7 @@ The above example uses Redfish and DifferentialPressureAPI to collect inlet temp
 This part of the spec is used to configure how to collect inlet temperature.
 
 - `type`: `Redfish` or `Fake`.
+  - `Fake` always returns `15.5` as the temperature.
 - `endpoint`: Endpoint URL. Ignored when `type` is `Fake`.
 - `basicAuthSecret` (Optional): Secret containing username and password for basic authentication. Ignored when the `type` does not require authentication.
 - `fetchInterval` (Optional): Interval to fetch metrics. Default is `15s`.
@@ -136,6 +137,7 @@ This part of the spec is used to configure how to collect inlet temperature.
 This part of the spec is used to configure how to collect differential pressure.
 
 - `type`: `DifferentialPressureAPI` or `Fake`.
+  - `Fake` always returns `7.5` as the delta pressure.
 - `endpoint`: Endpoint URL. Ignored when `type` is `Fake`.
 - `basicAuthSecret` (Optional): Secret containing username and password for basic authentication. Ignored when the `type` does not require authentication.
 - `fetchInterval` (Optional): Interval to fetch metrics. Default is `15s`.
@@ -152,6 +154,7 @@ This part of the spec is used to configure how to collect differential pressure.
 This part of the spec is used to configure how to predict power consumption.
 
 - `type`: `V2InferenceProtocol` or `Fake`.
+  - `Fake` always returns `3.14` as the power consumption.
 - `endpoint`: Endpoint URL. Ignored when `type` is `Fake`.
 - `basicAuthSecret` (Optional): Secret containing username and password for basic authentication. Ignored when the `type` does not require authentication.
 - `fetchInterval` (Unused): Ignored.
@@ -167,6 +170,7 @@ This part of the spec is used to configure how to predict power consumption.
 This part of the spec is used to configure how to get endpoint for power consumption predictor. This is useful when the endpoint is described in Redfish or other APIs.
 
 - `type`: `Redfish` or `Fake`.
+  - Fake always returns `https://fake-endpoint`.
 - `endpoint`: Endpoint URL. Ignored when `type` is `Fake`.
 - `basicAuthSecret` (Optional): Secret containing username and password for basic authentication. Ignored when the `type` does not require authentication.
 - `fetchInterval` (Unused): Ignored.
