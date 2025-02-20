@@ -1702,13 +1702,23 @@ func (proxier *Proxier) writeServiceToEndpointRules(tx *knftables.Transaction, s
 	if ok {
 		// Check if any endpoint has a normal score
 		// NOTE: There is always at least one endpoint with a score of 100 (ScoreMax). So normally this should be true.
-		for _, ep := range endpoints {
-			if scores[ep.IP()] > 0 {
+		eps := make([]string, len(endpoints))
+		for i, ep := range endpoints {
+			epInfo, ok := ep.(*endpointInfo)
+			if !ok {
+				continue
+			}
+			eps[i] = epInfo.IP()
+		}
+		for _, ep := range eps {
+			if scores[ep] > 0 {
 				useWAO = true
 				break
 			}
 		}
-		klog.ErrorS(fmt.Errorf("all scores are score <= 0"), "WAO: writeServiceToEndpointRules unexpected scores", "ipFamily", proxier.ipFamily, "svcPortName", svcPortNameString, "scores", scores)
+		if !useWAO {
+			klog.ErrorS(fmt.Errorf("all scores are score <= 0"), "WAO: writeServiceToEndpointRules unexpected scores", "ipFamily", proxier.ipFamily, "svcPortName", svcPortNameString, "endpoints", eps, "scores", scores)
+		}
 	}
 	klog.V(5).InfoS("WAO: writeServiceToEndpointRules", "ipFamily", proxier.ipFamily, "svcPortName", svcPortNameString, "useWAO", useWAO)
 
