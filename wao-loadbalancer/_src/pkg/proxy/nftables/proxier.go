@@ -1048,13 +1048,13 @@ func (proxier *Proxier) syncProxyRules() {
 	}
 
 	// WAO: calc scores for all services
-	klog.InfoS("WAO: syncProxyRules calculating scores for all svcPortNames")
+	klog.InfoS("WAO: syncProxyRules calculating scores for all svcPortNames", "ipFamily", proxier.ipFamily)
 	svcPortNames := make([]string, 0, len(proxier.svcPortMap))
 	for svcPortName := range proxier.svcPortMap {
 		svcPortNames = append(svcPortNames, svcPortName.String())
 	}
 	proxier.waoLB.Score(context.TODO(), []string(svcPortNames))
-	klog.InfoS("WAO: syncProxyRules added scores for svcPortNames", "len(scores)", len(proxier.waoLB.Scores))
+	klog.InfoS("WAO: syncProxyRules added scores for svcPortNames", "ipFamily", proxier.ipFamily, "len(scores)", len(proxier.waoLB.Scores))
 
 	// Now start the actual syncing transaction
 	tx := proxier.nftables.NewTransaction()
@@ -1708,9 +1708,9 @@ func (proxier *Proxier) writeServiceToEndpointRules(tx *knftables.Transaction, s
 				break
 			}
 		}
-		klog.ErrorS(fmt.Errorf("all scores are score <= 0"), "WAO: writeServiceToEndpointRules unexpected scores", "svcPortName", svcPortNameString, "scores", scores)
+		klog.ErrorS(fmt.Errorf("all scores are score <= 0"), "WAO: writeServiceToEndpointRules unexpected scores", "ipFamily", proxier.ipFamily, "svcPortName", svcPortNameString, "scores", scores)
 	}
-	klog.V(5).InfoS("WAO: writeServiceToEndpointRules", "svcPortName", svcPortNameString, "useWAO", useWAO)
+	klog.V(5).InfoS("WAO: writeServiceToEndpointRules", "ipFamily", proxier.ipFamily, "svcPortName", svcPortNameString, "useWAO", useWAO)
 
 	// Now write loadbalancing rule
 
@@ -1731,11 +1731,11 @@ func (proxier *Proxier) writeServiceToEndpointRules(tx *knftables.Transaction, s
 			// get score
 			score, ok := scores[epInfo.IP()]
 			if !ok {
-				klog.V(5).InfoS("WAO: writeServiceToEndpointRules score is missing, so skip", "svcPortName", svcPortNameString, "epInfo.IP", epInfo.IP())
+				klog.V(5).InfoS("WAO: writeServiceToEndpointRules score is missing, so skip", "ipFamily", proxier.ipFamily, "svcPortName", svcPortNameString, "epInfo.IP", epInfo.IP())
 				continue
 			}
 			if score <= 0 {
-				klog.V(5).InfoS("WAO: writeServiceToEndpointRules score <= 0, so skip", "svcPortName", svcPortNameString, "epInfo.IP", epInfo.IP(), "score", score)
+				klog.V(5).InfoS("WAO: writeServiceToEndpointRules score <= 0, so skip", "ipFamily", proxier.ipFamily, "svcPortName", svcPortNameString, "epInfo.IP", epInfo.IP(), "score", score)
 				continue
 			}
 
