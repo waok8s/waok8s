@@ -197,6 +197,11 @@ Here is a non-comprehensive list of the variables and their implementation statu
 
 Versioning: we use the same major.minor as Kubernetes, and the patch is our own.
 
+- 2025-02-20 `v1.30.0-alpha.2`
+  - Support user-defined CPU request per request.
+  - Use delta power to calculate the weight.
+  - Support more WAO configurations.
+  - Internal improvements.
 - 2025-02-12 `v1.30.0-alpha.1`
   - Drop support for `ipvs` mode (now only `nftables` mode is supported).
   - Support non-default service proxy deployment.
