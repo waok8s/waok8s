@@ -229,6 +229,10 @@ func (w *WAOLB) Score(ctx context.Context, svcPortNames []string) {
 			klog.ErrorS(err, "WAO: Score failed to score service", "ipFamily", w.opts.IPFamily, "svcPortName", svcPortName)
 			return
 		}
+		if len(scores) == 0 {
+			klog.InfoS("WAO: Score all failed len(scores)==0", "ipFamily", w.opts.IPFamily, "svcPortName", svcPortName)
+			return
+		}
 		w.Scores[svcPortName] = scores // set the value only if no error
 		klog.V(5).InfoS("WAO: Score added scores", "ipFamily", w.opts.IPFamily, "svcPortName", svcPortName)
 	}, betterChunkSize(n, Parallelism))
