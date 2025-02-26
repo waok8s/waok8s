@@ -1,18 +1,21 @@
-name: Release
+name: "[wao-core] Release"
 on:
   push:
     tags:
-      - "v*"
+      - "wao-core/v*"
 jobs:
   image:
     name: Push container image
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: wao-core
     steps:
       - uses: actions/checkout@v3
       - uses: docker/metadata-action@v4
         id: meta
         with:
-          images: ghcr.io/${{ github.repository_owner }}/wao-loadbalancer
+          images: ghcr.io/${{ github.repository_owner }}/wao-controller
           tags: |
             # v1.2.3-rc.4
             type=semver,pattern={{raw}}
@@ -32,12 +35,15 @@ jobs:
   release:
     name: Release on GitHub
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: wao-core
     steps:
       - uses: actions/checkout@v3
-      - uses: actions/setup-go@v3
+      - uses: actions/setup-go@v5
         with:
-          go-version-file: go.mod
+          go-version-file: go.work # go.mod or go.work
       - run: REGISTRY=ghcr.io/${GITHUB_REPOSITORY_OWNER,,} ./hack/dist.sh
       - uses: softprops/action-gh-release@v1
         with:
-          files: wao-loadbalancer.yaml
+          files: wao-core.yaml
