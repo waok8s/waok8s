@@ -1,0 +1,9 @@
+resources:
+- deps/wao-core.yaml
+- ns.yaml
+- apiservice-custommetrics.yaml
+# - apiservice-externalmetrics.yaml
+# - sa-hpa.yaml
+- sa.yaml
+- deploy.yaml
+- svc.yaml

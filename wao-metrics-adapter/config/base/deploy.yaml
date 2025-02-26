@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: wao-metrics-adapter
+  name: wao-metrics-adapter
+  namespace: custom-metrics
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: wao-metrics-adapter
+  template:
+    metadata:
+      labels:
+        app: wao-metrics-adapter
+      name: wao-metrics-adapter
+    spec:
+      serviceAccountName: wao-metrics-adapter
+      containers:
+      - name: wao-metrics-adapter
+        image: wao-metrics-adapter
+        command:
+        - adapter
+        args:
+        - --secure-port=6443
+        - --cert-dir=/var/run/serving-cert
+        - --v=5
+        resources: {}
+        ports:
+        - containerPort: 6443
+          name: https
+        - containerPort: 8080
+          name: http
+        volumeMounts:
+        - mountPath: /tmp
+          name: temp-vol
+          readOnly: false
+        - mountPath: /var/run/serving-cert
+          name: volume-serving-cert
+          readOnly: false
+      volumes:
+      - name: temp-vol
+        emptyDir: {}
+      - name: volume-serving-cert
+        emptyDir: {}
