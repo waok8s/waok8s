@@ -1,4 +1,4 @@
-VERSION?=$(shell git describe --tags --match "v*")
+VERSION?=$(shell git describe --tags --match "wao-core/v*" | sed 's|^wao-core/||')
 IMAGE_REGISTRY=localhost
 IMAGE_NAME=wao-scheduler
 

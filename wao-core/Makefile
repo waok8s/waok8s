@@ -1,3 +1,5 @@
+VERSION?=$(shell git describe --tags --match "wao-core/v*" | sed 's|^wao-core/||')
+GO_BUILD_ARGS=-trimpath -ldflags "-s -w -X k8s.io/component-base/version.gitVersion=$(VERSION)"
 
 # Image URL to use all building/pushing image targets
 IMG ?= controller:latest
@@ -68,7 +70,7 @@ test: manifests generate fmt vet envtest ## Run tests.
 
 .PHONY: build
 build: manifests generate fmt vet ## Build manager binary.
-	go build -o bin/manager cmd/main.go
+	go build $(GO_BUILD_ARGS) -o bin/manager cmd/main.go
 
 .PHONY: run
 run: manifests generate fmt vet ## Run a controller from your host.

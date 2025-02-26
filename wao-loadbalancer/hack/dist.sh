@@ -7,7 +7,7 @@
 IMAGE=wao-loadbalancer
 DIST=wao-loadbalancer.yaml
 
-VERSION=$(git describe --tags --match "v*")
+VERSION=$(git describe --tags --match "wao-loadbalancer/v*" | sed 's|^wao-loadbalancer/||')
 REGISTRY=${REGISTRY:-""}
 IMAGE_NAME=$IMAGE:$VERSION
 if [ -n "$REGISTRY" ] ; then IMAGE_NAME=$REGISTRY/$IMAGE:$VERSION ; fi

@@ -7,7 +7,7 @@
 IMAGE=wao-scheduler
 DIST=wao-scheduler.yaml
 
-VERSION=$(git describe --tags --match "v*")
+VERSION=$(git describe --tags --match "wao-scheduler/v*" | sed 's|^wao-scheduler/||')
 REGISTRY=${REGISTRY:-""}
 IMAGE_NAME=$IMAGE:$VERSION
 if [ -n "$REGISTRY" ] ; then IMAGE_NAME=$REGISTRY/$IMAGE:$VERSION ; fi

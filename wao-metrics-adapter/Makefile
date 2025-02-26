@@ -1,4 +1,5 @@
-VERSION?=$(shell git describe --tags --match "v*")
+VERSION?=$(shell git describe --tags --match "wao-metrics-adapter/v*" | sed 's|^wao-metrics-adapter/||')
+
 IMAGE_REGISTRY=localhost
 IMAGE_NAME=wao-metrics-adapter
 

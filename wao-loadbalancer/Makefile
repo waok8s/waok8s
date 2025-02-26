@@ -1,4 +1,4 @@
-VERSION?=$(shell git describe --tags --match "v*")
+VERSION?=$(shell git describe --tags --match "wao-loadbalancer/v*" | sed 's|^wao-loadbalancer/||')
 IMAGE_REGISTRY=localhost
 IMAGE_NAME=wao-loadbalancer
 

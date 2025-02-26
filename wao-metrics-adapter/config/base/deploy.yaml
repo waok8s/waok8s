@@ -19,7 +19,7 @@ spec:
       serviceAccountName: wao-metrics-adapter
       containers:
       - name: wao-metrics-adapter
-        image: wao-metrics-adapter
+        image: localhost/wao-metrics-adapter:v0.0.1-dev
         command:
         - adapter
         args:

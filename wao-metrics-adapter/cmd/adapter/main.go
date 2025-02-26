@@ -16,7 +16,7 @@ import (
 	waocontroller "github.com/waok8s/waok8s/wao-core/pkg/controller"
 	waometrics "github.com/waok8s/waok8s/wao-core/pkg/metrics"
 
-	waoprovider "github.com/waok8s/waok8s/wao-loadbalancer/pkg/provider"
+	waoprovider "github.com/waok8s/waok8s/wao-metrics-adapter/pkg/provider"
 )
 
 type Adapter struct {
