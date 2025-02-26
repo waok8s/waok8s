@@ -1,0 +1,4 @@
+resources:
+  - sa.yaml
+  - cm.yaml
+  - deploy.yaml

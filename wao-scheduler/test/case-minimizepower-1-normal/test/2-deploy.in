@@ -1,0 +1,2 @@
+# is deployment/test-dep ok?
+kubectl get deployment -n default test-dep | grep "3/3" | wc -l

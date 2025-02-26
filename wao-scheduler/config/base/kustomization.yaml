@@ -1,0 +1,6 @@
+resources:
+- deps/wao-core.yaml
+- deps/wao-metrics-adapter.yaml
+- sa.yaml
+- cm.yaml
+- deploy.yaml
