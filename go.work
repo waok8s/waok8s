@@ -1,0 +1,8 @@
+go 1.23.3
+
+use (
+	./wao-core
+	./wao-loadbalancer
+	./wao-metrics-adapter
+	./wao-scheduler
+)
