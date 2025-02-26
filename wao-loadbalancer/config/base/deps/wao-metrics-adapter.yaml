@@ -145,7 +145,7 @@ spec:
         - --v=5
         command:
         - adapter
-        image: ghcr.io/waok8s/wao-metrics-adapter:v1.30.0
+        image: ghcr.io/waok8s/wao-metrics-adapter:v1.30.1
         name: wao-metrics-adapter
         ports:
         - containerPort: 6443

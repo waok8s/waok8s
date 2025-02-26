@@ -83,6 +83,22 @@ So you can run WAO-LB as a non-default service proxy by following these steps:
 > [!NOTE]
 > This kube-proxy feature is not described in the official documentation yet, but can be found in [KEP-2447](https://github.com/kubernetes/enhancements/tree/13a4bd1c2eb29d39275ba433ecf952882e0092c5/keps/sig-network/2447-Make-kube-proxy-service-abstraction-optional), and also supported by other service proxies (e.g., [Kube-router](https://github.com/cloudnativelabs/kube-router/issues/979), [Cilium](https://docs.cilium.io/en/stable/network/kubernetes/kubeproxy-free/)).
 
+
+> [!NOTE]
+> Make sure you have [wao-core](https://github.com/waok8s/wao-core), [wao-metrics-adapter](https://github.com/waok8s/wao-metrics-adapter) and [wao-scheduler](https://github.com/waok8s/wao-scheduler) set up.
+> Make sure you have step 1 mentioned above done.
+
+Install WAO-LB with default configuration.
+
+```sh
+kubectl apply -f https://github.com/waok8s/wao-loadbalancer/releases/download/v1.30.0/wao-loadbalancer.yaml
+```
+
+Wait for the DaemonSet to be ready.
+```sh
+kubectl rollout status daemonset wao-loadbalancer -n kube-system --timeout=120s
+```
+
 #### Use WAO-LB as the Default Service Proxy
 
 WAO-LB can be used as a drop-in replacement for the default kube-proxy by following these steps:
@@ -116,12 +132,36 @@ Do like this:
 
 Use `nft` command is the easiest way.
 
+You can see tables for WAO-LB like this:
+
+```
+$ kubectl exec -n kube-system <kube-proxy-pod> -- nft list tables
+table ip kube-proxy
+table ip6 kube-proxy
+table ip wao-loadbalancer
+table ip6 wao-loadbalancer
+```
+
+To see the current ruleset, use this command:
+
 ```sh
-kubectl exec -n kube-system <kube-proxy-pod> -- nft list table
 kubectl exec -n kube-system <kube-proxy-pod> -- nft list ruleset
 ```
 
-// TODO: write more details
+The current weights are stored like this:
+
+```
+chain service-X4OXUEPL-default/nginx-waolb/tcp/https {
+  ip daddr 10.96.3.88 tcp dport 443 ip saddr != 10.244.0.0/16 jump mark-for-masquerade numgen random mod 459 vmap {
+    0-57 : goto endpoint-7Z6FGHRL-default/nginx-waolb/tcp/https__10.244.1.6/443,
+    58-157 : goto endpoint-VCT5YWDA-default/nginx-waolb/tcp/https__10.244.1.7/443,
+    158-234 : goto endpoint-H4NIIRDH-default/nginx-waolb/tcp/https__10.244.1.8/443,
+    235-314 : goto endpoint-XKCOTXG4-default/nginx-waolb/tcp/https__10.244.2.5/443,
+    315-381 : goto endpoint-NMVKMO6R-default/nginx-waolb/tcp/https__10.244.2.6/443,
+    382-458 : goto endpoint-O5WG6FSR-default/nginx-waolb/tcp/https__10.244.2.7/443
+  }
+}
+```
 
 ## Configuration
 
@@ -197,6 +237,8 @@ Here is a non-comprehensive list of the variables and their implementation statu
 
 Versioning: we use the same major.minor as Kubernetes, and the patch is our own.
 
+- 2025-02-26 `v1.30.0`
+  - Release version.
 - 2025-02-20 `v1.30.0-alpha.2`
   - Support user-defined CPU request per request.
   - Use delta power to calculate the weight.
