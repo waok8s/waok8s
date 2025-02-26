@@ -10,8 +10,8 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/waok8s/wao-core/pkg/predictor"
-	"github.com/waok8s/wao-core/pkg/util"
+	"github.com/waok8s/waok8s/wao-core/pkg/predictor"
+	"github.com/waok8s/waok8s/wao-core/pkg/util"
 )
 
 type PowerConsumptionPredictor struct {

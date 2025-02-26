@@ -12,8 +12,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/waok8s/wao-core/pkg/metrics"
-	"github.com/waok8s/wao-core/pkg/util"
+	"github.com/waok8s/waok8s/wao-core/pkg/metrics"
+	"github.com/waok8s/waok8s/wao-core/pkg/util"
 )
 
 type ServerType string

@@ -4,26 +4,26 @@
 # More info: https://book.kubebuilder.io/reference/project-config.html
 domain: bitmedia.co.jp
 layout:
-- go.kubebuilder.io/v4
+  - go.kubebuilder.io/v4
 multigroup: true
 projectName: wao-core
-repo: github.com/waok8s/wao-core
+repo: github.com/waok8s/waok8s/wao-core
 resources:
-- api:
-    crdVersion: v1
-    namespaced: true
-  domain: bitmedia.co.jp
-  group: wao
-  kind: NodeConfig
-  path: github.com/waok8s/wao-core/api/wao/v1beta1
-  version: v1beta1
-- api:
-    crdVersion: v1
-    namespaced: true
-  controller: true
-  domain: bitmedia.co.jp
-  group: wao
-  kind: NodeConfigTemplate
-  path: github.com/waok8s/wao-core/api/wao/v1beta1
-  version: v1beta1
+  - api:
+      crdVersion: v1
+      namespaced: true
+    domain: bitmedia.co.jp
+    group: wao
+    kind: NodeConfig
+    path: github.com/waok8s/waok8s/wao-core/api/wao/v1beta1
+    version: v1beta1
+  - api:
+      crdVersion: v1
+      namespaced: true
+    controller: true
+    domain: bitmedia.co.jp
+    group: wao
+    kind: NodeConfigTemplate
+    path: github.com/waok8s/waok8s/wao-core/api/wao/v1beta1
+    version: v1beta1
 version: "3"

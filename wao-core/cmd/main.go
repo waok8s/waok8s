@@ -16,8 +16,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
-	waov1beta1 "github.com/waok8s/wao-core/api/wao/v1beta1"
-	waocontroller "github.com/waok8s/wao-core/internal/controller/wao"
+	waov1beta1 "github.com/waok8s/waok8s/wao-core/api/wao/v1beta1"
+	waocontroller "github.com/waok8s/waok8s/wao-core/internal/controller/wao"
 	//+kubebuilder:scaffold:imports
 )
 

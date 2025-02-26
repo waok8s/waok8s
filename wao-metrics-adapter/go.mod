@@ -1,9 +1,12 @@
-module github.com/waok8s/wao-metrics-adapter
+module github.com/waok8s/waok8s/wao-metrics-adapter
 
-go 1.22.2
+go 1.23.6
 
 require (
-	github.com/waok8s/wao-core v1.30.1
+	github.com/waok8s/waok8s/wao-core v0.0.1-dev // go work
+)
+
+require (
 	k8s.io/apimachinery v0.30.0
 	k8s.io/client-go v0.30.0
 	k8s.io/component-base v0.30.0

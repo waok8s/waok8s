@@ -9,9 +9,9 @@ import (
 
 	"k8s.io/client-go/kubernetes"
 
-	waov1beta1 "github.com/waok8s/wao-core/api/wao/v1beta1"
-	"github.com/waok8s/wao-core/pkg/predictor"
-	"github.com/waok8s/wao-core/pkg/predictor/fromnodeconfig"
+	waov1beta1 "github.com/waok8s/waok8s/wao-core/api/wao/v1beta1"
+	"github.com/waok8s/waok8s/wao-core/pkg/predictor"
+	"github.com/waok8s/waok8s/wao-core/pkg/predictor/fromnodeconfig"
 )
 
 type CachedPredictorClient struct {

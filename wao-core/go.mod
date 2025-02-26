@@ -1,6 +1,6 @@
-module github.com/waok8s/wao-core
+module github.com/waok8s/waok8s/wao-core
 
-go 1.22.2
+go 1.23.6
 
 require (
 	github.com/Masterminds/sprig/v3 v3.2.3

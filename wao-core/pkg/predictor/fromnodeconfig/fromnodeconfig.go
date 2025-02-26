@@ -10,12 +10,12 @@ import (
 
 	"k8s.io/client-go/kubernetes"
 
-	waov1beta1 "github.com/waok8s/wao-core/api/wao/v1beta1"
-	"github.com/waok8s/wao-core/pkg/predictor"
-	"github.com/waok8s/wao-core/pkg/predictor/fake"
-	"github.com/waok8s/wao-core/pkg/predictor/redfish"
-	"github.com/waok8s/wao-core/pkg/predictor/v2inferenceprotocol"
-	"github.com/waok8s/wao-core/pkg/util"
+	waov1beta1 "github.com/waok8s/waok8s/wao-core/api/wao/v1beta1"
+	"github.com/waok8s/waok8s/wao-core/pkg/predictor"
+	"github.com/waok8s/waok8s/wao-core/pkg/predictor/fake"
+	"github.com/waok8s/waok8s/wao-core/pkg/predictor/redfish"
+	"github.com/waok8s/waok8s/wao-core/pkg/predictor/v2inferenceprotocol"
+	"github.com/waok8s/waok8s/wao-core/pkg/util"
 )
 
 func NewEndpointProvider(client kubernetes.Interface, namespace string, endpointTerm *waov1beta1.EndpointTerm) (predictor.EndpointProvider, error) {

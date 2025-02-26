@@ -35,10 +35,10 @@ import (
 	custommetricsclient "k8s.io/metrics/pkg/client/custom_metrics"
 
 	// wao
-	waov1beta1 "github.com/waok8s/wao-core/api/wao/v1beta1"
-	waoclient "github.com/waok8s/wao-core/pkg/client"
-	waometrics "github.com/waok8s/wao-core/pkg/metrics"
-	"github.com/waok8s/wao-core/pkg/predictor"
+	waov1beta1 "github.com/waok8s/waok8s/wao-core/api/wao/v1beta1"
+	waoclient "github.com/waok8s/waok8s/wao-core/pkg/client"
+	waometrics "github.com/waok8s/waok8s/wao-core/pkg/metrics"
+	"github.com/waok8s/waok8s/wao-core/pkg/predictor"
 )
 
 // Copied from wao-scheduler.

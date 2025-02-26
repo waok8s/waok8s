@@ -6,7 +6,7 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	kubeschedulerscheme "k8s.io/kubernetes/pkg/scheduler/apis/config/scheme"
 
-	"github.com/waok8s/wao-scheduler/pkg/plugins/minimizepower"
+	"github.com/waok8s/waok8s/wao-scheduler/pkg/plugins/minimizepower"
 )
 
 // https://github.com/kubernetes-sigs/scheduler-plugins/blob/v0.26.7/apis/config/scheme/scheme.go
