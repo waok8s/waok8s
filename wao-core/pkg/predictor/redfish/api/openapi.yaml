@@ -1,0 +1,364 @@
+# NOTE: This file is copied from MLMM repository.
+# Important: Run "go generate ./..." to regenerate code after modifying this file.
+openapi: 3.0.3
+info:
+  title: NEDO Machine Learning Model Management API
+  description: |-
+    This is NEDO Machine Learning Model Management API
+  version: 0.2.0
+tags:
+  - name: Machine Learning Model Management API
+paths:
+  /redfish/v1/Systems/{systemId}:
+    get:
+      summary: Get system resource.
+      description: |-
+        Get system resource data of the BMC with path of the machine learning model resource added.<br>
+        Only the path of the machine learning model resource to be added is listed in the response below.
+      tags:
+        - Machine Learning Model Management API
+      parameters:
+        - in: path
+          name: systemId
+          schema:
+            type: string
+          required: true
+          description: system ID
+      responses:
+        "200":
+          description: Successful operation.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/System"
+        "401":
+          description: Authentication credentials included with this request are missing or invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Unauthorized"
+        "403":
+          description: Do not possess authorization to complete this request.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Forbidden"
+        "404":
+          description: Request specified a URI of a resource that does not exist. 
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFound"
+        "405":
+          description: HTTP method in the request is not supported for this request URI. 
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MethodNotAllowed"
+        "406":
+          description: Unacceptable header specified in request.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotAcceptable"
+        "500":
+          description: Internal error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalError"
+  /redfish/v1/Systems/{systemId}/MachineLearningModel:
+    get:
+      summary: Get machine learning model resource.
+      description: |-
+        Get machine learning model resource containing
+        power consumption model information and response time model information.
+      tags:
+        - Machine Learning Model Management API
+      parameters:
+        - in: path
+          name: systemId
+          schema:
+            type: string
+          required: true
+          description: system ID
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MachineLearningModel"
+        "401":
+          description: Authentication credentials included with this request are missing or invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Unauthorized"
+        "403":
+          description: Do not possess authorization to complete this request.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Forbidden"
+        "404":
+          description: Request specified a URI of a resource that does not exist. 
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFound"
+        "405":
+          description: HTTP method in the request is not supported for this request URI. 
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MethodNotAllowed"
+        "406":
+          description: Unacceptable header specified in request.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotAcceptable"
+        "500":
+          description: Internal error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalError"
+components:
+  schemas:
+    System:
+      type: object
+      properties:
+        MachineLearningModel:
+          type: object
+          properties:
+            "@odata.id":
+              type: string
+              example: /redfish/v1/Systems/1/MachineLearningModel
+              description: Path of the machine learning model resource
+    MachineLearningModel:
+      type: object
+      properties:
+        "@odata.id":
+          type: string
+          example: "/redfish/v1/Systems/System.Embedded.1/MachineLearningModel"
+          description: ID of resource
+        "@odata.type":
+          type: string
+          example: "#MachineLearningModel.v1_0_0.MachineLearningModel"
+          description: Type of resource
+        "@odata.context":
+          type: string
+          example: "/redfish/v1/$metadata#Systems/System.Embedded.1/MachineLearningModel"
+          description: Context URL of resource
+        Name:
+          type: string
+          example: Machine Learning Model
+          description: Resource name
+        PowerConsumptionModel:
+          type: object
+          properties:
+            Name:
+              type: string
+              example: PC-PowerEdgeR650xs-2CPU
+              description: Name of power consumption model
+            Url:
+              type: string
+              example: http://10.0.0.20
+              description: URL of power consumption model
+            Type:
+              type: string
+              example: V2InferenceProtocol
+              description: Type of inference protocol
+            Version:
+              type: string
+              example: v0.1.0
+              description: Version of power consumption model
+        ResponseTimeModel:
+          type: object
+          properties:
+            Name:
+              type: string
+              example: RT-PowerEdgeR650xs-2CPU
+              description: Name of response time model
+            Url:
+              type: string
+              example: http://10.0.0.20
+              description: URL of response time model
+            Type:
+              type: string
+              example: V2InferenceProtocol
+              description: Type of inference protocol
+            Version:
+              type: string
+              example: v0.1.0
+              description: Version of response time model
+    Unauthorized:
+      type: object
+      properties:
+        error:
+          properties:
+            code:
+              type: string
+              example: Base.1.8.GeneralError
+              description: Message code
+            message:
+              type: string
+              example: A general error has occurred. See ExtendedInfo for more information.
+              description: Error message
+            "@Message.ExtendedInfo":
+              type: array
+              items:
+                type: object
+                properties:
+                  Message:
+                    type: string
+                    example: The authentication credentials included with this request are missing or invalid.
+                    description: Error message.
+                  "MessageId":
+                    type: string
+                    example: Base.1.8.AccessDenied
+                    description: Message ID.
+                  "Severity":
+                    type: string
+                    example: Critical
+                    description: Severity of the error.
+    Forbidden:
+      type: object
+      properties:
+        error:
+          properties:
+            code:
+              type: string
+              example: Base.1.8.GeneralError
+              description: Message code
+            message:
+              type: string
+              example: A general error has occurred. See ExtendedInfo for more information.
+              description: Error message
+            "@Message.ExtendedInfo":
+              type: array
+              items:
+                type: object
+                properties:
+                  Message:
+                    type: string
+                    example: A required license is missing or expired.
+                    description: Error message.
+                  "MessageId":
+                    type: string
+                    example: IDRAC.2.7.LIC501
+                    description: Message ID.
+                  "Severity":
+                    type: string
+                    example: Warning
+                    description: Severity of the error.
+    NotFound:
+      type: object
+      properties:
+        error:
+          properties:
+            code:
+              type: string
+              example: Base.1.12.GeneralError
+              description: Message code
+            message:
+              type: string
+              example: A general error has occurred. See ExtendedInfo for more information.
+              description: Error message
+            "@Message.ExtendedInfo":
+              type: array
+              items:
+                type: object
+                properties:
+                  Message:
+                    type: string
+                    example: The resource at the URI 'MachineLearningModels' was not found.
+                    description: Error message.
+                  "MessageId":
+                    type: string
+                    example: Base.1.12.ResourceMissingAtURI
+                    description: Message ID.
+                  "Severity":
+                    type: string
+                    example: Critical
+                    description: Severity of the error.
+    MethodNotAllowed:
+      type: object
+      properties:
+        error:
+          properties:
+            code:
+              type: string
+              example: Base.1.8.GeneralError
+              description: Message code
+            message:
+              type: string
+              example: A general error has occurred. See ExtendedInfo for more information.
+              description: Error message
+            "@Message.ExtendedInfo":
+              type: array
+              items:
+                type: object
+                properties:
+                  Message:
+                    type: string
+                    example: Unable to run the method because the requested HTTP method is not allowed.
+                    description: Error message.
+                  "MessageId":
+                    type: string
+                    example: IDRAC.2.7.SYS402
+                    description: Message ID.
+                  "Severity":
+                    type: string
+                    example: Informational
+                    description: Severity of the error.
+    NotAcceptable:
+      type: object
+      properties:
+        error:
+          properties:
+            code:
+              type: string
+              example: Base.1.8.GeneralError
+              description: Message code
+            message:
+              type: string
+              example: A general error has occurred. See ExtendedInfo for more information.
+              description: Error message
+            "@Message.ExtendedInfo":
+              type: array
+              items:
+                type: object
+                properties:
+                  Message:
+                    type: string
+                    example: internal error, Unacceptable header specified in request
+                    description: Error message.
+                  "MessageId":
+                    type: string
+                    example: Base.1.8.InternalError
+                    description: Message ID.
+    InternalError:
+      type: object
+      properties:
+        error:
+          properties:
+            code:
+              type: string
+              example: ""
+              description: message code
+            message:
+              type: string
+              example: "See @Message.ExtendedInfo for more information"
+              description: error message
+            "@Message.ExtendedInfo":
+              type: array
+              items:
+                type: object
+                properties:
+                  Message:
+                    type: string
+                    example: "Internal error occurred."
+                    description: error message
