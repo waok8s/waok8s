@@ -1,0 +1,70 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: basic-auth-secret
+  namespace: wao-system
+type: kubernetes.io/basic-auth
+stringData:
+  username: admin
+  password: t0p-Secret
+---
+apiVersion: wao.bitmedia.co.jp/v1beta1
+kind: NodeConfigTemplate
+metadata:
+  name: hoge-nodes
+  namespace: wao-system
+spec:
+  nodeSelector:
+    matchLabels:
+      hoge: fuga
+  template:
+    nodeName: ""
+    metricsCollector:
+      inletTemp:
+        type: Fake
+        endpoint: ""
+        fetchInterval: 1s
+      deltaP:
+        type: Fake
+        endpoint: ""
+        fetchInterval: 1s
+    predictor:
+      powerConsumption:
+        type: Fake
+        endpoint: ""
+---
+apiVersion: wao.bitmedia.co.jp/v1beta1
+kind: NodeConfigTemplate
+metadata:
+  name: foo-nodes
+  namespace: wao-system
+spec:
+  nodeSelector:
+    matchLabels:
+      foo: bar
+  template:
+    nodeName: ""
+    metricsCollector:
+      inletTemp:
+        type: Fake
+        endpoint: ""
+        basicAuthSecret:
+          name: basic-auth-secret
+        fetchInterval: 1s
+      deltaP:
+        type: Fake
+        endpoint: ""
+        basicAuthSecret:
+          name: basic-auth-secret
+        fetchInterval: 1s
+    predictor:
+      powerConsumption:
+        type: ""
+        endpoint: ""
+        basicAuthSecret:
+          name: basic-auth-secret
+      powerConsumptionEndpointProvider:
+        type: Fake
+        endpoint: ""
+        basicAuthSecret:
+          name: basic-auth-secret
