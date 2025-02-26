@@ -19,7 +19,7 @@ test: gen
 
 .PHONY: image
 image: gen
-	docker build -f ./Dockerfile -t $(IMAGE_REGISTRY)/$(IMAGE_NAME):$(VERSION) .
+	docker build --progress=plain --build-arg VERSION=$(VERSION) -f ./Dockerfile -t $(IMAGE_REGISTRY)/$(IMAGE_NAME):$(VERSION) .
 
 .PHONY: push
 push:

@@ -1,5 +1,4 @@
 VERSION?=$(shell git describe --tags --match "wao-metrics-adapter/v*" | sed 's|^wao-metrics-adapter/||')
-
 IMAGE_REGISTRY=localhost
 IMAGE_NAME=wao-metrics-adapter
 
@@ -20,7 +19,7 @@ test: gen
 
 .PHONY: image
 image: gen
-	docker build -f ./Dockerfile -t $(IMAGE_REGISTRY)/$(IMAGE_NAME):$(VERSION) .
+	docker build --progress=plain --build-arg VERSION=$(VERSION) -f ./Dockerfile -t $(IMAGE_REGISTRY)/$(IMAGE_NAME):$(VERSION) .
 
 .PHONY: push
 push:
