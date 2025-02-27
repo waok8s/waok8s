@@ -105,8 +105,8 @@ metadata:
   namespace: wao-system
 spec:
   nodeSelector:
-  matchLabels:
-    node.kubernetes.io/instance-type: "test-node"
+    matchLabels:
+      node.kubernetes.io/instance-type: "test-node"
   template:
     nodeName: "" # the controller will fill this value
     metricsCollector:
