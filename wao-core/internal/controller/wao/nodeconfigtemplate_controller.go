@@ -16,7 +16,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	waov1beta1 "github.com/waok8s/wao-core/api/wao/v1beta1"
+	waov1beta1 "github.com/waok8s/waok8s/wao-core/api/wao/v1beta1"
 )
 
 // NodeConfigTemplateReconciler reconciles a NodeConfigTemplate object

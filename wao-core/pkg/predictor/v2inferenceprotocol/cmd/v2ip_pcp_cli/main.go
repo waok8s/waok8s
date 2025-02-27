@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/waok8s/wao-core/pkg/predictor/v2inferenceprotocol"
-	"github.com/waok8s/wao-core/pkg/util"
+	"github.com/waok8s/waok8s/wao-core/pkg/predictor/v2inferenceprotocol"
+	"github.com/waok8s/waok8s/wao-core/pkg/util"
 )
 
 func main() {

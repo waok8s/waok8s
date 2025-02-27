@@ -1,9 +1,10 @@
-module github.com/waok8s/wao-loadbalancer
+module github.com/waok8s/waok8s/wao-loadbalancer
 
-go 1.23.0
+go 1.23.6
+
+require github.com/waok8s/waok8s/wao-core v0.0.1-dev // go work
 
 require (
-	github.com/waok8s/wao-core v1.30.1
 	k8s.io/metrics v0.30.0
 	sigs.k8s.io/controller-runtime v0.18.2
 	sigs.k8s.io/knftables v0.0.14
@@ -145,7 +146,7 @@ require (
 	k8s.io/kube-openapi v0.0.0-20240430033511-f0e62f92d13f // indirect
 	k8s.io/kubelet v0.30.0 // indirect
 	moul.io/http2curl/v2 v2.3.0 // indirect
-	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.29.0 // indirect
+	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.30.0 // indirect
 	sigs.k8s.io/custom-metrics-apiserver v1.30.0 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.4.1 // indirect

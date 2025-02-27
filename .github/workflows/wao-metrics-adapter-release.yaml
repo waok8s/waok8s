@@ -1,0 +1,74 @@
+name: "[wao-metrics-adapter] Release"
+on:
+  push:
+    tags:
+      - "wao-metrics-adapter/v*"
+jobs:
+  image:
+    name: Push container image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Extract versions from Git tag
+        # This repo has "<module>/v<semver>" tags, so extract the versions here for later use.
+        id: versions
+        run: |
+          echo "From \"GITHUB_REF\": ${GITHUB_REF}"
+
+          module=${GITHUB_REF#refs/tags/}
+          module=${module%%/v*}
+          echo "Extracted \"module\": ${module}"
+          echo "module=${module}" >> $GITHUB_OUTPUT
+
+          semver=${GITHUB_REF#refs/tags/*/v}
+          echo "Extracted \"semver\": ${semver}"
+          echo "semver=${semver}" >> $GITHUB_OUTPUT
+
+          vsemver=${GITHUB_REF#refs/tags/*/}
+          echo "Extracted \"vsemver\": ${vsemver}"
+          echo "vsemver=${vsemver}" >> $GITHUB_OUTPUT
+      - uses: actions/checkout@v3
+      - uses: docker/metadata-action@v4
+        id: meta
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/wao-metrics-adapter
+          tags: |
+            # NOTE: we can also use match expressions, but for now we use the extracted versions.
+            # Here is an example:
+            # hoge/v1.2.3-rc.4 -> 1.2.3-rc.4 (semver)
+            #type=match,pattern=.*/v(.*),group=1
+
+            type=raw,value=latest
+            type=raw,value=${{ steps.versions.outputs.semver }}
+            type=raw,value=${{ steps.versions.outputs.vsemver }}
+          labels: |
+            # override the default values if needed (default values: title=repo name, description=repo description, version=tag)
+            org.opencontainers.image.title=wao-metrics-adapter
+            org.opencontainers.image.description=Exposes custom metrics for WAO
+            org.opencontainers.image.version=${{ steps.versions.outputs.semver }}
+      - uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v3
+        with:
+          context: wa-metrics-adapter
+          file: wao-metrics-adapter/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+  release:
+    name: Release on GitHub
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: wao-metrics-adapter
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.work # go.mod or go.work
+      - run: REGISTRY=ghcr.io/${GITHUB_REPOSITORY_OWNER,,} ./hack/dist.sh
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: wa-metrics-adapter/wao-metrics-adapter.yaml

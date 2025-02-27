@@ -1,8 +1,8 @@
-VERSION?=$(shell git describe --tags --match "v*")
+VERSION?=$(shell git describe --tags --match "wao-metrics-adapter/v*" | sed 's|^wao-metrics-adapter/||')
 IMAGE_REGISTRY=localhost
 IMAGE_NAME=wao-metrics-adapter
 
-GO_BUILD_ARGS=-trimpath -ldflags "-s -w -X k8s.io/component-base/version.gitVersion=$(VERSION)"
+GO_BUILD_ARGS=-trimpath -ldflags "-s -w"
 
 -include .env
 
@@ -19,7 +19,7 @@ test: gen
 
 .PHONY: image
 image: gen
-	docker build -f ./Dockerfile -t $(IMAGE_REGISTRY)/$(IMAGE_NAME):$(VERSION) .
+	docker build --progress=plain -f ./Dockerfile -t $(IMAGE_REGISTRY)/$(IMAGE_NAME):$(VERSION) .
 
 .PHONY: push
 push:

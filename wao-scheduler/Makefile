@@ -1,4 +1,4 @@
-VERSION?=$(shell git describe --tags --match "v*")
+VERSION?=$(shell git describe --tags --match "wao-core/v*" | sed 's|^wao-core/||')
 IMAGE_REGISTRY=localhost
 IMAGE_NAME=wao-scheduler
 
@@ -19,7 +19,7 @@ test: gen
 
 .PHONY: image
 image: gen
-	docker build -f ./Dockerfile -t $(IMAGE_REGISTRY)/$(IMAGE_NAME):$(VERSION) .
+	docker build --progress=plain --build-arg VERSION=$(VERSION) -f ./Dockerfile -t $(IMAGE_REGISTRY)/$(IMAGE_NAME):$(VERSION) .
 
 .PHONY: push
 push:

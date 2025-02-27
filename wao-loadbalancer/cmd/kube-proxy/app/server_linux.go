@@ -58,7 +58,7 @@ import (
 	"k8s.io/utils/exec"
 
 	// "k8s.io/kubernetes/pkg/proxy/nftables"
-	"github.com/waok8s/wao-loadbalancer/pkg/proxy/nftables"
+	"github.com/waok8s/waok8s/wao-loadbalancer/pkg/proxy/nftables"
 )
 
 // timeoutForNodePodCIDR is the time to wait for allocators to assign a PodCIDR to the

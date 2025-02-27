@@ -10,10 +10,10 @@ import (
 	"strings"
 	"time"
 
-	waov1beta1 "github.com/waok8s/wao-core/api/wao/v1beta1"
-	"github.com/waok8s/wao-core/pkg/predictor"
-	"github.com/waok8s/wao-core/pkg/predictor/redfish/api"
-	"github.com/waok8s/wao-core/pkg/util"
+	waov1beta1 "github.com/waok8s/waok8s/wao-core/api/wao/v1beta1"
+	"github.com/waok8s/waok8s/wao-core/pkg/predictor"
+	"github.com/waok8s/waok8s/wao-core/pkg/predictor/redfish/api"
+	"github.com/waok8s/waok8s/wao-core/pkg/util"
 )
 
 type EndpointProvider struct {

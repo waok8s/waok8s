@@ -1,0 +1,10 @@
+go 1.23.6
+
+// NOTE: Modules in this repository are developed exclusively with each other so we commit `go.work`.
+
+use (
+	./wao-core
+	./wao-loadbalancer
+	./wao-metrics-adapter
+	./wao-scheduler
+)

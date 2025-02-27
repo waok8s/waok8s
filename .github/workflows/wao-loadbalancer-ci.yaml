@@ -1,4 +1,4 @@
-name: CI
+name: "[wao-loadbalancer] CI"
 on:
   push:
     branches: [main, release-*]
@@ -8,13 +8,16 @@ jobs:
   test:
     name: Test
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: wao-loadbalancer
     steps:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0 # git fetch --unshallow
-      - uses: actions/setup-go@v3
+      - uses: actions/setup-go@v5
         with:
-          go-version-file: go.mod
+          go-version-file: go.work # go.mod or go.work
       - name: "test: unit tests"
         run: make test
       - name: "test: deploy"

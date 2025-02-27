@@ -4,7 +4,7 @@
 IMAGE=wao-controller
 DIST=wao-core.yaml
 
-VERSION=$(git describe --tags --match "v*")
+VERSION=$(git describe --tags --match "wao-core/v*" | sed 's|^wao-core/||')
 REGISTRY=${REGISTRY:-""}
 IMAGE_NAME=$IMAGE:$VERSION
 if [ -n "$REGISTRY" ] ; then IMAGE_NAME=$REGISTRY/$IMAGE:$VERSION ; fi

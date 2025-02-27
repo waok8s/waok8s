@@ -7,7 +7,7 @@
 IMAGE=wao-metrics-adapter
 DIST=wao-metrics-adapter.yaml
 
-VERSION=$(git describe --tags --match "v*")
+VERSION=$(git describe --tags --match "wao-metrics-adapter/v*" | sed 's|^wao-metrics-adapter/||')
 REGISTRY=${REGISTRY:-""}
 IMAGE_NAME=$IMAGE:$VERSION
 if [ -n "$REGISTRY" ] ; then IMAGE_NAME=$REGISTRY/$IMAGE:$VERSION ; fi

@@ -17,12 +17,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	waov1beta1 "github.com/waok8s/wao-core/api/wao/v1beta1"
-	"github.com/waok8s/wao-core/pkg/metrics"
-	"github.com/waok8s/wao-core/pkg/metrics/dpapi"
-	"github.com/waok8s/wao-core/pkg/metrics/fake"
-	"github.com/waok8s/wao-core/pkg/metrics/redfish"
-	"github.com/waok8s/wao-core/pkg/util"
+	waov1beta1 "github.com/waok8s/waok8s/wao-core/api/wao/v1beta1"
+	"github.com/waok8s/waok8s/wao-core/pkg/metrics"
+	"github.com/waok8s/waok8s/wao-core/pkg/metrics/dpapi"
+	"github.com/waok8s/waok8s/wao-core/pkg/metrics/fake"
+	"github.com/waok8s/waok8s/wao-core/pkg/metrics/redfish"
+	"github.com/waok8s/waok8s/wao-core/pkg/util"
 )
 
 var (

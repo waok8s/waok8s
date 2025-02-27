@@ -20,7 +20,7 @@ import (
 	"sigs.k8s.io/custom-metrics-apiserver/pkg/provider/defaults"
 	"sigs.k8s.io/custom-metrics-apiserver/pkg/provider/helpers"
 
-	waometrics "github.com/waok8s/wao-core/pkg/metrics"
+	waometrics "github.com/waok8s/waok8s/wao-core/pkg/metrics"
 )
 
 var (

@@ -23,9 +23,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
-	"github.com/waok8s/wao-core/internal/controller/wao"
+	"github.com/waok8s/waok8s/wao-core/internal/controller/wao"
 
-	"github.com/waok8s/wao-core/api/wao/v1beta1"
+	"github.com/waok8s/waok8s/wao-core/api/wao/v1beta1"
 	//+kubebuilder:scaffold:imports
 )
 

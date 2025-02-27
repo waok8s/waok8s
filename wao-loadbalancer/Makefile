@@ -1,4 +1,4 @@
-VERSION?=$(shell git describe --tags --match "v*")
+VERSION?=$(shell git describe --tags --match "wao-loadbalancer/v*" | sed 's|^wao-loadbalancer/||')
 IMAGE_REGISTRY=localhost
 IMAGE_NAME=wao-loadbalancer
 
@@ -25,7 +25,7 @@ test: gen
 
 .PHONY: image
 image: gen
-	docker build -f ./Dockerfile -t $(IMAGE_REGISTRY)/$(IMAGE_NAME):$(VERSION) .
+	docker build --progress=plain --build-arg VERSION=$(VERSION) -f ./Dockerfile -t $(IMAGE_REGISTRY)/$(IMAGE_NAME):$(VERSION) .
 
 .PHONY: push
 push:

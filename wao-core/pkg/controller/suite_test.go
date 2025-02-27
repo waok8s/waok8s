@@ -21,12 +21,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
-	waoclient "github.com/waok8s/wao-core/pkg/client"
-	waocontroller "github.com/waok8s/wao-core/pkg/controller"
-	waometrics "github.com/waok8s/wao-core/pkg/metrics"
-	waopredictor "github.com/waok8s/wao-core/pkg/predictor"
+	waoclient "github.com/waok8s/waok8s/wao-core/pkg/client"
+	waocontroller "github.com/waok8s/waok8s/wao-core/pkg/controller"
+	waometrics "github.com/waok8s/waok8s/wao-core/pkg/metrics"
+	waopredictor "github.com/waok8s/waok8s/wao-core/pkg/predictor"
 
-	"github.com/waok8s/wao-core/api/wao/v1beta1"
+	"github.com/waok8s/waok8s/wao-core/api/wao/v1beta1"
 	//+kubebuilder:scaffold:imports
 )
 

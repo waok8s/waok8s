@@ -7,7 +7,7 @@
 KIND_CLUSTER_NAME=$PROJECT_NAME
 CLUSTER_NAME=kind-$KIND_CLUSTER_NAME
 
-VERSION=$(git describe --tags --match "v*")
+VERSION=v0.0.1-dev # always use the same version to reuse config files
 IMAGE_REGISTRY=localhost
 IMAGE_NAME=wao-metrics-adapter
 
@@ -24,7 +24,6 @@ make image IMAGE_REGISTRY=$IMAGE_REGISTRY IMAGE_NAME=$IMAGE_NAME VERSION="$VERSI
 "$KIND" load docker-image "$IMAGE" -n "$KIND_CLUSTER_NAME"
 
 # deploy
-cd config/base && "$KUSTOMIZE" edit set image wao-metrics-adapter="$IMAGE" && cd -
 "$KUBECTL" delete -k config/base || true
 "$KUBECTL" apply -k config/base
 sleep 2

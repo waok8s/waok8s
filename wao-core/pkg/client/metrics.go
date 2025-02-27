@@ -16,7 +16,7 @@ import (
 	metricsclientv1beta1 "k8s.io/metrics/pkg/client/clientset/versioned/typed/metrics/v1beta1"
 	custommetricsclient "k8s.io/metrics/pkg/client/custom_metrics"
 
-	"github.com/waok8s/wao-core/pkg/metrics"
+	"github.com/waok8s/waok8s/wao-core/pkg/metrics"
 )
 
 type CachedMetricsClient struct {

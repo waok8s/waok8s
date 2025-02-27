@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/waok8s/wao-core/pkg/metrics"
+	"github.com/waok8s/waok8s/wao-core/pkg/metrics"
 )
 
 type FakeAgent struct {
