@@ -52,7 +52,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - uses: docker/build-push-action@v3
         with:
-          context: wa-metrics-adapter
+          context: wao-metrics-adapter
           file: wao-metrics-adapter/Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
@@ -71,4 +71,4 @@ jobs:
       - run: REGISTRY=ghcr.io/${GITHUB_REPOSITORY_OWNER,,} ./hack/dist.sh
       - uses: softprops/action-gh-release@v2
         with:
-          files: wa-metrics-adapter/wao-metrics-adapter.yaml
+          files: wao-metrics-adapter/wao-metrics-adapter.yaml
