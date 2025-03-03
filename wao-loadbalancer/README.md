@@ -237,47 +237,16 @@ Here is a non-comprehensive list of the variables and their implementation statu
 
 Versioning: we use the same major.minor as Kubernetes, and the patch is our own.
 
-- 2025-02-26 `v1.30.0`
-  - Release version.
-- 2025-02-20 `v1.30.0-alpha.2`
-  - Support user-defined CPU request per request.
-  - Use delta power to calculate the weight.
-  - Support more WAO configurations.
-  - Internal improvements.
-- 2025-02-12 `v1.30.0-alpha.1`
-  - Drop support for `ipvs` mode (now only `nftables` mode is supported).
-  - Support non-default service proxy deployment.
-  - Internal improvements.
-  - Example K8s configs are available.
-- 2025-02-05 `v1.30.0-alpha.0`
-  - Support both `ipvs` and `nftables` mode.
-  - Now the container image is available.
-- 2024-07-01 `v1.29.0-alpha.0`
-  - Support both `ipvs` and `nftables` mode.
-  - You need to build the image by yourself.
+- What comes next?
+  - TBD
+- 2025-xx-xx `v1.31.0`
+  - Support Kubernetes v1.31.
+- Older versions (<=v1.30) can be found at [`waok8s/wao-loadbalancer`](https://github.com/waok8s/wao-loadbalancer).
 
 ## Acknowledgements
 
-This work is supported by the New Energy and Industrial Technology Development Organization (NEDO) under its "Program to Develop and Promote the Commercialization of Energy Conservation Technologies to Realize a Decarbonized Society" ([JPNP21005](https://www.nedo.go.jp/english/activities/activities_ZZJP_100197.html)).
+See [here](https://github.com/waok8s/waok8s?tab=readme-ov-file#acknowledgements) for details.
 
 ## License
 
-> [!NOTE]
-> The original Kubernetes code is [licensed under Apache-2.0](https://github.com/kubernetes/kubernetes/blob/master/LICENSE).
-
-Copyright 2021 Osaka University.  
-Copyright 2022 Bitmedia, Inc.  
-Copyright 2024 Neutrix Cloud Japan Corporation.  
-Copyright 2025 Bitmedia, Inc.  
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
+Apache-2.0. See [here](https://github.com/waok8s/waok8s?tab=readme-ov-file#license) for details.
