@@ -6,7 +6,6 @@ Welcome to the WAO for Kubernetes project!
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 
 - [Overview](#overview)
-  - [Additional Resources](#additional-resources)
 - [Architecture](#architecture)
   - [`wao-core`: CRDs, controllers and libraries](#wao-core-crds-controllers-and-libraries)
   - [`wao-metrics-adapter`: Exposes environmental metrics](#wao-metrics-adapter-exposes-environmental-metrics)
@@ -32,7 +31,7 @@ WAO in essence predicts the additional power consumption that each node would in
 
 Experiments on commodity CPU-based servers running AI workloads have demonstrated up to a 30% reduction in overall power consumption, showcasing how a software-based method can make a tangible impact on data center energy efficiency.
 
-### Additional Resources
+**Additional Resources**
 
 - WAO models and optimization code are available at [`waok8s/optimization`](https://github.com/waok8s/optimization).
 - Presentation at Kubernetes Meetup Tokyo #66 (日本語) [[Video]](https://www.youtube.com/live/RpaC3AG2bc4?t=2490s) [[Slides]](https://speakerdeck.com/ebiiim/waok8s-k8sjp66)
@@ -105,8 +104,8 @@ metadata:
   namespace: wao-system
 spec:
   nodeSelector:
-  matchLabels:
-    node.kubernetes.io/instance-type: "test-node"
+    matchLabels:
+      node.kubernetes.io/instance-type: "test-node"
   template:
     nodeName: "" # the controller will fill this value
     metricsCollector:
@@ -156,7 +155,7 @@ This work is supported by the New Energy and Industrial Technology Development O
 
 ## License
 
-Copyright 2021-2025 [Osaka University](https://www.osaka-u.ac.jp/), [Bitmedia, Inc.](https://bitmedia.co.jp/), [NEC Corporation](https://www.nec.com/), [Neutrix Cloud Japan Corporation](https://www.neutrix.co.jp/), [Shinohara Electric Co., Ltd.](https://www.shinohara-elec.co.jp)
+Copyright 2021-2025 [Osaka University](https://www.osaka-u.ac.jp/), [Bitmedia Inc.](https://bitmedia.co.jp/), [NEC Corporation](https://www.nec.com/), [Neutrix Cloud Japan Inc.](https://www.neutrix.co.jp/), [Shinohara Electric Co., Ltd.](https://www.shinohara-elec.co.jp)
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
