@@ -2,7 +2,15 @@ module github.com/waok8s/waok8s/wao-loadbalancer
 
 go 1.23.6
 
-require github.com/waok8s/waok8s/wao-core v0.0.1-dev // go work
+require (
+	github.com/waok8s/waok8s/wao-core v0.0.0
+	github.com/waok8s/waok8s/wao-metrics-adapter v0.0.0
+)
+
+replace (
+	github.com/waok8s/waok8s/wao-core => ../wao-core
+	github.com/waok8s/waok8s/wao-metrics-adapter => ../wao-metrics-adapter
+)
 
 require (
 	k8s.io/metrics v0.30.0

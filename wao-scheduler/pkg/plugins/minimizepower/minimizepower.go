@@ -20,9 +20,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	waov1beta1 "github.com/waok8s/waok8s/wao-core/api/wao/v1beta1"
-	waoclient "github.com/waok8s/waok8s/wao-core/pkg/client"
-	waometrics "github.com/waok8s/waok8s/wao-core/pkg/metrics"
-	"github.com/waok8s/waok8s/wao-core/pkg/predictor"
+	waoclient "github.com/waok8s/waok8s/wao-metrics-adapter/pkg/client"
+	waometrics "github.com/waok8s/waok8s/wao-metrics-adapter/pkg/metrics"
+	"github.com/waok8s/waok8s/wao-metrics-adapter/pkg/predictor"
 )
 
 type MinimizePower struct {
