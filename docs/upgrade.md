@@ -10,6 +10,8 @@
 1. Edit `go.mod` file to update the library versions.
 2. Edit `hack/0-env.sh` `hack/2-lib.sh` to update the versions in the scripts.
   - `wao-metrics-adapter` `wao-scheduler` `wao-loadbalancer`
+3. Edit envtest version in Makefile.
+  - `wao-core` `wao-metrics-adapter`
 
 ## Release New Version
 
@@ -19,11 +21,9 @@
 
 ## Upgrade Component Versions
 
-1. Edit `go.mod` file to update the library versions.
+1. Edit `hack/deps.sh` and run it to update the component versions.
   - `wao-metrics-adapter` `wao-scheduler` `wao-loadbalancer`
-2. Edit `hack/deps.sh` and run it to update the component versions.
-  - `wao-metrics-adapter` `wao-scheduler` `wao-loadbalancer`
-3. Edit related yaml files in `test` directory.
+2. Edit related yaml files in `test` directory.
   - `wao-scheduler`
 
 ## Upgrade Kubebuilder Version
