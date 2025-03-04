@@ -37,7 +37,9 @@ func init() {
 
 // NodeConfigReconciler reconciles a NodeConfig object.
 //
-// NOTE: This reconciler is used in wao-metrics-adaptor instead of the controller. So RBAC rules below should be applied to wao-metrics-adaptor.
+// NOTE: This reconciler is used in wao-metrics-adaptor instead of the controller.
+// So RBAC rules below should be applied to wao-metrics-adaptor. The following RBAC rules are just for reference.
+//
 // kubebuilder:rbac:groups=wao.bitmedia.co.jp,resources=nodeconfigs,verbs=get;list;watch;create;update;patch;delete
 // kubebuilder:rbac:groups=wao.bitmedia.co.jp,resources=nodeconfigs/status,verbs=get;update;patch
 // kubebuilder:rbac:groups=wao.bitmedia.co.jp,resources=nodeconfigs/finalizers,verbs=update
