@@ -96,3 +96,25 @@ subjects:
 - kind: ServiceAccount
   name: wao-metrics-adapter
   namespace: custom-metrics
+---
+# this is for scheduler and load balancer
+# (HPA also needs this but we don't have HPA in our setup)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: custom-metrics-server-resources
+rules:
+- apiGroups:
+  - custom.metrics.k8s.io
+  resources: ["*"]
+  verbs: ["*"]
+---
+# this is for scheduler and load balancer
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: metrics-reader
+rules:
+  - apiGroups: ["metrics.k8s.io"]
+    resources: [pods, nodes]
+    verbs: [get, list, watch]
