@@ -13,6 +13,7 @@ This repository contains patches files.
 │       └── proxy.go             # (modified) changed import path of `app`
 ├── pkg
 │   └── proxy                    # overwrite `k8s.io/kubernetes/pkg/proxy`
+│       └── apis/config/validation/validation.go    # (modified) always allow NFTables mode; no feature gate needed and works with k8s v1.31
 │       └── nftables
 │           ├── proxier.go       # (modified) use WAO to calculate weight
 │           ├── wao.go           # (add) the WAO implementation
