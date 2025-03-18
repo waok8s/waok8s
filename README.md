@@ -97,7 +97,7 @@ kubectl apply -f https://github.com/waok8s/waok8s/releases/download/wao-loadbala
 Group your nodes by their hardware characteristics and create a NodeConfigTemplate for each group. This template will be used to create NodeConfig objects for each node.
 
 ```yaml
-apiVersion: wao.bitmedia.co.jp/v1beta1
+apiVersion: node.waok8s.github.io/v1beta1
 kind: NodeConfigTemplate
 metadata:
   name: test-nodes
