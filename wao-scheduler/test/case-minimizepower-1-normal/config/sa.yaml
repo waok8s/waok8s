@@ -46,15 +46,6 @@ subjects:
   namespace: kube-system
 ---
 apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  name: metrics-reader
-rules:
-  - apiGroups: ["metrics.k8s.io"]
-    resources: [pods, nodes]
-    verbs: [get, list, watch]
----
-apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: wao-scheduler-as-metrics-reader
@@ -66,16 +57,6 @@ roleRef:
   kind: ClusterRole
   name: metrics-reader
   apiGroup: rbac.authorization.k8s.io
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  name: custom-metrics-server-resources
-rules:
-- apiGroups:
-  - custom.metrics.k8s.io
-  resources: ["*"]
-  verbs: ["*"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -102,17 +83,6 @@ subjects:
 - kind: ServiceAccount
   name: wao-scheduler
   namespace: kube-system
-# ---
-# NOTE: same role in wao-metrics-adapter
-# apiVersion: rbac.authorization.k8s.io/v1
-# kind: Role
-# metadata:
-#   name: secret-reader
-#   namespace: wao-system
-# rules:
-# - apiGroups: [""]
-#   resources: ["secrets"]
-#   verbs: ["get"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
