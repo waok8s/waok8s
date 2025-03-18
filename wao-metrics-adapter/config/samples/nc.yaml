@@ -8,7 +8,7 @@ stringData:
   username: admin
   password: t0p-Secret
 ---
-apiVersion: wao.bitmedia.co.jp/v1beta1
+apiVersion: node.waok8s.github.io/v1beta1
 kind: NodeConfig
 metadata:
   name: wao-metrics-adapter-worker
@@ -30,7 +30,7 @@ spec:
       endpoint: ""
       fetchInterval: 10s
 ---
-apiVersion: wao.bitmedia.co.jp/v1beta1
+apiVersion: node.waok8s.github.io/v1beta1
 kind: NodeConfig
 metadata:
   name: wao-metrics-adapter-worker2
