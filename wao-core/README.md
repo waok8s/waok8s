@@ -36,7 +36,7 @@ This repository contains CRDs and controllers for WAO. They are intended to be u
 Install CRDs and controllers.
 
 ```sh
-kubectl apply -f https://github.com/waok8s/wao-core/releases/download/v1.30.3/wao-core.yaml
+kubectl apply -f https://github.com/waok8s/waok8s/releases/download/wao-core/v1.30.3/wao-core.yaml
 ```
 
 Wait for the pod to be ready.

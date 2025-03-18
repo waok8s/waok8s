@@ -29,12 +29,12 @@ WAO Metrics Adapter exposes the following custom metrics for WAO:
 ### Installation
 
 > [!NOTE]
-> Make sure you have [wao-core](https://github.com/waok8s/wao-core) set up.
+> Make sure you have [wao-core](https://github.com/waok8s/waok8s/wao-core) set up.
 
 Install WAO Metrics Adapter.
 
 ```sh
-kubectl apply -f https://github.com/waok8s/wao-metrics-adapter/releases/download/v1.30.1/wao-metrics-adapter.yaml
+kubectl apply -f https://github.com/waok8s/waok8s/releases/download/wao-metrics-adapter/v1.30.3/wao-metrics-adapter.yaml
 ```
 
 Wait for the pod to be ready.
@@ -60,7 +60,7 @@ kubectl get --raw "/apis/custom.metrics.k8s.io/v1beta2/nodes/$NODE/delta_p"
 Or you can use client libraries to fetch the metrics.
 
 - `k8s.io/metrics/pkg/client/custom_metrics` has the official client
-- `github.com/waok8s/wao-core/pkg/client` has our cached client
+- `github.com/waok8s/waok8s/wao-metrics-adapter/pkg/client` has our cached client
 
 
 ## Development
@@ -70,6 +70,10 @@ This project is using [custom-metrics-apiserver](https://github.com/kubernetes-s
 ### Components
 
 - `pkg/provider`: Custom metrics provider.
+- `pkg/controller`: Controllers.
+- `pkg/metrics`: Custom metrics library.
+- `pkg/predictor`: Predictor library.
+- `pkg/client`: Cached clients for metrics and predictors.
 
 ## Changelog
 
@@ -79,7 +83,9 @@ Versioning: we use the same major.minor as Kubernetes, and the patch is our own.
   - TBD
 - 2025-xx-xx `v1.31.0`
   - Support Kubernetes v1.31.
-- Older versions (<=v1.30) can be found at [`waok8s/wao-metrics-adapter`](https://github.com/waok8s/wao-metrics-adapter).
+- 2025-xx-xx `v1.30.3`
+  - Change domain to `waok8s.github.io`.
+- Older versions (<=v1.30.2) can be found at [`waok8s/wao-metrics-adapter`](https://github.com/waok8s/wao-metrics-adapter).
 
 ## Acknowledgements
 

@@ -33,12 +33,12 @@ WAO Scheduler schedules pods with features focused on minimizing power consumpti
 ### Installation
 
 > [!NOTE]
-> Make sure you have [wao-core](https://github.com/waok8s/wao-core) and [wao-metrics-adapter](https://github.com/waok8s/wao-metrics-adapter) set up.
+> Make sure you have [wao-core](https://github.com/waok8s/waok8s/wao-core) and [wao-metrics-adapter](https://github.com/waok8s/waok8s/wao-metrics-adapter) set up.
 
 Install WAO Scheduler with default configuration.
 
 ```sh
-kubectl apply -f https://github.com/waok8s/wao-scheduler/releases/download/v1.30.1/wao-scheduler.yaml
+kubectl apply -f https://github.com/waok8s/waok8s/releases/download/wao-scheduler/v1.30.3/wao-scheduler.yaml
 ```
 
 Wait for the scheduler to be ready.
@@ -181,7 +181,9 @@ Versioning: we use the same major.minor as Kubernetes, and the patch is our own.
   - TBD
 - 2025-xx-xx `v1.31.0`
   - Support Kubernetes v1.31.
-- Older versions (<=v1.30) can be found at [`waok8s/wao-scheduler`](https://github.com/waok8s/wao-scheduler).
+- 2025-xx-xx `v1.30.3`
+  - Change domain to `waok8s.github.io`.
+- Older versions (<=v1.30.2) can be found at [`waok8s/wao-scheduler`](https://github.com/waok8s/wao-scheduler).
 
 ## Acknowledgements
 

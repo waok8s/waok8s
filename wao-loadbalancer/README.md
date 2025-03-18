@@ -51,7 +51,7 @@ $score_i = 100 \times \frac{\min(\mathbf{deltaPowers})}{power_i}$
 ### Installation
 
 > [!NOTE]
-> Make sure you have [wao-core](https://github.com/waok8s/wao-core) and [wao-metrics-adapter](https://github.com/waok8s/wao-metrics-adapter) set up.
+> Make sure you have [wao-core](https://github.com/waok8s/waok8s/wao-core) and [wao-metrics-adapter](https://github.com/waok8s/waok8s/wao-metrics-adapter) set up.
 
 There are two ways to use WAO-LB: as a non-default service proxy or as the default service proxy, and there are some notable points:
 
@@ -85,13 +85,13 @@ So you can run WAO-LB as a non-default service proxy by following these steps:
 
 
 > [!NOTE]
-> Make sure you have [wao-core](https://github.com/waok8s/wao-core), [wao-metrics-adapter](https://github.com/waok8s/wao-metrics-adapter) and [wao-scheduler](https://github.com/waok8s/wao-scheduler) set up.
+> Make sure you have [wao-core](https://github.com/waok8s/waok8s/wao-core), [wao-metrics-adapter](https://github.com/waok8s/waok8s/wao-metrics-adapter) set up.
 > Make sure you have step 1 mentioned above done.
 
 Install WAO-LB with default configuration.
 
 ```sh
-kubectl apply -f https://github.com/waok8s/wao-loadbalancer/releases/download/v1.30.0/wao-loadbalancer.yaml
+kubectl apply -f https://github.com/waok8s/waok8s/releases/download/wao-loadbalancer/v1.30.3/wao-loadbalancer.yaml
 ```
 
 Wait for the DaemonSet to be ready.
@@ -241,7 +241,9 @@ Versioning: we use the same major.minor as Kubernetes, and the patch is our own.
   - TBD
 - 2025-xx-xx `v1.31.0`
   - Support Kubernetes v1.31.
-- Older versions (<=v1.30) can be found at [`waok8s/wao-loadbalancer`](https://github.com/waok8s/wao-loadbalancer).
+- 2025-xx-xx `v1.30.3`
+  - Change domain to `waok8s.github.io`.
+- Older versions (<=v1.30.1; v1.30.2 is skipped) can be found at [`waok8s/wao-loadbalancer`](https://github.com/waok8s/wao-loadbalancer).
 
 ## Acknowledgements
 
