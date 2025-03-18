@@ -59,7 +59,7 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           # `--build-arg VERSION=v1.2.3-rc.4` (see Dockerfile and Makefile for details)
           build-args: |
-            VERSION=${{ steps.versions.outputs.semver }}
+            VERSION=${{ steps.versions.outputs.vsemver }}
   release:
     name: Release on GitHub
     runs-on: ubuntu-latest
