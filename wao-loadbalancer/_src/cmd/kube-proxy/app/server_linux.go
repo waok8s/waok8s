@@ -80,7 +80,8 @@ func (o *Options) platformApplyDefaults(config *proxyconfigapi.KubeProxyConfigur
 	o.logger.V(2).Info("DetectLocalMode", "localMode", string(config.DetectLocalMode))
 
 	// WAO
-	config.Mode = proxyconfigapi.ProxyModeNFTables // fix mode to nftables for WAO
+	config.FeatureGates[string(features.NFTablesProxyMode)] = true // always allow nftables so works with k8s v1.31
+	config.Mode = proxyconfigapi.ProxyModeNFTables                 // fix mode to nftables for WAO
 	if WAOProxyName == "" {
 		o.logger.V(2).Info("Applied values for WAO Load Balancer (default service proxy mode)", "mode", config.Mode)
 	} else {
