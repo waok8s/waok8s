@@ -48,10 +48,12 @@ const (
 type NodeConfigStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
+
+	// TODO: implement status
 }
 
-//+kubebuilder:object:root=true
-//+kubebuilder:subresource:status
+// +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
 
 // NodeConfig is the Schema for the nodeconfigs API
 type NodeConfig struct {
@@ -62,7 +64,7 @@ type NodeConfig struct {
 	Status NodeConfigStatus `json:"status,omitempty"`
 }
 
-//+kubebuilder:object:root=true
+// +kubebuilder:object:root=true
 
 // NodeConfigList contains a list of NodeConfig
 type NodeConfigList struct {

@@ -1,4 +1,4 @@
-package wao
+package node
 
 import (
 	"context"
@@ -16,7 +16,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	waov1beta1 "github.com/waok8s/waok8s/wao-core/api/wao/v1beta1"
+	waov1beta1 "github.com/waok8s/waok8s/wao-core/api/node/v1beta1"
 )
 
 // NodeConfigTemplateReconciler reconciles a NodeConfigTemplate object
@@ -25,13 +25,14 @@ type NodeConfigTemplateReconciler struct {
 	Scheme *runtime.Scheme
 }
 
-//+kubebuilder:rbac:groups=wao.bitmedia.co.jp,resources=nodeconfigtemplates,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=wao.bitmedia.co.jp,resources=nodeconfigtemplates/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=wao.bitmedia.co.jp,resources=nodeconfigtemplates/finalizers,verbs=update
-//+kubebuilder:rbac:groups=wao.bitmedia.co.jp,resources=nodeconfigs,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=wao.bitmedia.co.jp,resources=nodeconfigs/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=wao.bitmedia.co.jp,resources=nodeconfigs/finalizers,verbs=update
-//+kubebuilder:rbac:groups=core,resources=nodes,verbs=get;list;watch;
+// +kubebuilder:rbac:groups=node.waok8s.github.io,resources=nodeconfigtemplates,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=node.waok8s.github.io,resources=nodeconfigtemplates/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=node.waok8s.github.io,resources=nodeconfigtemplates/finalizers,verbs=update
+
+// +kubebuilder:rbac:groups=node.waok8s.github.io,resources=nodeconfigs,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=node.waok8s.github.io,resources=nodeconfigs/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=node.waok8s.github.io,resources=nodeconfigs/finalizers,verbs=update
+// +kubebuilder:rbac:groups=core,resources=nodes,verbs=get;list;watch;
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.

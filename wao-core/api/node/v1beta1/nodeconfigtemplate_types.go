@@ -143,10 +143,12 @@ type NodeConfigTemplateSpec struct {
 type NodeConfigTemplateStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
+
+	// TODO: implement status
 }
 
-//+kubebuilder:object:root=true
-//+kubebuilder:subresource:status
+// +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
 
 // NodeConfigTemplate is the Schema for the nodeconfigtemplates API
 type NodeConfigTemplate struct {
@@ -157,7 +159,7 @@ type NodeConfigTemplate struct {
 	Status NodeConfigTemplateStatus `json:"status,omitempty"`
 }
 
-//+kubebuilder:object:root=true
+// +kubebuilder:object:root=true
 
 // NodeConfigTemplateList contains a list of NodeConfigTemplate
 type NodeConfigTemplateList struct {

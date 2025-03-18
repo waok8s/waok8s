@@ -1,6 +1,6 @@
-// Package v1beta1 contains API Schema definitions for the wao v1beta1 API group
+// Package v1beta1 contains API Schema definitions for the node v1beta1 API group
 // +kubebuilder:object:generate=true
-// +groupName=wao.bitmedia.co.jp
+// +groupName=node.waok8s.github.io
 package v1beta1
 
 import (
@@ -10,7 +10,7 @@ import (
 
 var (
 	// GroupVersion is group version used to register these objects
-	GroupVersion = schema.GroupVersion{Group: "wao.bitmedia.co.jp", Version: "v1beta1"}
+	GroupVersion = schema.GroupVersion{Group: "node.waok8s.github.io", Version: "v1beta1"}
 
 	// SchemeBuilder is used to add go types to the GroupVersionKind scheme
 	SchemeBuilder = &scheme.Builder{GroupVersion: GroupVersion}

@@ -1,4 +1,4 @@
-apiVersion: wao.bitmedia.co.jp/v1beta1
+apiVersion: node.waok8s.github.io/v1beta1
 kind: NodeConfigTemplate
 metadata:
   name: nodeconfigtemplate-sample

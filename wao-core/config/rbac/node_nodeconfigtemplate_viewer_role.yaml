@@ -3,16 +3,12 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   labels:
-    app.kubernetes.io/name: clusterrole
-    app.kubernetes.io/instance: nodeconfigtemplate-viewer-role
-    app.kubernetes.io/component: rbac
-    app.kubernetes.io/created-by: wao-core
-    app.kubernetes.io/part-of: wao-core
+    app.kubernetes.io/name: wao-core
     app.kubernetes.io/managed-by: kustomize
-  name: nodeconfigtemplate-viewer-role
+  name: node-nodeconfigtemplate-viewer-role
 rules:
 - apiGroups:
-  - wao.bitmedia.co.jp
+  - node.waok8s.github.io
   resources:
   - nodeconfigtemplates
   verbs:
@@ -20,7 +16,7 @@ rules:
   - list
   - watch
 - apiGroups:
-  - wao.bitmedia.co.jp
+  - node.waok8s.github.io
   resources:
   - nodeconfigtemplates/status
   verbs:

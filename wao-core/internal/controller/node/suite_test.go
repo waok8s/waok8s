@@ -1,10 +1,11 @@
-package wao_test
+package node_test
 
 import (
 	"context"
 	"errors"
 	"fmt"
 	"path/filepath"
+	"runtime"
 	"testing"
 	"time"
 
@@ -23,9 +24,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
-	"github.com/waok8s/waok8s/wao-core/internal/controller/wao"
-
-	"github.com/waok8s/waok8s/wao-core/api/wao/v1beta1"
+	"github.com/waok8s/waok8s/wao-core/api/node/v1beta1"
+	"github.com/waok8s/waok8s/wao-core/internal/controller/node"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -49,6 +49,14 @@ var _ = BeforeSuite(func() {
 	testEnv = &envtest.Environment{
 		CRDDirectoryPaths:     []string{filepath.Join("..", "..", "..", "config", "crd", "bases")},
 		ErrorIfCRDPathMissing: true,
+
+		// The BinaryAssetsDirectory is only required if you want to run the tests directly
+		// without call the makefile target test. If not informed it will look for the
+		// default path defined in controller-runtime which is /usr/local/kubebuilder/.
+		// Note that you must have the required binaries setup under the bin directory to perform
+		// the tests directly. When we run make test it will be setup and used automatically.
+		BinaryAssetsDirectory: filepath.Join("..", "..", "..", "bin", "k8s",
+			fmt.Sprintf("1.30.0-%s-%s", runtime.GOOS, runtime.GOARCH)),
 	}
 
 	var err error
@@ -60,7 +68,7 @@ var _ = BeforeSuite(func() {
 	err = v1beta1.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 
-	//+kubebuilder:scaffold:scheme
+	// +kubebuilder:scaffold:scheme
 
 	k8sClient, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})
 	Expect(err).NotTo(HaveOccurred())
@@ -231,7 +239,7 @@ var _ = Describe("NodeConfigTemplate Controller", func() {
 		})
 		Expect(err).NotTo(HaveOccurred())
 
-		reconciler := wao.NodeConfigTemplateReconciler{
+		reconciler := node.NodeConfigTemplateReconciler{
 			Client: k8sClient,
 			Scheme: scheme.Scheme,
 		}

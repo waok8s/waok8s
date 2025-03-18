@@ -1,5 +1,5 @@
 ## Append samples of your project ##
 resources:
-- wao_v1beta1_nodeconfig.yaml
-- wao_v1beta1_nodeconfigtemplate.yaml
-#+kubebuilder:scaffold:manifestskustomizesamples
+- node_v1beta1_nodeconfig.yaml
+- node_v1beta1_nodeconfigtemplate.yaml
+# +kubebuilder:scaffold:manifestskustomizesamples
