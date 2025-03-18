@@ -121,7 +121,7 @@ function lib::run-tests {
     local sched_image=$2
     local kind_cluster_name=$3
 
-    cd $1 || exit 1
+    cd "$cases_dir" || exit 1
 
     for d in case*/ ; do
 
