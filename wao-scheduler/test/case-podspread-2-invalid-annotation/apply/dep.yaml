@@ -5,7 +5,7 @@ metadata:
   labels:
     app: sleep
   annotations:
-    wao.bitmedia.co.jp/podspread-rate: "a"
+    waok8s.github.io/podspread-rate: "a"
 spec:
   replicas: 3
   selector:

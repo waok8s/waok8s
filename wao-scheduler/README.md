@@ -73,7 +73,7 @@ This plugin is enabled by default, so you only need to set `spec.schedulerName`.
 
 ### Deploy Pods with PodSpread
 
-This plugin only effects pods controlled by Deployment (and ReplicaSet), and it needs to be enabled by setting `wao.bitmedia.co.jp/podspread-rate` annotation.
+This plugin only effects pods controlled by Deployment (and ReplicaSet), and it needs to be enabled by setting `waok8s.github.io/podspread-rate` annotation.
 
 ```diff
   apiVersion: apps/v1
@@ -83,7 +83,7 @@ This plugin only effects pods controlled by Deployment (and ReplicaSet), and it 
     labels:
       app: nginx
 +   annotations:
-+     wao.bitmedia.co.jp/podspread-rate: "0.6"
++     waok8s.github.io/podspread-rate: "0.6"
   spec:
     replicas: 10
     selector:
