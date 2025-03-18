@@ -35,7 +35,7 @@ import (
 	custommetricsclient "k8s.io/metrics/pkg/client/custom_metrics"
 
 	// wao
-	waov1beta1 "github.com/waok8s/waok8s/wao-core/api/wao/v1beta1"
+	waov1beta1 "github.com/waok8s/waok8s/wao-core/api/node/v1beta1"
 	waoclient "github.com/waok8s/waok8s/wao-metrics-adapter/pkg/client"
 	waometrics "github.com/waok8s/waok8s/wao-metrics-adapter/pkg/metrics"
 	"github.com/waok8s/waok8s/wao-metrics-adapter/pkg/predictor"
