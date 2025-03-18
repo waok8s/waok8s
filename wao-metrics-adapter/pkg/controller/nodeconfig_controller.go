@@ -17,7 +17,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	waov1beta1 "github.com/waok8s/waok8s/wao-core/api/wao/v1beta1"
+	waov1beta1 "github.com/waok8s/waok8s/wao-core/api/node/v1beta1"
 
 	"github.com/waok8s/waok8s/wao-metrics-adapter/pkg/metrics"
 	"github.com/waok8s/waok8s/wao-metrics-adapter/pkg/metrics/dpapi"

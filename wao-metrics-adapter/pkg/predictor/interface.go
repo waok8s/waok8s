@@ -3,7 +3,7 @@ package predictor
 import (
 	"context"
 
-	waov1beta1 "github.com/waok8s/waok8s/wao-core/api/wao/v1beta1"
+	waov1beta1 "github.com/waok8s/waok8s/wao-core/api/node/v1beta1"
 )
 
 type PredictorType string

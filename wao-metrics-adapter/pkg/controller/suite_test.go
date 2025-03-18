@@ -26,7 +26,7 @@ import (
 	waometrics "github.com/waok8s/waok8s/wao-metrics-adapter/pkg/metrics"
 	waopredictor "github.com/waok8s/waok8s/wao-metrics-adapter/pkg/predictor"
 
-	"github.com/waok8s/waok8s/wao-core/api/wao/v1beta1"
+	"github.com/waok8s/waok8s/wao-core/api/node/v1beta1"
 	//+kubebuilder:scaffold:imports
 )
 

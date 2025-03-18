@@ -10,7 +10,7 @@ import (
 
 	"k8s.io/client-go/kubernetes"
 
-	waov1beta1 "github.com/waok8s/waok8s/wao-core/api/wao/v1beta1"
+	waov1beta1 "github.com/waok8s/waok8s/wao-core/api/node/v1beta1"
 	"github.com/waok8s/waok8s/wao-metrics-adapter/pkg/predictor"
 	"github.com/waok8s/waok8s/wao-metrics-adapter/pkg/predictor/fake"
 	"github.com/waok8s/waok8s/wao-metrics-adapter/pkg/predictor/redfish"
