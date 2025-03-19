@@ -74,11 +74,11 @@ roleRef:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: wao-scheduler-as-wao-nodeconfig-viewer-role
+  name: wao-scheduler-as-wao-node-nodeconfig-viewer-role
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: wao-nodeconfig-viewer-role
+  name: wao-node-nodeconfig-viewer-role
 subjects:
 - kind: ServiceAccount
   name: wao-scheduler
