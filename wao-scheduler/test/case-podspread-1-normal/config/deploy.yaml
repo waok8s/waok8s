@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
+    app: wao-scheduler
     component: scheduler
     tier: control-plane
   name: wao-scheduler
@@ -9,15 +10,16 @@ metadata:
 spec:
   selector:
     matchLabels:
+      app: wao-scheduler
       component: scheduler
       tier: control-plane
   replicas: 1
   template:
     metadata:
       labels:
+        app: wao-scheduler
         component: scheduler
         tier: control-plane
-        version: second
     spec:
       serviceAccountName: wao-scheduler
       containers:
