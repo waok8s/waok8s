@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -33,6 +34,8 @@ type MinimizePower struct {
 	predictorclient *waoclient.CachedPredictorClient
 
 	args *MinimizePowerArgs
+
+	startTime map[string]time.Time // to measure elapsed time for each pod; key=pod.Name
 }
 
 var _ framework.PreFilterPlugin = (*MinimizePower)(nil)
@@ -117,6 +120,7 @@ func New(_ context.Context, obj runtime.Object, fh framework.Handle) (framework.
 		metricsclient:        waoclient.NewCachedMetricsClient(mc, cmc, args.MetricsCacheTTL.Duration),
 		predictorclient:      waoclient.NewCachedPredictorClient(fh.ClientSet(), args.PredictorCacheTTL.Duration),
 		args:                 &args,
+		startTime:            map[string]time.Time{},
 	}, nil
 }
 
@@ -129,6 +133,11 @@ func (pl *MinimizePower) PreFilterExtensions() framework.PreFilterExtensions { r
 // PreFilter rejects a pod if it does not have at least one container that has a CPU request or limit set.
 func (pl *MinimizePower) PreFilter(ctx context.Context, state *framework.CycleState, pod *corev1.Pod) (*framework.PreFilterResult, *framework.Status) {
 	klog.InfoS("MinimizePower.PreFilter", "pod", pod.Name)
+
+	// measure elapsed time for each pod
+	delete(pl.startTime, pod.Name)
+	t0 := time.Now()
+	pl.startTime[pod.Name] = t0
 
 	if PodCPURequestOrLimit(pod) == 0 {
 		return nil, framework.NewStatus(framework.Unschedulable, ReasonResourceRequest)
@@ -305,6 +314,12 @@ func (pl *MinimizePower) NormalizeScore(_ context.Context, _ *framework.CycleSta
 	PowerConsumptions2Scores(scores, ScoreBase, ScoreReplaceMap)
 
 	klog.InfoS("MinimizePower.NormalizeScore after", "pod", pod.Name, "scores", scores)
+
+	// measure elapsed time for each pod
+	t1 := time.Now()
+	if t0, ok := pl.startTime[pod.Name]; ok {
+		klog.InfoS("MinimizePower.NormalizeScore elapsedTime", "pod", pod.Name, "t0", t0, "t1", t1, "duration", t1.Sub(t0))
+	}
 
 	return nil
 }
