@@ -416,6 +416,10 @@ func (w *WAOLB) ScoreNode(ctx context.Context, nodeName string, cpuUsage resourc
 			klog.ErrorS(err, "WAO: ScoreNode GetPredictorEndpoint", "ipFamily", w.opts.IPFamily, "node", nodeName)
 			return 0, err
 		}
+		if ep2 == nil { // FIXME: this is a workaround for some weird cases
+			klog.ErrorS(fmt.Errorf("ep2 == nil"), "WAO: ScoreNode unexpected error", "ipFamily", w.opts.IPFamily, "node", nodeName)
+			return 0, err
+		}
 		ep.Type = ep2.Type
 		ep.Endpoint = ep2.Endpoint
 	}
