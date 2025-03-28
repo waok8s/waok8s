@@ -95,7 +95,7 @@ var (
 func (*PodSpread) Name() string { return Name }
 
 const (
-	AnnotationPodSpreadRate = "wao.bitmedia.co.jp/podspread-rate"
+	AnnotationPodSpreadRate = "waok8s.github.io/podspread-rate"
 )
 
 // New initializes a new plugin and returns it.

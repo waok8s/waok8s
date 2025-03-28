@@ -13,6 +13,6 @@ IMAGE_NAME=$IMAGE:$VERSION
 if [ -n "$REGISTRY" ] ; then IMAGE_NAME=$REGISTRY/$IMAGE:$VERSION ; fi
 
 # main
-cd config/base && "$KUSTOMIZE" edit set image wao-metrics-adapter="$IMAGE_NAME" && cd -
+cd config/base && "$KUSTOMIZE" edit set image localhost/wao-metrics-adapter="$IMAGE_NAME" && cd -
 cd config/base && "$KUSTOMIZE" edit remove resource "deps/*" && cd -
 "$KUSTOMIZE" build config/base > $DIST

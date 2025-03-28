@@ -1,0 +1,27 @@
+# permissions for end users to edit nodeconfigtemplates.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: wao-core
+    app.kubernetes.io/managed-by: kustomize
+  name: node-nodeconfigtemplate-editor-role
+rules:
+- apiGroups:
+  - node.waok8s.github.io
+  resources:
+  - nodeconfigtemplates
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - node.waok8s.github.io
+  resources:
+  - nodeconfigtemplates/status
+  verbs:
+  - get

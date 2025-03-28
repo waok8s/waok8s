@@ -33,12 +33,12 @@ WAO Scheduler schedules pods with features focused on minimizing power consumpti
 ### Installation
 
 > [!NOTE]
-> Make sure you have [wao-core](https://github.com/waok8s/wao-core) and [wao-metrics-adapter](https://github.com/waok8s/wao-metrics-adapter) set up.
+> Make sure you have [wao-core](https://github.com/waok8s/waok8s/wao-core) and [wao-metrics-adapter](https://github.com/waok8s/waok8s/wao-metrics-adapter) set up.
 
 Install WAO Scheduler with default configuration.
 
 ```sh
-kubectl apply -f https://github.com/waok8s/wao-scheduler/releases/download/v1.30.1/wao-scheduler.yaml
+kubectl apply -f https://github.com/waok8s/waok8s/releases/download/wao-scheduler/v1.30.3/wao-scheduler.yaml
 ```
 
 Wait for the scheduler to be ready.
@@ -73,7 +73,7 @@ This plugin is enabled by default, so you only need to set `spec.schedulerName`.
 
 ### Deploy Pods with PodSpread
 
-This plugin only effects pods controlled by Deployment (and ReplicaSet), and it needs to be enabled by setting `wao.bitmedia.co.jp/podspread-rate` annotation.
+This plugin only effects pods controlled by Deployment (and ReplicaSet), and it needs to be enabled by setting `waok8s.github.io/podspread-rate` annotation.
 
 ```diff
   apiVersion: apps/v1
@@ -83,7 +83,7 @@ This plugin only effects pods controlled by Deployment (and ReplicaSet), and it 
     labels:
       app: nginx
 +   annotations:
-+     wao.bitmedia.co.jp/podspread-rate: "0.6"
++     waok8s.github.io/podspread-rate: "0.6"
   spec:
     replicas: 10
     selector:
@@ -177,36 +177,19 @@ This project is following [Scheduling Framework](https://kubernetes.io/docs/conc
 
 Versioning: we use the same major.minor as Kubernetes, and the patch is our own.
 
-- 2025-02-26 `v1.30.1`
-  - Bug fixes and improvements.
-- 2024-05-17 `v1.30.0`
-  - Support Kubernetes v1.30.
-- 2024-05-07 `v1.29.0`
-  - Support Kubernetes v1.29.
-- 2024-03-29 `v1.28.0`
-  - Support Kubernetes v1.28.
-- 2024-03-04 `v1.27.0`
-  - First release.
-  - `minimizepower` Add the scheduler plugin.
-  - `podspread` Add the scheduler plugin.
+- What comes next?
+  - TBD
+- 2025-xx-xx `v1.31.0`
+  - Support Kubernetes v1.31.
+- 2025-03-31 `v1.30.3`
+  - Change domain to `waok8s.github.io`.
+  - Minor fixes and improvements.
+- Older versions (<=v1.30.2) can be found at [`waok8s/wao-scheduler`](https://github.com/waok8s/wao-scheduler).
 
 ## Acknowledgements
 
-This work is supported by the New Energy and Industrial Technology Development Organization (NEDO) under its "Program to Develop and Promote the Commercialization of Energy Conservation Technologies to Realize a Decarbonized Society" ([JPNP21005](https://www.nedo.go.jp/english/activities/activities_ZZJP_100197.html)).
+See [here](https://github.com/waok8s/waok8s?tab=readme-ov-file#acknowledgements) for details.
 
 ## License
 
-Copyright 2021 Osaka University.
-Copyright 2023 Bitmedia, Inc.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
+Apache-2.0. See [here](https://github.com/waok8s/waok8s?tab=readme-ov-file#license) for details.

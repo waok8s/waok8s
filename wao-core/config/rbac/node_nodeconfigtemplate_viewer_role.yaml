@@ -1,0 +1,23 @@
+# permissions for end users to view nodeconfigtemplates.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: wao-core
+    app.kubernetes.io/managed-by: kustomize
+  name: node-nodeconfigtemplate-viewer-role
+rules:
+- apiGroups:
+  - node.waok8s.github.io
+  resources:
+  - nodeconfigtemplates
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - node.waok8s.github.io
+  resources:
+  - nodeconfigtemplates/status
+  verbs:
+  - get

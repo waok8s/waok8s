@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -19,10 +20,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	waov1beta1 "github.com/waok8s/waok8s/wao-core/api/wao/v1beta1"
-	waoclient "github.com/waok8s/waok8s/wao-core/pkg/client"
-	waometrics "github.com/waok8s/waok8s/wao-core/pkg/metrics"
-	"github.com/waok8s/waok8s/wao-core/pkg/predictor"
+	waov1beta1 "github.com/waok8s/waok8s/wao-core/api/node/v1beta1"
+	waoclient "github.com/waok8s/waok8s/wao-metrics-adapter/pkg/client"
+	waometrics "github.com/waok8s/waok8s/wao-metrics-adapter/pkg/metrics"
+	"github.com/waok8s/waok8s/wao-metrics-adapter/pkg/predictor"
 )
 
 type MinimizePower struct {
@@ -33,6 +34,8 @@ type MinimizePower struct {
 	predictorclient *waoclient.CachedPredictorClient
 
 	args *MinimizePowerArgs
+
+	startTime map[string]time.Time // to measure elapsed time for each pod; key=pod.Name
 }
 
 var _ framework.PreFilterPlugin = (*MinimizePower)(nil)
@@ -117,6 +120,7 @@ func New(_ context.Context, obj runtime.Object, fh framework.Handle) (framework.
 		metricsclient:        waoclient.NewCachedMetricsClient(mc, cmc, args.MetricsCacheTTL.Duration),
 		predictorclient:      waoclient.NewCachedPredictorClient(fh.ClientSet(), args.PredictorCacheTTL.Duration),
 		args:                 &args,
+		startTime:            map[string]time.Time{},
 	}, nil
 }
 
@@ -129,6 +133,11 @@ func (pl *MinimizePower) PreFilterExtensions() framework.PreFilterExtensions { r
 // PreFilter rejects a pod if it does not have at least one container that has a CPU request or limit set.
 func (pl *MinimizePower) PreFilter(ctx context.Context, state *framework.CycleState, pod *corev1.Pod) (*framework.PreFilterResult, *framework.Status) {
 	klog.InfoS("MinimizePower.PreFilter", "pod", pod.Name)
+
+	// measure elapsed time for each pod
+	delete(pl.startTime, pod.Name)
+	t0 := time.Now()
+	pl.startTime[pod.Name] = t0
 
 	if PodCPURequestOrLimit(pod) == 0 {
 		return nil, framework.NewStatus(framework.Unschedulable, ReasonResourceRequest)
@@ -177,7 +186,7 @@ func (pl *MinimizePower) Score(ctx context.Context, state *framework.CycleState,
 	node := nodeInfo.Node()
 	nodeMetrics, err := pl.metricsclient.GetNodeMetrics(ctx, node.Name)
 	if err != nil {
-		klog.ErrorS(err, "MinimizePower.Score score=ScoreError as error occurred", "pod", pod.Name, "node", nodeName)
+		klog.ErrorS(err, "MinimizePower.Score GetNodeMetrics score=ScoreError as error occurred", "pod", pod.Name, "node", nodeName)
 		return ScoreError, nil
 	}
 
@@ -230,12 +239,12 @@ func (pl *MinimizePower) Score(ctx context.Context, state *framework.CycleState,
 	// get custom metrics
 	inletTemp, err := pl.metricsclient.GetCustomMetricForNode(ctx, nodeName, waometrics.ValueInletTemperature)
 	if err != nil {
-		klog.ErrorS(err, "MinimizePower.Score score=ScoreError as error occurred", "pod", pod.Name, "node", nodeName)
+		klog.ErrorS(err, "MinimizePower.Score GetCustomMetricForNode(inlet_temp) score=ScoreError as error occurred", "pod", pod.Name, "node", nodeName)
 		return ScoreError, nil
 	}
 	deltaP, err := pl.metricsclient.GetCustomMetricForNode(ctx, nodeName, waometrics.ValueDeltaPressure)
 	if err != nil {
-		klog.ErrorS(err, "MinimizePower.Score score=ScoreError as error occurred", "pod", pod.Name, "node", nodeName)
+		klog.ErrorS(err, "MinimizePower.Score GetCustomMetricForNode(delta_p) score=ScoreError as error occurred", "pod", pod.Name, "node", nodeName)
 		return ScoreError, nil
 	}
 	klog.InfoS("MinimizePower.Score metrics", "pod", pod.Name, "node", nodeName, "inlet_temp", inletTemp.Value.AsApproximateFloat64(), "delta_p", deltaP.Value.AsApproximateFloat64())
@@ -244,7 +253,7 @@ func (pl *MinimizePower) Score(ctx context.Context, state *framework.CycleState,
 	var nc *waov1beta1.NodeConfig
 	var ncs waov1beta1.NodeConfigList
 	if err := pl.ctrlclient.List(ctx, &ncs); err != nil {
-		klog.ErrorS(err, "MinimizePower.Score score=ScoreError as error occurred", "pod", pod.Name, "node", nodeName)
+		klog.ErrorS(err, "MinimizePower.Score NodeConfigList score=ScoreError as error occurred", "pod", pod.Name, "node", nodeName)
 		return ScoreError, nil
 	}
 	for _, e := range ncs.Items {
@@ -270,7 +279,7 @@ func (pl *MinimizePower) Score(ctx context.Context, state *framework.CycleState,
 	if nc.Spec.Predictor.PowerConsumptionEndpointProvider != nil {
 		ep2, err := pl.predictorclient.GetPredictorEndpoint(ctx, nc.Namespace, nc.Spec.Predictor.PowerConsumptionEndpointProvider, predictor.TypePowerConsumption)
 		if err != nil {
-			klog.ErrorS(err, "MinimizePower.Score score=ScoreError as error occurred", "pod", pod.Name, "node", nodeName)
+			klog.ErrorS(err, "MinimizePower.Score GetPredictorEndpoint score=ScoreError as error occurred", "pod", pod.Name, "node", nodeName)
 			return ScoreError, nil
 		}
 		ep.Type = ep2.Type
@@ -280,12 +289,12 @@ func (pl *MinimizePower) Score(ctx context.Context, state *framework.CycleState,
 	// do predict
 	beforeWatt, err := pl.predictorclient.PredictPowerConsumption(ctx, nc.Namespace, ep, beforeUsage, inletTemp.Value.AsApproximateFloat64(), deltaP.Value.AsApproximateFloat64())
 	if err != nil {
-		klog.ErrorS(err, "MinimizePower.Score score=ScoreError as error occurred", "pod", pod.Name, "node", nodeName)
+		klog.ErrorS(err, "MinimizePower.Score PredictPowerConsumption(before) score=ScoreError as error occurred", "pod", pod.Name, "node", nodeName)
 		return ScoreError, nil
 	}
 	afterWatt, err := pl.predictorclient.PredictPowerConsumption(ctx, nc.Namespace, ep, afterUsage, inletTemp.Value.AsApproximateFloat64(), deltaP.Value.AsApproximateFloat64())
 	if err != nil {
-		klog.ErrorS(err, "MinimizePower.Score score=ScoreError as error occurred", "pod", pod.Name, "node", nodeName)
+		klog.ErrorS(err, "MinimizePower.Score PredictPowerConsumption(after) score=ScoreError as error occurred", "pod", pod.Name, "node", nodeName)
 		return ScoreError, nil
 	}
 	klog.InfoS("MinimizePower.Score prediction", "pod", pod.Name, "node", nodeName, "watt_before", beforeWatt, "watt_after", afterWatt)
@@ -305,6 +314,12 @@ func (pl *MinimizePower) NormalizeScore(_ context.Context, _ *framework.CycleSta
 	PowerConsumptions2Scores(scores, ScoreBase, ScoreReplaceMap)
 
 	klog.InfoS("MinimizePower.NormalizeScore after", "pod", pod.Name, "scores", scores)
+
+	// measure elapsed time for each pod
+	t1 := time.Now()
+	if t0, ok := pl.startTime[pod.Name]; ok {
+		klog.InfoS("MinimizePower.NormalizeScore elapsedTime", "pod", pod.Name, "t0", t0, "t1", t1, "duration", t1.Sub(t0))
+	}
 
 	return nil
 }

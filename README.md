@@ -7,7 +7,7 @@ Welcome to the WAO for Kubernetes project!
 
 - [Overview](#overview)
 - [Architecture](#architecture)
-  - [`wao-core`: CRDs, controllers and libraries](#wao-core-crds-controllers-and-libraries)
+  - [`wao-core`: CRDs and controllers](#wao-core-crds-and-controllers)
   - [`wao-metrics-adapter`: Exposes environmental metrics](#wao-metrics-adapter-exposes-environmental-metrics)
   - [`wao-scheduler`: Custom scheduler plugin](#wao-scheduler-custom-scheduler-plugin)
   - [`wao-loadbalancer`: Energy-efficient load balancing](#wao-loadbalancer-energy-efficient-load-balancing)
@@ -47,7 +47,7 @@ This integrated repository brings together multiple modules, each maintained as 
 ![arch](/docs/arch.png)
 
 
-### [`wao-core`](/wao-core/): CRDs, controllers and libraries 
+### [`wao-core`](/wao-core/): CRDs and controllers
 
 This is the central component of WAO. It provides the CRDs (such as NodeConfig and NodeConfigTemplate) and controllers required to manage power consumption prediction. It handles the configuration for each node (e.g. Redfish endpoints, sensor APIs, and prediction models) so that other WAO components can utilize this data.
 
@@ -97,7 +97,7 @@ kubectl apply -f https://github.com/waok8s/waok8s/releases/download/wao-loadbala
 Group your nodes by their hardware characteristics and create a NodeConfigTemplate for each group. This template will be used to create NodeConfig objects for each node.
 
 ```yaml
-apiVersion: wao.bitmedia.co.jp/v1beta1
+apiVersion: node.waok8s.github.io/v1beta1
 kind: NodeConfigTemplate
 metadata:
   name: test-nodes

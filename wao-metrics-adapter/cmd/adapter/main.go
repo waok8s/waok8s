@@ -13,9 +13,8 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	basecmd "sigs.k8s.io/custom-metrics-apiserver/pkg/cmd"
 
-	waocontroller "github.com/waok8s/waok8s/wao-core/pkg/controller"
-	waometrics "github.com/waok8s/waok8s/wao-core/pkg/metrics"
-
+	waocontroller "github.com/waok8s/waok8s/wao-metrics-adapter/pkg/controller"
+	waometrics "github.com/waok8s/waok8s/wao-metrics-adapter/pkg/metrics"
 	waoprovider "github.com/waok8s/waok8s/wao-metrics-adapter/pkg/provider"
 )
 

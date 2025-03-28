@@ -27,7 +27,7 @@ CRDs, controllers and libraries for WAO.
 
 ## Overview
 
-This repository contains CRDs, controllers and libraries for WAO. They are intended to be used with [wao-metrics-adapter](https://github.com/waok8s/wao-metrics-adapter), [wao-scheduler](https://github.com/waok8s/wao-scheduler), etc.
+This repository contains CRDs and controllers for WAO. They are intended to be used with [wao-metrics-adapter](https://github.com/waok8s/waok8s/wao-metrics-adapter), [wao-scheduler](https://github.com/waok8s/waok8s/wao-scheduler), [wao-loadbalancer](https://github.com/waok8s/waok8s/wao-loadbalancer), etc.
 
 ## Getting Started
 
@@ -36,7 +36,7 @@ This repository contains CRDs, controllers and libraries for WAO. They are inten
 Install CRDs and controllers.
 
 ```sh
-kubectl apply -f https://github.com/waok8s/wao-core/releases/download/v1.30.1/wao-core.yaml
+kubectl apply -f https://github.com/waok8s/waok8s/releases/download/wao-core/v1.30.3/wao-core.yaml
 ```
 
 Wait for the pod to be ready.
@@ -52,19 +52,19 @@ Before using NodeConfig[Template], you need to do the following.
 - Make sure that your nodes have Redfish API enabled and inlet temperature sensors are available.
 - Make sure that you have a differential pressure API server running.
 - Make sure that you have a power consumption predictor running.
-- (Optional) Make sure that your nodes have `/redfish/v1/Systems/{systemId}/MachineLearningModel` Redfish property. This property is currently not supported in most Redfish implementations, but you can use [MLMM]() to provide it.
+- (Optional) Make sure that your nodes have `/redfish/v1/Systems/{systemId}/MachineLearningModel` Redfish property. This property is currently not supported in most Redfish implementations, but you can use [MLMM](https://github.com/waok8s/experimental/mlmm) to provide it.
 
 We provide tools to test these requirements are met. Try the following.
 
 ```sh
 # CLI to get inlet_temp from Redfish server.
-go run github.com/waok8s/wao-core/pkg/metrics/redfish/cmd/redfish_inlettemp_cli@HEAD -h
+go run github.com/waok8s/waok8s/wao-core/pkg/metrics/redfish/cmd/redfish_inlettemp_cli@HEAD -h
 # CLI to get delta_p from DifferentialPressureAPI server.
-go run github.com/waok8s/wao-core/pkg/metrics/dpapi/cmd/dpapi_deltap_cli@HEAD -h
+go run github.com/waok8s/waok8s/wao-core/pkg/metrics/dpapi/cmd/dpapi_deltap_cli@HEAD -h
 # CLI to get power consumption from V2InferenceProtocol server.
-go run github.com/waok8s/wao-core/pkg/predictor/v2inferenceprotocol/cmd/v2ip_pcp_cli@HEAD -h
+go run github.com/waok8s/waok8s/wao-core/pkg/predictor/v2inferenceprotocol/cmd/v2ip_pcp_cli@HEAD -h
 # CLI to get power consumption predictor endpoint from Redfish server.
-go run github.com/waok8s/wao-core/pkg/predictor/redfish/cmd/redfish_ep_cli@HEAD -h
+go run github.com/waok8s/waok8s/wao-core/pkg/predictor/redfish/cmd/redfish_ep_cli@HEAD -h
 ```
 
 > [!NOTE]
@@ -87,7 +87,7 @@ Here is an example.
 > Currently, only "wao-system" namespace is supported for NodeConfig, NodeConfigTemplate and related Secrets. (This is due to RBAC.)
 
 ```yaml
-apiVersion: wao.bitmedia.co.jp/v1beta1
+apiVersion: node.waok8s.github.io/v1beta1
 kind: NodeConfig
 metadata:
   name: worker-0
@@ -206,7 +206,7 @@ Several fields can be templated and this is useful for configuring IP addresses,
 Here is an example.
 
 ```yaml
-apiVersion: wao.bitmedia.co.jp/v1beta1
+apiVersion: node.waok8s.github.io/v1beta1
 kind: NodeConfigTemplate
 metadata:
   name: redfish-enabled-nodes
@@ -262,51 +262,30 @@ You can also use [`sprig`](http://masterminds.github.io/sprig/) functions to do 
 
 ## Development
 
-This project uses [Kubebuilder](https://github.com/kubernetes-sigs/kubebuilder) (v3.11) to generate the CRDs and controllers. However, codes under `pkg` (contain libraries) do not follow Kubebuilder conventions.
+This project uses [Kubebuilder](https://github.com/kubernetes-sigs/kubebuilder) (v4.1.1) to generate the CRDs and controllers.
 
 ### Components
 
 - `api/wao`: CRDs.
 - `internal/controller`: Controllers.
-- `pkg/controller`: Controllers not run in the controller manager.
-- `pkg/metrics`: Custom metrics library.
-- `pkg/predictor`: Predictor library.
-- `pkg/client`: Cached clients for metrics and predictors.
 
 ## Changelog
 
 Versioning: we use the same major.minor as Kubernetes, and the patch is our own.
 
 - What comes next?
-  - Upgrade `kubebuilder`. NOTE: We use `kube-rbac-proxy:v0.14.1` so [`gcr.io` retirement](https://github.com/kubernetes-sigs/kubebuilder/discussions/3907) affects us. The workaround is to use other image registry.
-- 2025-02-26 `v1.30.1`
-  - Bug fixes and improvements.
-- 2024-05-17 `v1.30.0`
-  - Support Kubernetes v1.30.
-- 2024-05-07 `v1.29.0`
-  - Support Kubernetes v1.29.
-- 2024-03-29 `v1.28.0`
-  - Support Kubernetes v1.28.
-- 2024-03-04 `v1.27.0`
-  - First release.
-  - CRDs, controllers and libraries.
+  - TBD
+- 2025-xx-xx `v1.31.0`
+  - Support Kubernetes v1.31.
+- 2025-03-31 `v1.30.3`
+  - Change domain to `waok8s.github.io`.
+  - Build with Kubebuilder v4.1.1.
+- Older versions (<=v1.30.2) can be found at [`waok8s/wao-core`](https://github.com/waok8s/wao-core).
 
 ## Acknowledgements
 
-This work is supported by the New Energy and Industrial Technology Development Organization (NEDO) under its "Program to Develop and Promote the Commercialization of Energy Conservation Technologies to Realize a Decarbonized Society" ([JPNP21005](https://www.nedo.go.jp/english/activities/activities_ZZJP_100197.html)).
+See [here](https://github.com/waok8s/waok8s?tab=readme-ov-file#acknowledgements) for details.
 
 ## License
 
-Copyright 2023 Bitmedia, Inc.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
+Apache-2.0. See [here](https://github.com/waok8s/waok8s?tab=readme-ov-file#license) for details.

@@ -7,6 +7,9 @@ data:
   scheduler-config.yaml: |
     apiVersion: kubescheduler.config.k8s.io/v1
     kind: KubeSchedulerConfiguration
+    clientConnection:
+      qps: 150
+      burst: 300
     leaderElection:
       leaderElect: false
     profiles:
@@ -15,4 +18,12 @@ data:
           multiPoint:
             enabled:
             - name: MinimizePower
+              weight: 20
             # - name: PodSpread
+        pluginConfig:
+          - name: MinimizePower
+            args:
+              metricsCacheTTL: 15s
+              predictorCacheTTL: 15m
+              podUsageAssumption: 0.8
+              cpuUsageFormat: Percent

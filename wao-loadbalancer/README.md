@@ -51,7 +51,7 @@ $score_i = 100 \times \frac{\min(\mathbf{deltaPowers})}{power_i}$
 ### Installation
 
 > [!NOTE]
-> Make sure you have [wao-core](https://github.com/waok8s/wao-core) and [wao-metrics-adapter](https://github.com/waok8s/wao-metrics-adapter) set up.
+> Make sure you have [wao-core](https://github.com/waok8s/waok8s/wao-core) and [wao-metrics-adapter](https://github.com/waok8s/waok8s/wao-metrics-adapter) set up.
 
 There are two ways to use WAO-LB: as a non-default service proxy or as the default service proxy, and there are some notable points:
 
@@ -85,13 +85,13 @@ So you can run WAO-LB as a non-default service proxy by following these steps:
 
 
 > [!NOTE]
-> Make sure you have [wao-core](https://github.com/waok8s/wao-core), [wao-metrics-adapter](https://github.com/waok8s/wao-metrics-adapter) and [wao-scheduler](https://github.com/waok8s/wao-scheduler) set up.
+> Make sure you have [wao-core](https://github.com/waok8s/waok8s/wao-core), [wao-metrics-adapter](https://github.com/waok8s/waok8s/wao-metrics-adapter) set up.
 > Make sure you have step 1 mentioned above done.
 
 Install WAO-LB with default configuration.
 
 ```sh
-kubectl apply -f https://github.com/waok8s/wao-loadbalancer/releases/download/v1.30.0/wao-loadbalancer.yaml
+kubectl apply -f https://github.com/waok8s/waok8s/releases/download/wao-loadbalancer/v1.30.3/wao-loadbalancer.yaml
 ```
 
 Wait for the DaemonSet to be ready.
@@ -182,7 +182,7 @@ chain service-X4OXUEPL-default/nginx-waolb/tcp/https {
 
 - `service.kubernetes.io/service-proxy-name` label
   - Set this value if WAO-LB is running as a non-default service proxy.
-- (not yet implemented) `waok8s.github.io/cpu-per-request` annotation
+- `waok8s.github.io/cpu-per-request` annotation
   - Set this value to specify the CPU request per request.
   - The default value is `100m` (0.1 CPU).
   - AI inference or other heavy tasks should set a higher value.
@@ -200,7 +200,7 @@ Here is a non-comprehensive list of the variables and their implementation statu
   - Not implemented yet
   - Fixed to `wao-loadbalancer`
 - CPU request per access
-  - (not yet implemented) Annotation `waok8s.github.io/cpu-per-request` in Service do this
+  - Annotation `waok8s.github.io/cpu-per-request` in Service do this
   - The default value is fixed to `100m` (0.1 CPU) for now
 - WAO Metrics Cache TTL
   - Not implemented yet
@@ -237,47 +237,19 @@ Here is a non-comprehensive list of the variables and their implementation statu
 
 Versioning: we use the same major.minor as Kubernetes, and the patch is our own.
 
-- 2025-02-26 `v1.30.0`
-  - Release version.
-- 2025-02-20 `v1.30.0-alpha.2`
-  - Support user-defined CPU request per request.
-  - Use delta power to calculate the weight.
-  - Support more WAO configurations.
-  - Internal improvements.
-- 2025-02-12 `v1.30.0-alpha.1`
-  - Drop support for `ipvs` mode (now only `nftables` mode is supported).
-  - Support non-default service proxy deployment.
-  - Internal improvements.
-  - Example K8s configs are available.
-- 2025-02-05 `v1.30.0-alpha.0`
-  - Support both `ipvs` and `nftables` mode.
-  - Now the container image is available.
-- 2024-07-01 `v1.29.0-alpha.0`
-  - Support both `ipvs` and `nftables` mode.
-  - You need to build the image by yourself.
+- What comes next?
+  - TBD
+- 2025-xx-xx `v1.31.0`
+  - Support Kubernetes v1.31.
+- 2025-03-31 `v1.30.3`
+  - Change domain to `waok8s.github.io`.
+  - Minor fixes and improvements.
+- Older versions (<=v1.30.1; v1.30.2 is skipped) can be found at [`waok8s/wao-loadbalancer`](https://github.com/waok8s/wao-loadbalancer).
 
 ## Acknowledgements
 
-This work is supported by the New Energy and Industrial Technology Development Organization (NEDO) under its "Program to Develop and Promote the Commercialization of Energy Conservation Technologies to Realize a Decarbonized Society" ([JPNP21005](https://www.nedo.go.jp/english/activities/activities_ZZJP_100197.html)).
+See [here](https://github.com/waok8s/waok8s?tab=readme-ov-file#acknowledgements) for details.
 
 ## License
 
-> [!NOTE]
-> The original Kubernetes code is [licensed under Apache-2.0](https://github.com/kubernetes/kubernetes/blob/master/LICENSE).
-
-Copyright 2021 Osaka University.  
-Copyright 2022 Bitmedia, Inc.  
-Copyright 2024 Neutrix Cloud Japan Corporation.  
-Copyright 2025 Bitmedia, Inc.  
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
+Apache-2.0. See [here](https://github.com/waok8s/waok8s?tab=readme-ov-file#license) for details.
