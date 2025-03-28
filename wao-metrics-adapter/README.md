@@ -85,6 +85,7 @@ Versioning: we use the same major.minor as Kubernetes, and the patch is our own.
   - Support Kubernetes v1.31.
 - 2025-03-31 `v1.30.3`
   - Change domain to `waok8s.github.io`.
+  - Move client libraries `waok8s/wao-core` -> `waok8s/wao-metrics-adapter`.
 - Older versions (<=v1.30.2) can be found at [`waok8s/wao-metrics-adapter`](https://github.com/waok8s/wao-metrics-adapter).
 
 ## Acknowledgements
