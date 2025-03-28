@@ -182,7 +182,7 @@ chain service-X4OXUEPL-default/nginx-waolb/tcp/https {
 
 - `service.kubernetes.io/service-proxy-name` label
   - Set this value if WAO-LB is running as a non-default service proxy.
-- (not yet implemented) `waok8s.github.io/cpu-per-request` annotation
+- `waok8s.github.io/cpu-per-request` annotation
   - Set this value to specify the CPU request per request.
   - The default value is `100m` (0.1 CPU).
   - AI inference or other heavy tasks should set a higher value.
@@ -200,7 +200,7 @@ Here is a non-comprehensive list of the variables and their implementation statu
   - Not implemented yet
   - Fixed to `wao-loadbalancer`
 - CPU request per access
-  - (not yet implemented) Annotation `waok8s.github.io/cpu-per-request` in Service do this
+  - Annotation `waok8s.github.io/cpu-per-request` in Service do this
   - The default value is fixed to `100m` (0.1 CPU) for now
 - WAO Metrics Cache TTL
   - Not implemented yet

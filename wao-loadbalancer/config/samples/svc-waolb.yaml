@@ -3,11 +3,12 @@ kind: Service
 metadata:
   name: nginx-waolb
   labels:
-    app: nginx
     service.kubernetes.io/service-proxy-name: wao-loadbalancer
   annotations:
-    waok8s.github.io/cpu-per-request: "500m" # CPU per request (not yet implemented)
+    waok8s.github.io/cpu-per-request: "500m" # CPU per request
 spec:
+  selector:
+    app: nginx
   ports:
     - name: http
       port: 80
@@ -15,5 +16,3 @@ spec:
     - name: https
       port: 443
       targetPort: 443
-  selector:
-    app: nginx
