@@ -382,6 +382,10 @@ func (w *WAOLB) ScoreNode(ctx context.Context, nodeName string, cpuUsage resourc
 		klog.ErrorS(err, "WAO: ScoreNode GetCustomMetricForNode", "ipFamily", w.opts.IPFamily, "node", nodeName, "metric", waometrics.ValueDeltaPressure)
 		return 0, err
 	}
+	if inletTemp == nil || deltaP == nil { // FIXME: this is a workaround for some weird cases
+		klog.ErrorS(fmt.Errorf("inletTemp == nil || deltaP == nil"), "WAO: ScoreNode unexpected error", "ipFamily", w.opts.IPFamily, "node", nodeName)
+		return 0, err
+	}
 	klog.V(5).InfoS("WAO: ScoreNode metrics", "ipFamily", w.opts.IPFamily, "node", nodeName, "inlet_temp", inletTemp.Value.AsApproximateFloat64(), "delta_p", deltaP.Value.AsApproximateFloat64())
 
 	// get NodeConfig
@@ -414,6 +418,10 @@ func (w *WAOLB) ScoreNode(ctx context.Context, nodeName string, cpuUsage resourc
 		ep2, err := w.predictorclient.GetPredictorEndpoint(ctx, nc.Namespace, nc.Spec.Predictor.PowerConsumptionEndpointProvider, predictor.TypePowerConsumption)
 		if err != nil {
 			klog.ErrorS(err, "WAO: ScoreNode GetPredictorEndpoint", "ipFamily", w.opts.IPFamily, "node", nodeName)
+			return 0, err
+		}
+		if ep2 == nil { // FIXME: this is a workaround for some weird cases
+			klog.ErrorS(fmt.Errorf("ep2 == nil"), "WAO: ScoreNode unexpected error", "ipFamily", w.opts.IPFamily, "node", nodeName)
 			return 0, err
 		}
 		ep.Type = ep2.Type
