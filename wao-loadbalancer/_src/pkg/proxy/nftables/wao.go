@@ -382,6 +382,10 @@ func (w *WAOLB) ScoreNode(ctx context.Context, nodeName string, cpuUsage resourc
 		klog.ErrorS(err, "WAO: ScoreNode GetCustomMetricForNode", "ipFamily", w.opts.IPFamily, "node", nodeName, "metric", waometrics.ValueDeltaPressure)
 		return 0, err
 	}
+	if inletTemp == nil || deltaP == nil { // FIXME: this is a workaround for some weird cases
+		klog.ErrorS(fmt.Errorf("inletTemp == nil || deltaP == nil"), "WAO: ScoreNode unexpected error", "ipFamily", w.opts.IPFamily, "node", nodeName)
+		return 0, err
+	}
 	klog.V(5).InfoS("WAO: ScoreNode metrics", "ipFamily", w.opts.IPFamily, "node", nodeName, "inlet_temp", inletTemp.Value.AsApproximateFloat64(), "delta_p", deltaP.Value.AsApproximateFloat64())
 
 	// get NodeConfig
