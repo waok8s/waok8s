@@ -277,7 +277,7 @@ Versioning: we use the same major.minor as Kubernetes, and the patch is our own.
   - TBD
 - 2025-xx-xx `v1.31.0`
   - Support Kubernetes v1.31.
-- 2025-xx-xx `v1.30.3`
+- 2025-03-31 `v1.30.3`
   - Change domain to `waok8s.github.io`.
   - Build with Kubebuilder v4.1.1.
 - Older versions (<=v1.30.2) can be found at [`waok8s/wao-core`](https://github.com/waok8s/wao-core).
