@@ -370,8 +370,8 @@ github.com/valyala/bytebufferpool v1.0.0/go.mod h1:6bBcMArwyJ5K/AmCkWv1jt77kVWyC
 github.com/valyala/fasttemplate v1.2.2/go.mod h1:KHLXt3tVN2HBp8eijSv/kGJopbvo7S+qRAEEKiv+SiQ=
 github.com/vmihailenco/msgpack/v5 v5.3.5/go.mod h1:7xyJ9e+0+9SaZT0Wt1RGleJXzli6Q/V5KbhBonMG9jc=
 github.com/vmihailenco/tagparser/v2 v2.0.0/go.mod h1:Wri+At7QHww0WTrCBeu4J6bNtoV6mEfg5OIWRZA9qds=
-github.com/waok8s/waok8s/wao-core v1.30.3/go.mod h1:lgubtmKH2Z/pxoCirZOMgQhAzLjhioHuWsMQIM5Uo68=
 github.com/waok8s/waok8s/wao-metrics-adapter v0.0.1-dev/go.mod h1:zFy0c+Qe3AooHLZK0JCX7IHdzcgAhPW6rVvQqr5qboI=
+github.com/waok8s/waok8s/wao-metrics-adapter v1.30.3/go.mod h1:jJpB99M2ldeLCdMXvyi+OeLIB71Wa7beiLRUYDWND6M=
 github.com/x448/float16 v0.8.4 h1:qLwI1I70+NjRFUR3zs1JPUCgaCXSh3SW62uAKT1mSBM=
 github.com/x448/float16 v0.8.4/go.mod h1:14CWIYCyZA/cWjXOioeEpHeN/83MdbZDRQHoFcYsOfg=
 github.com/xeipuuv/gojsonpointer v0.0.0-20180127040702-4e3ac2762d5f/go.mod h1:N2zxlSyiKSe5eX1tZViRH5QA0qijqEDrYZiPEAiq3wU=
