@@ -16,31 +16,6 @@ rules:
   - node.waok8s.github.io
   resources:
   - nodeconfigs
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - node.waok8s.github.io
-  resources:
-  - nodeconfigs/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - node.waok8s.github.io
-  resources:
-  - nodeconfigs/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - node.waok8s.github.io
-  resources:
   - nodeconfigtemplates
   verbs:
   - create
@@ -53,12 +28,14 @@ rules:
 - apiGroups:
   - node.waok8s.github.io
   resources:
+  - nodeconfigs/finalizers
   - nodeconfigtemplates/finalizers
   verbs:
   - update
 - apiGroups:
   - node.waok8s.github.io
   resources:
+  - nodeconfigs/status
   - nodeconfigtemplates/status
   verbs:
   - get
