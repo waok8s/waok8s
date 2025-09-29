@@ -15,9 +15,10 @@
 
 ## Release New Version
 
-1. Tag the commit with <module_name>/<version> format (e.g., `wao-core/v1.31.0-alpha.0`).
-2. Push the tag to the remote repository.
-3. Wait for the CI/CD pipeline to build and push the image and manifest.
+1. (Production release only) Create `release-1.xx` branch from `main` branch.
+2. Tag the commit with <module_name>/<version> format (e.g., `wao-core/v1.31.0-alpha.0`).
+3. Push the tag to the remote repository.
+4. Wait for the CI/CD pipeline to build and push the image and manifest.
 
 ## Upgrade Component Versions
 
