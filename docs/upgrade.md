@@ -22,9 +22,10 @@
 
 ## Upgrade Component Versions
 
-1. Edit `hack/deps.sh` and run it to update the component versions.
+1. Edit `go.mod` file to update the library versions.
+2. Edit `hack/deps.sh` and run it to update the component versions.
   - `wao-metrics-adapter` `wao-scheduler` `wao-loadbalancer`
-2. Edit related yaml files in `test` directory.
+3. Edit related yaml files in `test` directory.
   - `wao-scheduler`
 
 ## Upgrade Kubebuilder Version
