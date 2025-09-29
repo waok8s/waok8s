@@ -12,6 +12,13 @@
   - `wao-metrics-adapter` `wao-scheduler` `wao-loadbalancer`
 3. Edit envtest version in Makefile.
   - `wao-core` `wao-metrics-adapter`
+4. Upgrade controller-runtime and envtest version if necessary.
+  - Version matrix here: https://github.com/kubernetes-sigs/controller-runtime
+  - controller-runtime: go.mod
+  - envtest: Makefile
+5. Upgrade controller-tools version if necessary.
+  - Version matrix here: https://github.com/kubernetes-sigs/controller-tools
+  - controller-tools: Makefile
 
 ## Release New Version
 
