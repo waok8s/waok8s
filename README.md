@@ -1,5 +1,7 @@
 # WAO for Kubernetes
 
+<img src="./docs/icons/icon-3.png" alt="WAO Logo" width="400">
+
 Welcome to the WAO for Kubernetes project!
 
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
@@ -35,6 +37,7 @@ Experiments on commodity CPU-based servers running AI workloads have demonstrate
 
 - WAO models and optimization code are available at [`waok8s/optimization`](https://github.com/waok8s/optimization).
 - Presentation at Kubernetes Meetup Tokyo #66 (日本語) [[Video]](https://www.youtube.com/live/RpaC3AG2bc4?t=2490s) [[Slides]](https://speakerdeck.com/ebiiim/waok8s-k8sjp66)
+- Performance evaluation: [Shunsuke Ise et al., "Scalability and Versatility of Energy-Aware Workload Allocation Optimizer (WAO) on Kubernetes", IEEE JCC 2025, Tucson, AZ, USA, 2025.](https://ieeexplore.ieee.org/document/11124162)
 - Experiments in datacenter: [Ying-Feng Hsu et al., "Sustainable Data Center Energy Management through Server Workload Allocation Optimization and HVAC System", IEEE Cloud Summit 2024, Washington DC, USA, 2024.](https://ieeexplore.ieee.org/document/10630908)
 - WAO: [R. Douhara et al., "Kubernetes-based Workload Allocation Optimizer for Minimizing Power Consumption of Computing System with Neural Network," 2020 International Conference on Computational Science and Computational Intelligence (CSCI), Las Vegas, NV, USA, 2020.](https://ieeexplore.ieee.org/document/9458062)
 
