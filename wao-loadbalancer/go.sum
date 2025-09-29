@@ -361,10 +361,10 @@ github.com/vishvananda/netlink v1.1.0/go.mod h1:cTgwzPIzzgDAYoQrMm0EdrjRUBkTqKYp
 github.com/vishvananda/netns v0.0.0-20191106174202-0a2b9b5464df/go.mod h1:JP3t17pCcGlemwknint6hfoeCVQrEMVwxRLRjXpq+BU=
 github.com/vishvananda/netns v0.0.4 h1:Oeaw1EM2JMxD51g9uhtC0D7erkIjgmj8+JZc26m1YX8=
 github.com/vishvananda/netns v0.0.4/go.mod h1:SpkAiCQRtJ6TvvxPnOSyH3BMl6unz3xZlaprSwhNNJM=
-github.com/waok8s/waok8s/wao-core v1.30.3-alpha.0 h1:5CyzbIGxQm65CcJDD7QwcTwLNBhFHOMfnTyVqvPlk9U=
-github.com/waok8s/waok8s/wao-core v1.30.3-alpha.0/go.mod h1:DBbVEfHsfyL98mu2MKgeSl/5Fe1hMx9Ug2/h3mXI3kU=
-github.com/waok8s/waok8s/wao-metrics-adapter v1.30.3-alpha.0 h1:NG4m7qBzP8cEHZR4VISFkqa0pP/QIT3O3gNIq629MZ4=
-github.com/waok8s/waok8s/wao-metrics-adapter v1.30.3-alpha.0/go.mod h1:I+og5D9CijXIPM4nxbPvXnMJ/Ety/vJDt5mrboFz2Eg=
+github.com/waok8s/waok8s/wao-core v1.30.3 h1:wP4bUqDQBE46soh6rAXFaYZLLdPJ6gky31g7D6QX2Oc=
+github.com/waok8s/waok8s/wao-core v1.30.3/go.mod h1:lgubtmKH2Z/pxoCirZOMgQhAzLjhioHuWsMQIM5Uo68=
+github.com/waok8s/waok8s/wao-metrics-adapter v1.30.3 h1:Xi2WtnCE70oQRrY2TNOwIywL3jeq1Nk87mEOo6N2zMA=
+github.com/waok8s/waok8s/wao-metrics-adapter v1.30.3/go.mod h1:jJpB99M2ldeLCdMXvyi+OeLIB71Wa7beiLRUYDWND6M=
 github.com/xiang90/probing v0.0.0-20190116061207-43a291ad63a2 h1:eY9dn8+vbi4tKz5Qo6v2eYzo7kUS51QINcR5jNpbZS8=
 github.com/xiang90/probing v0.0.0-20190116061207-43a291ad63a2/go.mod h1:UETIi67q53MR2AWcXfiuqkDkRtnGDLqkBTpCHuJHxtU=
 github.com/xordataexchange/crypt v0.0.3-0.20170626215501-b2862e3d0a77/go.mod h1:aYKd//L2LvnjZzWKhF00oedf4jCCReLcmhLdhm1A27Q=

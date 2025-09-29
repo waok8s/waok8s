@@ -3,8 +3,8 @@ module github.com/waok8s/waok8s/wao-loadbalancer
 go 1.23.6
 
 require (
-	github.com/waok8s/waok8s/wao-core v1.30.3-alpha.0
-	github.com/waok8s/waok8s/wao-metrics-adapter v1.30.3-alpha.0
+	github.com/waok8s/waok8s/wao-core v1.30.3
+	github.com/waok8s/waok8s/wao-metrics-adapter v1.30.3
 )
 
 // local
