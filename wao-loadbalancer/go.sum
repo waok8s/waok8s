@@ -350,10 +350,10 @@ github.com/vishvananda/netlink v1.1.0/go.mod h1:cTgwzPIzzgDAYoQrMm0EdrjRUBkTqKYp
 github.com/vishvananda/netns v0.0.0-20191106174202-0a2b9b5464df/go.mod h1:JP3t17pCcGlemwknint6hfoeCVQrEMVwxRLRjXpq+BU=
 github.com/vishvananda/netns v0.0.4 h1:Oeaw1EM2JMxD51g9uhtC0D7erkIjgmj8+JZc26m1YX8=
 github.com/vishvananda/netns v0.0.4/go.mod h1:SpkAiCQRtJ6TvvxPnOSyH3BMl6unz3xZlaprSwhNNJM=
-github.com/waok8s/waok8s/wao-core v1.31.0-beta.0 h1:l3+mmk/Yx7uZHRY2sY/bUkVSQ45AnW7CR0eI5sYKKwc=
-github.com/waok8s/waok8s/wao-core v1.31.0-beta.0/go.mod h1:S/wwOmbMfLnrJAPEAhQjYg1bUt3JEC2GstDXktgTSbo=
-github.com/waok8s/waok8s/wao-metrics-adapter v1.31.0-beta.0 h1:s/9HBsUHSiQsPL+QbzK671sOJcQR6JUwbExnWM+fA5E=
-github.com/waok8s/waok8s/wao-metrics-adapter v1.31.0-beta.0/go.mod h1:te395yQ4c/QdBuDec3+F8f5Jm6Ev/843yR3tMqJMRoQ=
+github.com/waok8s/waok8s/wao-core v1.31.0 h1:nwr2tboy6cWGKnItLBOKahxhgA8p1jcHcdzrWrnPfDI=
+github.com/waok8s/waok8s/wao-core v1.31.0/go.mod h1:iHUeLhhaRgh/G+DT9Sr1RyGVV2x2xL0OkCk7NmhbVkY=
+github.com/waok8s/waok8s/wao-metrics-adapter v1.31.0 h1:3oH1gS2OuezqF/JaDKbrzi1JsedsUQS1WviFESj0MkQ=
+github.com/waok8s/waok8s/wao-metrics-adapter v1.31.0/go.mod h1:Penkk8Jf0e3WN0rScyZm88Ycx6xCF7XfzvuzKMXkgww=
 github.com/x448/float16 v0.8.4 h1:qLwI1I70+NjRFUR3zs1JPUCgaCXSh3SW62uAKT1mSBM=
 github.com/x448/float16 v0.8.4/go.mod h1:14CWIYCyZA/cWjXOioeEpHeN/83MdbZDRQHoFcYsOfg=
 github.com/xiang90/probing v0.0.0-20190116061207-43a291ad63a2 h1:eY9dn8+vbi4tKz5Qo6v2eYzo7kUS51QINcR5jNpbZS8=
@@ -506,6 +506,7 @@ google.golang.org/genproto v0.0.0-20190819201941-24fa4b261c55/go.mod h1:DMBHOl98
 google.golang.org/genproto v0.0.0-20200224152610-e50cd9704f63/go.mod h1:55QSHmfGQM9UVYDPBsyGGes0y52j32PQ3BqQfXhyH3c=
 google.golang.org/genproto v0.0.0-20200526211855-cb27e3aa2013/go.mod h1:NbSheEEYHJ7i3ixzK3sjbqSGDJWnxyFXZblF3eUsNvo=
 google.golang.org/genproto v0.0.0-20240213162025-012b6fc9bca9 h1:9+tzLLstTlPTRyJTh+ah5wIMsBW5c4tQwGTN3thOW9Y=
+google.golang.org/genproto v0.0.0-20240213162025-012b6fc9bca9/go.mod h1:mqHbVIp48Muh7Ywss/AD6I5kNVKZMmAa/QEW58Gxp2s=
 google.golang.org/genproto/googleapis/api v0.0.0-20240528184218-531527333157 h1:7whR9kGa5LUwFtpLm2ArCEejtnxlGeLbAyjFY8sGNFw=
 google.golang.org/genproto/googleapis/api v0.0.0-20240528184218-531527333157/go.mod h1:99sLkeliLXfdj2J75X3Ho+rrVCaJze0uwN7zDDkjPVU=
 google.golang.org/genproto/googleapis/rpc v0.0.0-20240701130421-f6361c86f094 h1:BwIjyKYGsK9dMCBOorzRri8MQwmi7mT9rGHsCEinZkA=
