@@ -1,5 +1,8 @@
+//go:build !linux
+// +build !linux
+
 /*
-Copyright 2014 The Kubernetes Authors.
+Copyright 2024 The Kubernetes Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,20 +17,15 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package main
+package nfacct
 
 import (
-	"os"
-
-	"k8s.io/component-base/cli"
-	_ "k8s.io/component-base/logs/json/register"
-	_ "k8s.io/component-base/metrics/prometheus/clientgo" // for client metric registration
-	_ "k8s.io/component-base/metrics/prometheus/version"  // for version metric registration
-	"k8s.io/kubernetes/cmd/kube-proxy/app"
+	"fmt"
+	"runtime"
 )
 
-func main() {
-	command := app.NewProxyCommand()
-	code := cli.Run(command)
-	os.Exit(code)
+var unsupportedError = fmt.Errorf(runtime.GOOS + "/" + runtime.GOARCH + "is unsupported")
+
+func New() (Interface, error) {
+	return nil, unsupportedError
 }

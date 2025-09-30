@@ -1,5 +1,5 @@
 /*
-Copyright 2014 The Kubernetes Authors.
+Copyright 2024 The Kubernetes Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,20 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package main
+// This is an empty file to avoid "build constraints exclude all Go files" error while running unit tests on non-linux platforms.
 
-import (
-	"os"
-
-	"k8s.io/component-base/cli"
-	_ "k8s.io/component-base/logs/json/register"
-	_ "k8s.io/component-base/metrics/prometheus/clientgo" // for client metric registration
-	_ "k8s.io/component-base/metrics/prometheus/version"  // for version metric registration
-	"k8s.io/kubernetes/cmd/kube-proxy/app"
-)
-
-func main() {
-	command := app.NewProxyCommand()
-	code := cli.Run(command)
-	os.Exit(code)
-}
+package iptables
