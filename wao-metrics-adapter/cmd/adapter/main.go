@@ -1,10 +1,10 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"os"
 
-	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/component-base/logs"
 	"k8s.io/klog/v2"
@@ -58,7 +58,8 @@ func main() {
 
 	klog.Infof(cmd.Message)
 	go func() {
-		if err := cmd.Run(wait.NeverStop); err != nil {
+		// TODO: handle graceful shutdown
+		if err := cmd.Run(context.Background()); err != nil {
 			klog.Fatalf("unable to run custom metrics adapter: %v", err)
 		}
 	}()

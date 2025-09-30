@@ -239,7 +239,7 @@ Versioning: we use the same major.minor as Kubernetes, and the patch is our own.
 
 - What comes next?
   - TBD
-- 2025-xx-xx `v1.31.0`
+- 2025-09-30 `v1.31.0`
   - Support Kubernetes v1.31.
 - 2025-03-31 `v1.30.3`
   - Change domain to `waok8s.github.io`.
