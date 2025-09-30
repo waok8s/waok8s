@@ -5,8 +5,8 @@
 
 # consts
 
-CERT_MANAGER_YAML=${CERT_MANAGER_YAML:-"https://github.com/cert-manager/cert-manager/releases/download/v1.14.5/cert-manager.yaml"}
-METRICS_SERVER_YAML=${METRICS_SERVER_YAML:-"https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.7.1/components.yaml"}
+CERT_MANAGER_YAML=${CERT_MANAGER_YAML:-"https://github.com/cert-manager/cert-manager/releases/download/v1.18.2/cert-manager.yaml"} # v1.18 for k8s v1.29-v1.33 https://cert-manager.io/docs/releases/
+METRICS_SERVER_YAML=${METRICS_SERVER_YAML:-"https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.8.0/components.yaml"} # v0.8 for k8s v1.31+ https://github.com/kubernetes-sigs/metrics-server?tab=readme-ov-file#compatibility-matrix
 METRICS_SERVER_PATCH=${METRICS_SERVER_PATCH:-'''[{"op":"add","path":"/spec/template/spec/containers/0/args/-","value":"--kubelet-insecure-tls"}]'''}
 
 # libs

@@ -8,7 +8,7 @@
 ## Upgrade Kubernetes Version
 
 1. Edit `go.mod` file to update the library versions.
-2. Edit `hack/0-env.sh` `hack/2-lib.sh` to update the versions in the scripts.
+2. Edit `hack/0-env.sh` `hack/2-lib.sh` `hack/dev-kind-reset-cluster.sh` to update the versions in the scripts.
   - `wao-metrics-adapter` `wao-scheduler` `wao-loadbalancer`
 3. Edit envtest k8s version in Makefile.
   - `wao-core` `wao-metrics-adapter`
