@@ -250,7 +250,9 @@ var _ = Describe("NodeConfig Controller", func() {
 		wait()
 	})
 
-	It("should start agentRunners", func() {
+	// NOTE: for v1.31, somehow cncl() does not stop the mgr,
+	// so the next test will fail, so we just combine the two tests here.
+	It("should start agentRunners and parse predictors", func() {
 		ctx := context.Background()
 
 		var err error
@@ -276,22 +278,6 @@ var _ = Describe("NodeConfig Controller", func() {
 			Expect(md.InletTemp).To(Equal(15.5))
 			Expect(md.DeltaPressure).To(Equal(7.5))
 		}
-	})
-
-	It("should parse predictors", func() {
-		ctx := context.Background()
-
-		var err error
-
-		// Create Secret
-		err = k8sClient.Create(ctx, testSecret.DeepCopy())
-		Expect(err).NotTo(HaveOccurred())
-
-		// Create NodeConfig
-		err = k8sClient.Create(ctx, testNC0.DeepCopy())
-		Expect(err).NotTo(HaveOccurred())
-		err = k8sClient.Create(ctx, testNC1.DeepCopy())
-		Expect(err).NotTo(HaveOccurred())
 
 		// node-0: direct endpoint
 		v, err := cachedPredictorClient.PredictPowerConsumption(ctx, testNS, testNC0.Spec.Predictor.PowerConsumption, 20.0, 15.5, 7.5)
@@ -307,5 +293,35 @@ var _ = Describe("NodeConfig Controller", func() {
 			Endpoint: "https://fake-endpoint",
 		}))
 	})
+
+	// It("should parse predictors", func() {
+	// 	ctx := context.Background()
+
+	// 	var err error
+
+	// 	// Create Secret
+	// 	err = k8sClient.Create(ctx, testSecret.DeepCopy())
+	// 	Expect(err).NotTo(HaveOccurred())
+
+	// 	// Create NodeConfig
+	// 	err = k8sClient.Create(ctx, testNC0.DeepCopy())
+	// 	Expect(err).NotTo(HaveOccurred())
+	// 	err = k8sClient.Create(ctx, testNC1.DeepCopy())
+	// 	Expect(err).NotTo(HaveOccurred())
+
+	// 	// node-0: direct endpoint
+	// 	v, err := cachedPredictorClient.PredictPowerConsumption(ctx, testNS, testNC0.Spec.Predictor.PowerConsumption, 20.0, 15.5, 7.5)
+	// 	Expect(err).NotTo(HaveOccurred())
+	// 	Expect(v).To(Equal(3.14)) // fake value
+
+	// 	// node-1: endpoint provider
+	// 	ep, err := cachedPredictorClient.GetPredictorEndpoint(ctx, testNS, testNC1.Spec.Predictor.PowerConsumptionEndpointProvider, waopredictor.TypePowerConsumption)
+	// 	Expect(err).NotTo(HaveOccurred())
+	// 	Expect(ep).To(Equal(&v1beta1.EndpointTerm{
+	// 		// fake endpoint provider returns this value
+	// 		Type:     v1beta1.TypeFake,
+	// 		Endpoint: "https://fake-endpoint",
+	// 	}))
+	// })
 
 })

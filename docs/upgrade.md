@@ -10,15 +10,15 @@
 1. Edit `go.mod` file to update the library versions.
 2. Edit `hack/0-env.sh` `hack/2-lib.sh` to update the versions in the scripts.
   - `wao-metrics-adapter` `wao-scheduler` `wao-loadbalancer`
-3. Edit envtest version in Makefile.
+3. Edit envtest k8s version in Makefile.
   - `wao-core` `wao-metrics-adapter`
-4. Upgrade controller-runtime and envtest version if necessary.
+4. Upgrade controller-runtime version if necessary.
   - Version matrix here: https://github.com/kubernetes-sigs/controller-runtime
-  - controller-runtime: go.mod
-  - envtest: Makefile
+  - controller-runtime: go.mod, Makefile (wao-metrics-adapter)
+  - envtest: Makefile (wao-core)
 5. Upgrade controller-tools version if necessary.
   - Version matrix here: https://github.com/kubernetes-sigs/controller-tools
-  - controller-tools: Makefile
+  - controller-tools: Makefile (wao-core)
 
 ## Release New Version
 
