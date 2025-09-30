@@ -14,7 +14,7 @@
   - `wao-core` `wao-metrics-adapter`
 4. Upgrade controller-runtime version if necessary.
   - Version matrix here: https://github.com/kubernetes-sigs/controller-runtime
-  - controller-runtime: go.mod, Makefile (wao-metrics-adapter)
+  - controller-runtime: go.mod
   - envtest: Makefile (wao-core)
 5. Upgrade controller-tools version if necessary.
   - Version matrix here: https://github.com/kubernetes-sigs/controller-tools
