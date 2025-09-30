@@ -49,10 +49,12 @@ import (
 	"k8s.io/kubernetes/pkg/proxy/ipvs"
 	utilipset "k8s.io/kubernetes/pkg/proxy/ipvs/ipset"
 	utilipvs "k8s.io/kubernetes/pkg/proxy/ipvs/util"
-	"k8s.io/kubernetes/pkg/proxy/nftables"
 	proxyutil "k8s.io/kubernetes/pkg/proxy/util"
 	utiliptables "k8s.io/kubernetes/pkg/util/iptables"
 	"k8s.io/utils/exec"
+
+	// "k8s.io/kubernetes/pkg/proxy/nftables"
+	"github.com/waok8s/waok8s/wao-loadbalancer/pkg/proxy/nftables"
 )
 
 // timeoutForNodePodCIDR is the time to wait for allocators to assign a PodCIDR to the
@@ -76,6 +78,16 @@ func (o *Options) platformApplyDefaults(config *proxyconfigapi.KubeProxyConfigur
 		config.DetectLocalMode = proxyconfigapi.LocalModeClusterCIDR
 	}
 	o.logger.V(2).Info("DetectLocalMode", "localMode", string(config.DetectLocalMode))
+
+	// WAO
+	if WAOProxyName == "" {
+		o.logger.V(2).Info("Applied values for WAO Load Balancer (default service proxy mode)", "mode", config.Mode)
+	} else {
+		// avoid conflicts with kube-proxy when WAO Load Balancer is running in non-default mode
+		config.HealthzBindAddress = DefaultHealthzBindAddress
+		config.MetricsBindAddress = DefaultMetricsBindAddress
+		o.logger.V(2).Info("Applied values for WAO Load Balancer (non-default service proxy mode)", "mode", config.Mode, "healthzBindAddress", config.HealthzBindAddress, "metricsBindAddress", config.MetricsBindAddress)
+	}
 }
 
 // platformSetup is called after setting up the ProxyServer, but before creating the

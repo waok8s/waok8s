@@ -62,7 +62,10 @@ import (
 const (
 	// Our nftables table. All of our chains/sets/maps are created inside this table,
 	// so they don't need any "kube-" or "kube-proxy-" prefix of their own.
-	kubeProxyTable = "kube-proxy"
+	// kubeProxyTable = "kube-proxy"
+
+	// WAO
+	kubeProxyTable = NFTableNameWAOLB
 
 	// base chains
 	filterPreroutingChain     = "filter-prerouting"
@@ -202,6 +205,10 @@ type Proxier struct {
 	noEndpointServices  *nftElementStorage
 	noEndpointNodePorts *nftElementStorage
 	serviceNodePorts    *nftElementStorage
+
+	// waoLB is the WAO Load Balancer
+	// WAO
+	waoLB *WAOLB
 }
 
 // Proxier implements proxy.Provider
@@ -279,6 +286,15 @@ func NewProxier(ctx context.Context,
 	logger.V(2).Info("NFTables sync params", "minSyncPeriod", minSyncPeriod, "syncPeriod", syncPeriod, "burstSyncs", burstSyncs)
 	// We need to pass *some* maxInterval to NewBoundedFrequencyRunner. time.Hour is arbitrary.
 	proxier.syncRunner = async.NewBoundedFrequencyRunner("sync-runner", proxier.syncProxyRules, minSyncPeriod, time.Hour, burstSyncs)
+
+	// WAO
+	klog.V(2).InfoS("WAO: NewProxier", "ipFamily", ipFamily)
+	waoLB, err := NewWAOLB(WAOLBOptions{IPFamily: proxier.ipFamily})
+	if err != nil {
+		klog.ErrorS(err, "Failed to initialize WAO Load Balancer")
+		return nil, err
+	}
+	proxier.waoLB = waoLB
 
 	return proxier, nil
 }
@@ -1214,6 +1230,15 @@ func (proxier *Proxier) syncProxyRules() {
 		}
 	}
 
+	// WAO: calc scores for all services
+	klog.InfoS("WAO: syncProxyRules calculating scores for all svcPortNames", "ipFamily", proxier.ipFamily)
+	svcPortNames := make([]string, 0, len(proxier.svcPortMap))
+	for svcPortName := range proxier.svcPortMap {
+		svcPortNames = append(svcPortNames, svcPortName.String())
+	}
+	proxier.waoLB.Score(context.TODO(), []string(svcPortNames))
+	klog.InfoS("WAO: syncProxyRules added scores for svcPortNames", "ipFamily", proxier.ipFamily, "len(scores)", len(proxier.waoLB.Scores))
+
 	// Now start the actual syncing transaction
 	tx := proxier.nftables.NewTransaction()
 	if !tryPartialSync {
@@ -1696,13 +1721,17 @@ func (proxier *Proxier) syncProxyRules() {
 		// If Cluster policy is in use, create the chain and create rules jumping
 		// from clusterPolicyChain to the clusterEndpoints
 		if usesClusterPolicyChain {
-			proxier.writeServiceToEndpointRules(tx, svcInfo, clusterPolicyChain, clusterEndpoints)
+			// proxier.writeServiceToEndpointRules(tx, svcInfo, clusterPolicyChain, clusterEndpoints)
+			// WAO: our version requires svcPortNameString
+			proxier.writeServiceToEndpointRules(tx, svcPortNameString, svcInfo, clusterPolicyChain, clusterEndpoints)
 		}
 
 		// If Local policy is in use, create rules jumping from localPolicyChain
 		// to the localEndpoints
 		if usesLocalPolicyChain {
-			proxier.writeServiceToEndpointRules(tx, svcInfo, localPolicyChain, localEndpoints)
+			// proxier.writeServiceToEndpointRules(tx, svcInfo, localPolicyChain, localEndpoints)
+			// WAO: our version requires svcPortNameString
+			proxier.writeServiceToEndpointRules(tx, svcPortNameString, svcInfo, localPolicyChain, localEndpoints)
 		}
 
 		// Generate the per-endpoint chains
@@ -1843,7 +1872,9 @@ func (proxier *Proxier) syncProxyRules() {
 	conntrack.CleanStaleEntries(proxier.conntrack, proxier.svcPortMap, serviceUpdateResult, endpointUpdateResult)
 }
 
-func (proxier *Proxier) writeServiceToEndpointRules(tx *knftables.Transaction, svcInfo *servicePortInfo, svcChain string, endpoints []proxy.Endpoint) {
+// func (proxier *Proxier) writeServiceToEndpointRules(tx *knftables.Transaction, svcInfo *servicePortInfo, svcChain string, endpoints []proxy.Endpoint) {
+// WAO: our version requires svcPortNameString
+func (proxier *Proxier) writeServiceToEndpointRules(tx *knftables.Transaction, svcPortNameString string, svcInfo *servicePortInfo, svcChain string, endpoints []proxy.Endpoint) {
 	// First write session affinity rules, if applicable.
 	if svcInfo.SessionAffinityType() == v1.ServiceAffinityClientIP {
 		ipX := "ip"
@@ -1867,26 +1898,107 @@ func (proxier *Proxier) writeServiceToEndpointRules(tx *knftables.Transaction, s
 		}
 	}
 
-	// Now write loadbalancing rule
-	var elements []string
-	for i, ep := range endpoints {
-		epInfo, ok := ep.(*endpointInfo)
-		if !ok {
-			continue
+	// WAO: get scores for this svcPortName
+	var useWAO bool
+	scores, ok := proxier.waoLB.Scores[svcPortNameString]
+	if ok {
+		// Check if any endpoint has a normal score
+		// NOTE: There is always at least one endpoint with a score of 100 (ScoreMax). So normally this should be true.
+		eps := make([]string, len(endpoints))
+		for i, ep := range endpoints {
+			epInfo, ok := ep.(*endpointInfo)
+			if !ok {
+				continue
+			}
+			eps[i] = epInfo.IP()
 		}
-
-		elements = append(elements,
-			strconv.Itoa(i), ":", "goto", epInfo.chainName,
-		)
-		if i != len(endpoints)-1 {
-			elements = append(elements, ",")
+		for _, ep := range eps {
+			if scores[ep] > 0 {
+				useWAO = true
+				break
+			}
+		}
+		if !useWAO {
+			klog.ErrorS(fmt.Errorf("all scores are score <= 0"), "WAO: writeServiceToEndpointRules unexpected scores", "ipFamily", proxier.ipFamily, "svcPortName", svcPortNameString, "endpoints", eps, "scores", scores)
 		}
 	}
-	tx.Add(&knftables.Rule{
-		Chain: svcChain,
-		Rule: knftables.Concat(
-			"numgen random mod", len(endpoints), "vmap",
-			"{", elements, "}",
-		),
-	})
+	klog.V(5).InfoS("WAO: writeServiceToEndpointRules", "ipFamily", proxier.ipFamily, "svcPortName", svcPortNameString, "useWAO", useWAO)
+
+	// Now write loadbalancing rule
+
+	if useWAO {
+
+		// WAO: use WAO logic
+
+		var totalScore int
+		var elements []string
+		for _, ep := range endpoints {
+
+			// cast to endpointInfo
+			epInfo, ok := ep.(*endpointInfo)
+			if !ok {
+				continue
+			}
+
+			// get score
+			score, ok := scores[epInfo.IP()]
+			if !ok {
+				klog.V(5).InfoS("WAO: writeServiceToEndpointRules score is missing, so skip", "ipFamily", proxier.ipFamily, "svcPortName", svcPortNameString, "epInfo.IP", epInfo.IP())
+				continue
+			}
+			if score <= 0 {
+				klog.V(5).InfoS("WAO: writeServiceToEndpointRules score <= 0, so skip", "ipFamily", proxier.ipFamily, "svcPortName", svcPortNameString, "epInfo.IP", epInfo.IP(), "score", score)
+				continue
+			}
+
+			// construct and add the rule
+			modRange := fmt.Sprintf("%d-%d", totalScore, totalScore+score-1) // 50-99
+			elements = append(elements,
+				modRange, ":", "goto", epInfo.chainName, // 50-99 : goto foobar
+			)
+			elements = append(elements, ",")
+
+			// update totalScore
+			totalScore += score
+		}
+		elements = elements[:len(elements)-1] // remove the last comma
+
+		tx.Add(&knftables.Rule{
+			Chain: svcChain,
+			Rule: knftables.Concat(
+				// NOTE: numgen random supports int32, so usually this should be fine.
+				// totalScore is in [ScoreMax, NumPodMax * ScoreMax], so it should be in [100, 150_000 * 100] = [100, 15_000_000] and this is fine.
+				// To be strict, it is in [ScoreMax, NumPodMax * NumEndpointMaxIPAddresses * ScoreMax] = [100, 1_500_000_000] and this is still fine (but usually doesn't happen).
+				"numgen random mod", totalScore, "vmap",
+				"{", elements, "}",
+			),
+		})
+
+	} else {
+
+		// WAO: fallback to the default logic
+
+		var elements []string
+		for i, ep := range endpoints {
+			epInfo, ok := ep.(*endpointInfo)
+			if !ok {
+				continue
+			}
+
+			elements = append(elements,
+				strconv.Itoa(i), ":", "goto", epInfo.chainName,
+			)
+			if i != len(endpoints)-1 {
+				elements = append(elements, ",")
+			}
+		}
+		tx.Add(&knftables.Rule{
+			Chain: svcChain,
+			Rule: knftables.Concat(
+				"numgen random mod", len(endpoints), "vmap",
+				"{", elements, "}",
+			),
+		})
+
+	}
 }

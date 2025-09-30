@@ -514,9 +514,22 @@ func (s *ProxyServer) Run(ctx context.Context) error {
 	// Start up a metrics server if requested
 	serveMetrics(s.Config.MetricsBindAddress, s.Config.Mode, s.Config.EnableProfiling, metricsErrCh)
 
-	noProxyName, err := labels.NewRequirement(apis.LabelServiceProxyName, selection.DoesNotExist, nil)
-	if err != nil {
-		return err
+	// WAO: check service proxy name
+	var proxyNameReq *labels.Requirement
+	if WAOProxyName == "" {
+		noProxyName, err := labels.NewRequirement(apis.LabelServiceProxyName, selection.DoesNotExist, nil)
+		if err != nil {
+			return err
+		}
+		proxyNameReq = noProxyName
+		logger.Info("WAO: default service proxy mode", EnvVarProxyName, WAOProxyName) // WAOProxyName == ""
+	} else {
+		withProxyName, err := labels.NewRequirement(apis.LabelServiceProxyName, selection.Equals, []string{WAOProxyName})
+		if err != nil {
+			return err
+		}
+		proxyNameReq = withProxyName
+		logger.Info("WAO: non-default service proxy mode", EnvVarProxyName, WAOProxyName)
 	}
 
 	noHeadlessEndpoints, err := labels.NewRequirement(v1.IsHeadlessService, selection.DoesNotExist, nil)
@@ -525,7 +538,7 @@ func (s *ProxyServer) Run(ctx context.Context) error {
 	}
 
 	labelSelector := labels.NewSelector()
-	labelSelector = labelSelector.Add(*noProxyName, *noHeadlessEndpoints)
+	labelSelector = labelSelector.Add(*proxyNameReq, *noHeadlessEndpoints)
 
 	// Make informers that filter out objects that want a non-default service proxy.
 	informerFactory := informers.NewSharedInformerFactoryWithOptions(s.Client, s.Config.ConfigSyncPeriod.Duration,
