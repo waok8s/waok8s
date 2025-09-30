@@ -789,7 +789,7 @@ spec:
         - --health-probe-bind-address=:8081
         command:
         - /manager
-        image: ghcr.io/waok8s/wao-controller:v1.31.0-beta.0
+        image: ghcr.io/waok8s/wao-controller:v1.31.0
         livenessProbe:
           httpGet:
             path: /healthz

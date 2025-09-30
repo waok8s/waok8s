@@ -2,7 +2,7 @@ module github.com/waok8s/waok8s/wao-metrics-adapter
 
 go 1.23.6
 
-require github.com/waok8s/waok8s/wao-core v1.31.0-beta.0
+require github.com/waok8s/waok8s/wao-core v1.31.0
 
 // replace github.com/waok8s/waok8s/wao-core => ../wao-core // local
 
