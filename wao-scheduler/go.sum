@@ -204,10 +204,10 @@ github.com/stretchr/testify v1.9.0/go.mod h1:r2ic/lqez/lEtzL7wO/rwa5dbSLXVDPFyf8
 github.com/tailscale/depaware v0.0.0-20210622194025-720c4b409502/go.mod h1:p9lPsd+cx33L3H9nNoecRRxPssFKUwwI50I3pZ0yT+8=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20220101234140-673ab2c3ae75 h1:6fotK7otjonDflCTK0BCfls4SPy3NcCVb5dqqmbRknE=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20220101234140-673ab2c3ae75/go.mod h1:KO6IkyS8Y3j8OdNO85qEYBsRPuteD+YciPomcXdrMnk=
-github.com/waok8s/waok8s/wao-core v1.31.0-beta.0 h1:l3+mmk/Yx7uZHRY2sY/bUkVSQ45AnW7CR0eI5sYKKwc=
-github.com/waok8s/waok8s/wao-core v1.31.0-beta.0/go.mod h1:S/wwOmbMfLnrJAPEAhQjYg1bUt3JEC2GstDXktgTSbo=
-github.com/waok8s/waok8s/wao-metrics-adapter v1.31.0-beta.0 h1:s/9HBsUHSiQsPL+QbzK671sOJcQR6JUwbExnWM+fA5E=
-github.com/waok8s/waok8s/wao-metrics-adapter v1.31.0-beta.0/go.mod h1:te395yQ4c/QdBuDec3+F8f5Jm6Ev/843yR3tMqJMRoQ=
+github.com/waok8s/waok8s/wao-core v1.31.0 h1:nwr2tboy6cWGKnItLBOKahxhgA8p1jcHcdzrWrnPfDI=
+github.com/waok8s/waok8s/wao-core v1.31.0/go.mod h1:iHUeLhhaRgh/G+DT9Sr1RyGVV2x2xL0OkCk7NmhbVkY=
+github.com/waok8s/waok8s/wao-metrics-adapter v1.31.0 h1:3oH1gS2OuezqF/JaDKbrzi1JsedsUQS1WviFESj0MkQ=
+github.com/waok8s/waok8s/wao-metrics-adapter v1.31.0/go.mod h1:Penkk8Jf0e3WN0rScyZm88Ycx6xCF7XfzvuzKMXkgww=
 github.com/x448/float16 v0.8.4 h1:qLwI1I70+NjRFUR3zs1JPUCgaCXSh3SW62uAKT1mSBM=
 github.com/x448/float16 v0.8.4/go.mod h1:14CWIYCyZA/cWjXOioeEpHeN/83MdbZDRQHoFcYsOfg=
 github.com/xiang90/probing v0.0.0-20190116061207-43a291ad63a2 h1:eY9dn8+vbi4tKz5Qo6v2eYzo7kUS51QINcR5jNpbZS8=
